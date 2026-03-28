@@ -6,7 +6,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
-	import { updateRing, removeRing, setRingExpanded, isRingExpanded } from '$lib/state/composition';
+	import { updateRing, removeRing, setRingExpanded, isRingExpanded, colorMode } from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
@@ -126,6 +126,7 @@
 				/>
 			</div>
 
+			{#if colorMode.mode === 'manual'}
 			<div class="flex flex-col gap-1">
 				<Label for="color-{index}" class="text-xs">Color</Label>
 				<div class="flex items-center gap-2">
@@ -139,6 +140,7 @@
 					<span class="text-xs text-muted-foreground font-mono">{ring.color}</span>
 				</div>
 			</div>
+		{/if}
 		</Collapsible.CollapsibleContent>
 	</Collapsible.Collapsible>
 </div>

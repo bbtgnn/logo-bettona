@@ -21,7 +21,9 @@ const twoRingComposition: Composition = {
 	rings: [
 		{ copies: 4, color: '#ff0000', templatePath: rectPath, ringHeight: 0.4 },
 		{ copies: 4, color: '#0000ff', templatePath: rectPath, ringHeight: 0.4 }
-	]
+	],
+	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+	fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
 };
 
 describe('renderComposition', () => {
@@ -66,7 +68,13 @@ describe('renderComposition', () => {
 	});
 
 	it('produces no paths for an empty composition', () => {
-		const empty: Composition = { baseRadius: 100, ringIncrement: 50, rings: [] };
+		const empty: Composition = {
+			baseRadius: 100,
+			ringIncrement: 50,
+			rings: [],
+			monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+			fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
+		};
 		renderComposition(empty, scope);
 		expect(scope.project.activeLayer.children.length).toBe(0);
 	});

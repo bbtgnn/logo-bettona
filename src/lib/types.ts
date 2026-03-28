@@ -10,8 +10,26 @@ export type Ring = {
 	ringHeight: number;
 };
 
+export type MonochromePalette = {
+	main: string;
+	bg: string;
+};
+
+export type FullPalette = {
+	colors: string[];
+};
+
+export type ColorMode = 'monochrome' | 'palette' | 'manual';
+
+export type ColorModeState = {
+	mode: ColorMode;
+	palette: number;
+};
+
 export type Composition = {
 	baseRadius: number;
 	ringIncrement: number;
 	rings: Ring[];
+	monochromePalettes: MonochromePalette[];
+	fullPalettes: FullPalette[];
 };

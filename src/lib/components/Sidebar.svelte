@@ -4,6 +4,7 @@
 	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import RingEditor from './RingEditor.svelte';
+	import ColorsSection from './ColorsSection.svelte';
 	import { composition, addRing, setBaseRadius, setRingIncrement, reorderRings } from '$lib/state/composition';
 
 	let dragFromIndex: number | null = null;
@@ -58,6 +59,9 @@
 	</SidebarUI.SidebarHeader>
 
 	<SidebarUI.SidebarContent class="p-2">
+		<div class="border rounded mb-2 bg-background">
+			<ColorsSection />
+		</div>
 		{#each composition.rings as ring, i (i)}
 			<RingEditor
 				{ring}

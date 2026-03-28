@@ -1,11 +1,23 @@
 import { lsSync } from 'rune-sync/localstorage';
-import type { Composition, Ring } from '$lib/types';
+import type { ColorModeState, ColorMode, Composition, FullPalette, MonochromePalette, Ring } from '$lib/types';
+import { applyColors } from '$lib/color/apply';
 
 const DEFAULT_COMPOSITION: Composition = {
 	baseRadius: 100,
 	ringIncrement: 50,
-	rings: []
+	rings: [],
+	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+	fullPalettes: [
+		{ colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'] },
+		{ colors: ['#2d6a4f', '#40916c', '#74c69d', '#d8f3dc'] },
+		{ colors: ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'] }
+	]
 };
+
+export const colorMode = lsSync<ColorModeState>('color-mode', {
+	mode: 'monochrome',
+	palette: 0
+});
 
 const DEFAULT_RING: Ring = {
 	copies: 8,
@@ -20,12 +32,84 @@ export const uiState = lsSync<{ expandedRings: Record<number, boolean> }>('compo
 	expandedRings: {}
 });
 
+function applyColorMode() {
+	const { mode, palette } = colorMode;
+	const monoPalette = composition.monochromePalettes[palette];
+	const fullPalette = composition.fullPalettes[palette];
+	const currentColors = composition.rings.map((r) => r.color);
+	const newColors = applyColors(mode, monoPalette, fullPalette, currentColors, composition.rings.length);
+	composition.rings = composition.rings.map((ring, i) => ({ ...ring, color: newColors[i] }));
+}
+
+export function reshuffle() {
+	if (colorMode.mode === 'palette') applyColorMode();
+}
+
+export function setColorMode(mode: ColorMode) {
+	const maxIndex =
+		mode === 'monochrome'
+			? composition.monochromePalettes.length - 1
+			: mode === 'palette'
+				? composition.fullPalettes.length - 1
+				: 0;
+	colorMode.mode = mode;
+	colorMode.palette = Math.min(colorMode.palette, Math.max(0, maxIndex));
+	applyColorMode();
+}
+
+export function setActivePalette(index: number) {
+	colorMode.palette = index;
+	applyColorMode();
+}
+
+export function addMonochromePalette(palette: MonochromePalette = { main: '#000000', bg: '#ffffff' }) {
+	composition.monochromePalettes = [...composition.monochromePalettes, palette];
+	colorMode.palette = composition.monochromePalettes.length - 1;
+	applyColorMode();
+}
+
+export function updateMonochromePalette(index: number, patch: Partial<MonochromePalette>) {
+	composition.monochromePalettes = composition.monochromePalettes.map((p, i) =>
+		i === index ? { ...p, ...patch } : p
+	);
+	if (colorMode.palette === index) applyColorMode();
+}
+
+export function removeMonochromePalette(index: number) {
+	if (composition.monochromePalettes.length <= 1) return;
+	composition.monochromePalettes = composition.monochromePalettes.filter((_, i) => i !== index);
+	colorMode.palette = Math.min(colorMode.palette, composition.monochromePalettes.length - 1);
+	applyColorMode();
+}
+
+export function addFullPalette(palette: FullPalette = { colors: ['#000000', '#ffffff'] }) {
+	composition.fullPalettes = [...composition.fullPalettes, palette];
+	colorMode.palette = composition.fullPalettes.length - 1;
+	applyColorMode();
+}
+
+export function updateFullPalette(index: number, patch: Partial<FullPalette>) {
+	composition.fullPalettes = composition.fullPalettes.map((p, i) =>
+		i === index ? { ...p, ...patch } : p
+	);
+	if (colorMode.palette === index) applyColorMode();
+}
+
+export function removeFullPalette(index: number) {
+	if (composition.fullPalettes.length <= 1) return;
+	composition.fullPalettes = composition.fullPalettes.filter((_, i) => i !== index);
+	colorMode.palette = Math.min(colorMode.palette, composition.fullPalettes.length - 1);
+	applyColorMode();
+}
+
 export function addRing() {
 	composition.rings = [...composition.rings, { ...DEFAULT_RING }];
+	applyColorMode();
 }
 
 export function removeRing(index: number) {
 	composition.rings = composition.rings.filter((_, i) => i !== index);
+	applyColorMode();
 }
 
 export function updateRing(index: number, patch: Partial<Ring>) {
@@ -39,6 +123,7 @@ export function reorderRings(fromIndex: number, toIndex: number) {
 	const [moved] = rings.splice(fromIndex, 1);
 	rings.splice(toIndex, 0, moved);
 	composition.rings = rings;
+	applyColorMode();
 }
 
 export function setBaseRadius(value: number) {
