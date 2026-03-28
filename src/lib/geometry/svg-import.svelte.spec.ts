@@ -47,6 +47,15 @@ describe('importSvgFromString', () => {
 		expect(result).toBeNull();
 	});
 
+	it('returns null for an SVG with multiple subpaths (compound path)', () => {
+		const multiSubpathSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+  <path d="M 0,0 L 10,0 Z M 20,20 L 30,20 Z"/>
+</svg>`;
+		const result = importSvgFromString(multiSubpathSvg, scope);
+		expect(result).toBeNull();
+	});
+
 	it('calls registered preprocessors with the imported item', () => {
 		const preprocessor = vi.fn((item: paper.Item) => item);
 		addPreprocessor(preprocessor);

@@ -35,6 +35,14 @@ export function importSvgFromString(svgText: string, scope: paper.PaperScope): P
 		processed = fn(processed);
 	}
 
+	// Reject compound paths (multiple subpaths / multiple M commands)
+	if (
+		processed instanceof paper.CompoundPath ||
+		processed.getItem({ class: paper.CompoundPath }) !== null
+	) {
+		return null;
+	}
+
 	// Find the first Path in the tree
 	const pathItem = findFirstPath(processed);
 	if (!pathItem) return null;

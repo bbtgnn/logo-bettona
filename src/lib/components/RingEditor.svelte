@@ -40,7 +40,7 @@
 		const path = await importSvg(file, importScope);
 
 		if (!path) {
-			importError = 'No paths found in this SVG file.';
+			importError = 'No valid path found. Make sure the SVG contains a single-contour path.';
 			return;
 		}
 
@@ -97,7 +97,10 @@
 				{/if}
 			</div>
 
-			<RingCanvas templatePath={ring.templatePath} />
+			<RingCanvas
+				templatePath={ring.templatePath}
+				onchange={(newPath) => updateRing(index, { templatePath: newPath })}
+			/>
 
 			<div class="flex flex-col gap-1">
 				<Label for="copies-{index}" class="text-xs">Copies</Label>
