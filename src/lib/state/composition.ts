@@ -22,7 +22,14 @@ export const colorMode = lsSync<ColorModeState>('color-mode', {
 const DEFAULT_RING: Ring = {
 	copies: 8,
 	color: '#000000',
-	templatePath: null,
+	templatePath: {
+		cmds: ['M', 'C', 'C'],
+		crds: [
+			20, 117.61326806392421, 59, 117.50800490602947, 32.43817613081838, 82.72961144836285,
+			61.688995215311024, 62.77907643368346, 83.43200751345759, 47.9492445945898, 101,
+			66.54953384995142, 180, 67.38673193607579
+		]
+	},
 	ringHeight: 0.12
 };
 

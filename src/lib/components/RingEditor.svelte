@@ -83,8 +83,13 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="px-3 pb-3 space-y-3">
+			<RingCanvas
+				templatePath={ring.templatePath}
+				onchange={(newPath) => updateRing(index, { templatePath: newPath })}
+			/>
+
 			<div class="flex flex-col gap-1">
-				<Label for="svg-upload-{index}" class="text-xs">Template SVG</Label>
+				<Label for="svg-upload-{index}" class="text-xs">Import SVG</Label>
 				<input
 					id="svg-upload-{index}"
 					type="file"
@@ -96,11 +101,6 @@
 					<p class="text-xs text-destructive">{importError}</p>
 				{/if}
 			</div>
-
-			<RingCanvas
-				templatePath={ring.templatePath}
-				onchange={(newPath) => updateRing(index, { templatePath: newPath })}
-			/>
 
 			<div class="flex flex-col gap-1">
 				<Label for="copies-{index}" class="text-xs">Copies</Label>
