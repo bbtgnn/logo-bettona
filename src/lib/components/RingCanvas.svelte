@@ -237,9 +237,8 @@
 			}
 		}
 
-		// 1. Render handle lines and handle circles for C segments (behind anchors)
-		for (const { segIdx, cmd } of anchorSegments) {
-			if (cmd !== 'C') continue;
+		// 1. Render handle lines and handle circles for any segment with non-zero handles (behind anchors)
+		for (const { segIdx } of anchorSegments) {
 			const seg = paperPath.segments[segIdx];
 			if (!seg) continue;
 
