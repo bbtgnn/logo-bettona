@@ -32,7 +32,7 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 		const tx = (x - bbox.x) / bbox.width;
 		const ty = (y - bbox.y) / bbox.height;
 		const angle = tx * alpha;
-		const r = radius * (1 - ring.ringHeight + ring.ringHeight * ty);
+		const r = radius * (1 - ring.ringHeight + ring.ringHeight * (1 - ty));
 		return { angle, r };
 	}
 
@@ -123,7 +123,7 @@ function transformHandle(
 	// Tangential: scales with arc length at anchorR
 	const tangentialMag = dx * alpha * anchorR;
 	// Radial: scales with ring height in world units
-	const radialMag = dy * ring.ringHeight * radius;
+	const radialMag = -dy * ring.ringHeight * radius;
 
 	// Tangent direction at anchorAngle: perpendicular to radius, in direction of increasing angle
 	const tangentDir = new paper.Point(-Math.sin(sign * anchorAngle), Math.cos(sign * anchorAngle)).multiply(sign);
