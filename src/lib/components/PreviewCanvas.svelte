@@ -2,9 +2,10 @@
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { composition } from '$lib/state/composition';
-	import { renderComposition, fitToView } from '$lib/geometry/compose';
+	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
 
 	let scope: paper.PaperScope;
+	const renderPipeline = createRenderPipeline();
 
 	function setupCanvas(canvas: HTMLCanvasElement) {
 		scope = new paper.PaperScope();
@@ -12,17 +13,22 @@
 
 		// redraw() only writes to paper.js canvas — no $state reassignment
 		$effect(() => {
-			redraw(composition);
+			const comp = composition;
+			renderPipeline.render({
+				composition: comp,
+				scope,
+				viewport: {
+					width: scope.view.size.width,
+					height: scope.view.size.height,
+					padding: 32
+				}
+			});
 		});
 
 		return () => {
 			scope.project.clear();
+			renderPipeline.dispose();
 		};
-	}
-
-	function redraw(comp: typeof composition) {
-		renderComposition(comp, scope);
-		fitToView(scope);
 	}
 
 	function exportSvg() {
