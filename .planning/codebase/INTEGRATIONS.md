@@ -4,69 +4,66 @@
 
 ## APIs & External Services
 
-**Runtime application APIs:**
-- Not detected in application source under `src/` (no `fetch(...)` usage and no API SDK imports found in route/component/state modules)
+**Third-party APIs:**
+- Not detected in application source (`src/` contains no Stripe/Supabase/AWS/OpenAI-style SDK usage and no HTTP client integration layer).
   - SDK/Client: Not applicable
   - Auth: Not applicable
 
-**Developer tooling services:**
-- Svelte MCP endpoint for IDE integration declared in `.cursor/mcp.json`
-  - SDK/Client: MCP server URL `https://mcp.svelte.dev/mcp` in `.cursor/mcp.json`
-  - Auth: Not specified in repository config
+**Browser platform services:**
+- LocalStorage-backed persistence via `rune-sync/localstorage` in `src/lib/state/composition.ts`.
+  - SDK/Client: `rune-sync`
+  - Auth: Not applicable
 
 ## Data Storage
 
 **Databases:**
-- Not detected (no DB client/ORM usage in `src/`, no server directory under `src/lib/server/`)
+- None detected (no ORM/client packages in `package.json`, no server endpoints in `src/routes/**/*+server.*`).
   - Connection: Not applicable
   - Client: Not applicable
 
 **File Storage:**
-- Local static assets only (`static/`, `$lib/assets` import in `src/routes/+layout.svelte`)
+- Local project assets and static build output only; no external object storage SDK detected.
 
 **Caching:**
-- Browser localStorage-backed reactive state via `rune-sync/localstorage` (`src/lib/state/composition.ts`)
+- None detected beyond client-side in-memory/runtime state and browser localStorage usage in `src/lib/state/composition.ts`.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None detected
-  - Implementation: Not applicable
+- Custom/External auth not detected.
+  - Implementation: Not applicable (static client-rendered app with `ssr = false` in `src/routes/+layout.ts`).
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None detected (no Sentry/Bugsnag/etc. packages or imports in `package.json` and `src/`)
+- None detected (no Sentry/Bugsnag/Rollbar SDKs in `package.json` or `src/` imports).
 
 **Logs:**
-- Not detected as a dedicated logging framework in app code (`src/`)
+- No centralized logging integration detected; project relies on local dev/test tooling logs from Vite/Vitest/Playwright scripts in `package.json`.
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- GitHub Pages static hosting pipeline (`.github/workflows/deploy.yml` with `actions/deploy-pages@v4`)
+- Static hosting compatible output via `@sveltejs/adapter-static` in `svelte.config.js`.
 
 **CI Pipeline:**
-- GitHub Actions workflow triggers on pushes to `main` (`.github/workflows/deploy.yml`)
-- Build uses Bun (`oven-sh/setup-bun@v2`, `bun i`, `bun run build` in `.github/workflows/deploy.yml`)
+- Not detected (no CI workflow configuration files detected in repository scan).
 
 ## Environment Configuration
 
 **Required env vars:**
-- `BASE_PATH` is provided in CI during build (`.github/workflows/deploy.yml`)
-- No other app env-var consumption detected (`src/` has no `process.env` or `import.meta.env` matches)
+- None detected for application runtime under `src/` (no `process.env`, `import.meta.env`, or `$env` references).
 
 **Secrets location:**
-- GitHub Actions repository/environment secrets (implied by workflow environment model in `.github/workflows/deploy.yml`)
-- No secret files detected in repository root for runtime configuration
+- Not applicable for current app runtime (no secret-backed integrations detected).
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None detected (no webhook endpoints in `src/routes/` or server handlers)
+- None detected (no server webhook handlers; no `+server` endpoints present under `src/routes/`).
 
 **Outgoing:**
-- None detected (no webhook emitters or external callback clients in `src/`)
+- None detected (no external API client calls identified in app source).
 
 ---
 

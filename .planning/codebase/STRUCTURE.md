@@ -6,108 +6,123 @@
 
 ```text
 logo-bettona/
-├── src/                     # SvelteKit app source (routes, components, domain logic)
-├── static/                  # Static public assets served as-is
-├── .cursor/                 # Project-local GSD workflows, skills, and agent metadata
-├── .github/workflows/       # CI/CD workflow definitions
-├── .planning/codebase/      # Generated codebase mapping documents
-├── package.json             # Scripts, dependencies, and toolchain entrypoint
-├── svelte.config.js         # SvelteKit + adapter configuration
-├── vite.config.ts           # Vite and Vitest projects configuration
-├── playwright.config.ts     # Playwright e2e test configuration
-└── tsconfig.json            # TypeScript compiler constraints
+├── src/                    # Application source code (SvelteKit routes + shared lib)
+│   ├── routes/             # Route entry points, layouts, and route-local experiments
+│   └── lib/                # Reusable app modules (components, state, geometry, UI kit)
+├── static/                 # Public static assets served as-is
+├── docs/                   # Project notes/specs and planning artifacts outside runtime app
+├── .cursor/                # Local workflow automation, skills, and agent definitions
+├── .planning/              # Generated codebase/planning documents
+├── package.json            # Scripts and dependency manifest
+├── svelte.config.js        # SvelteKit and compiler configuration
+├── vite.config.ts          # Vite + Vitest project configuration
+└── tsconfig.json           # TypeScript compiler settings
 ```
 
 ## Directory Purposes
 
 **`src/routes`:**
-- Purpose: Defines navigable pages and app shell.
-- Contains: `+layout.svelte`, `+layout.ts`, `+page.svelte`, plus route folders under `demo/` and `experiments/`.
-- Key files: `src/routes/+page.svelte`, `src/routes/+layout.ts`, `src/routes/demo/playwright/+page.svelte`.
+- Purpose: SvelteKit routing layer and page-level entry points.
+- Contains: `+layout.ts`, `+layout.svelte`, `+page.svelte`, and feature/demo route trees.
+- Key files: `src/routes/+page.svelte`, `src/routes/experiments/+page.svelte`, `src/routes/demo/playwright/+page.svelte`.
 
 **`src/lib/components`:**
-- Purpose: Houses feature-level UI components for editing and previewing compositions.
-- Contains: Sidebar, editors, canvas renderers, and reusable section components.
-- Key files: `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/PreviewCanvas.svelte`, `src/lib/components/RingCanvas.svelte`.
+- Purpose: Feature-level UI components for the shape editor.
+- Contains: Editable panels, canvas renderers, and composed sections.
+- Key files: `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/PreviewCanvas.svelte`.
 
 **`src/lib/state`:**
-- Purpose: Centralized client state, mutations, and persistence bindings.
-- Contains: `composition` state and action functions.
+- Purpose: Shared mutable application state and state mutation API.
+- Contains: Composition state, palette state, UI expansion state.
 - Key files: `src/lib/state/composition.ts`.
 
 **`src/lib/geometry`:**
-- Purpose: Geometry transforms, rendering pipeline, and SVG import conversion.
-- Contains: Pure TS modules with Paper.js integration and related tests.
-- Key files: `src/lib/geometry/bend.ts`, `src/lib/geometry/compose.ts`, `src/lib/geometry/svg-import.ts`.
+- Purpose: Geometry transformation, render orchestration, and SVG import adapters.
+- Contains: Paper.js pipeline modules and parsing logic.
+- Key files: `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/bend.ts`, `src/lib/geometry/svg-import.ts`.
+
+**`src/lib/color`:**
+- Purpose: Palette parsing and color application algorithms.
+- Contains: Color-mode algorithms and helpers.
+- Key files: `src/lib/color/apply.ts`.
 
 **`src/lib/shadcn`:**
-- Purpose: UI primitive wrappers and utility modules used by feature components.
-- Contains: component folders with Svelte primitives and `index.ts` barrel exports.
+- Purpose: Design-system primitives and utility wrappers used by feature UI.
+- Contains: UI primitives (`ui/*`), hooks, and utility helpers.
 - Key files: `src/lib/shadcn/ui/sidebar/index.ts`, `src/lib/shadcn/ui/button/index.ts`, `src/lib/shadcn/utils.ts`.
+
+**`src/lib/vitest-examples`:**
+- Purpose: Example/demo test assets separate from core feature logic.
+- Contains: Sample Svelte and TypeScript units with tests.
+- Key files: `src/lib/vitest-examples/Welcome.svelte`, `src/lib/vitest-examples/greet.spec.ts`.
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/routes/+layout.svelte`: Global app layout and shared head/body setup.
-- `src/routes/+layout.ts`: Runtime mode flags (`prerender`, `ssr`).
-- `src/routes/+page.svelte`: Root editor page composition.
+- `src/app.html`: Base HTML document template for SvelteKit.
+- `src/routes/+layout.ts`: Runtime mode flags (`prerender`, `ssr`) for route tree.
+- `src/routes/+layout.svelte`: Global CSS and favicon wiring.
+- `src/routes/+page.svelte`: Primary feature composition entry.
 
 **Configuration:**
-- `package.json`: npm scripts and dependency graph.
-- `svelte.config.js`: Static adapter and Svelte compiler options (runes policy).
-- `vite.config.ts`: Vite plugins and split Vitest projects.
-- `playwright.config.ts`: Browser e2e test runner configuration.
-- `eslint.config.js`: Linting configuration for JS/TS/Svelte.
+- `package.json`: Script entry points for dev/build/check/test.
+- `svelte.config.js`: Static adapter + runes compiler behavior.
+- `vite.config.ts`: Vite plugins and Vitest project matrix.
+- `playwright.config.ts`: E2E runner setup and preview server command.
+- `eslint.config.js`: Linting stack for JS/TS/Svelte.
+- `components.json`: shadcn alias and style configuration.
 
 **Core Logic:**
-- `src/lib/state/composition.ts`: Domain state and mutation API.
-- `src/lib/color/apply.ts`: Color assignment logic for modes/palettes.
-- `src/lib/geometry/bend.ts`: Ring deformation/path construction logic.
-- `src/lib/geometry/compose.ts`: Final draw ordering and view fitting.
-- `src/lib/geometry/svg-import.ts`: SVG-to-domain-path ingestion.
+- `src/lib/state/composition.ts`: Domain state and mutation boundary.
+- `src/lib/geometry/render-pipeline.ts`: Render lifecycle + validation.
+- `src/lib/geometry/bend.ts`: Template-to-ring geometric transformation.
+- `src/lib/geometry/svg-import.ts`: SVG path ingestion into internal path schema.
+- `src/lib/types.ts`: Shared domain types across UI/state/geometry.
 
 **Testing:**
-- `src/lib/geometry/*.svelte.spec.ts`: Geometry and import behavior tests.
-- `src/lib/vitest-examples/*.spec.ts`: Minimal Vitest sample tests.
-- `src/routes/demo/playwright/page.svelte.e2e.ts`: Playwright e2e smoke test.
+- `src/lib/**/*.spec.ts`: Unit tests colocated with implementation modules.
+- `src/routes/demo/playwright/page.svelte.e2e.ts`: E2E coverage for route behavior.
+- `vite.config.ts`: Client/server test project split.
 
 ## Naming Conventions
 
 **Files:**
-- Svelte route files follow SvelteKit naming (`+layout.svelte`, `+page.svelte`) in `src/routes/`.
-- Feature components use PascalCase (`src/lib/components/PreviewCanvas.svelte`, `src/lib/components/SettingsSection.svelte`).
-- Domain/util modules use kebab-case or lowercase words (`src/lib/geometry/svg-import.ts`, `src/lib/color/apply.ts`).
+- Svelte components use PascalCase names in feature/UI folders: `PreviewCanvas.svelte`, `RingEditor.svelte`.
+- Logic modules use kebab-case names in domain folders: `render-pipeline.ts`, `svg-import.ts`.
+- Tests use `*.spec.ts` for unit tests and `*.e2e.ts` for Playwright tests.
+- Route files follow SvelteKit conventions: `+layout.svelte`, `+page.svelte`, `+layout.ts`.
 
 **Directories:**
-- Feature/domain grouping by concern (`src/lib/components`, `src/lib/state`, `src/lib/geometry`, `src/lib/color`).
-- UI primitive directories are namespaced under `src/lib/shadcn/ui/<component>/`.
+- Feature/domain grouping under `src/lib/` uses lowercase folder names: `components`, `state`, `geometry`, `color`.
+- Nested design-system primitives are namespaced by component family: `src/lib/shadcn/ui/sidebar/`, `src/lib/shadcn/ui/sheet/`.
 
 ## Where to Add New Code
 
 **New Feature:**
-- Primary code: add feature UI in `src/lib/components/` and state mutations in `src/lib/state/composition.ts` (or sibling state module when scope grows).
-- Tests: place unit/component tests under `src/lib/<feature>/` as `*.spec.ts` or `*.svelte.spec.ts`; place browser-flow tests under `src/routes/**/` as `*.e2e.ts`.
+- Primary code: add feature components to `src/lib/components/` and route wiring in `src/routes/`.
+- Tests: colocate `*.spec.ts` beside logic modules (for example under `src/lib/geometry/` or `src/lib/color/`), and add `*.e2e.ts` under relevant route subtree when behavior is page-level.
 
 **New Component/Module:**
-- Implementation: put editor-facing components in `src/lib/components/`; if primitive-level and reusable, add in `src/lib/shadcn/ui/<name>/` with an `index.ts` export file.
+- Implementation: use `src/lib/components/` for UI components and `src/lib/{domain}/` for logic modules (for example `src/lib/geometry/` for render/math concerns).
 
 **Utilities:**
-- Shared helpers: geometry helpers in `src/lib/geometry/`, color helpers in `src/lib/color/`, generic app exports in `src/lib/index.ts`.
+- Shared helpers: add to closest domain folder (`src/lib/color/`, `src/lib/geometry/`, `src/lib/state/`).
+- Cross-domain UI utilities: place in `src/lib/shadcn/utils.ts` or a focused sibling utility module under `src/lib/shadcn/`.
 
 ## Special Directories
 
-**`src/lib/vitest-examples`:**
-- Purpose: Demonstrates baseline Vitest patterns for TS and Svelte component tests.
-- Generated: No.
+**`.cursor/`:**
+- Purpose: Agent workflows, skills, templates, and tooling metadata.
+- Generated: Yes (tool-managed plus project-managed files).
 - Committed: Yes.
 
-**`src/routes/demo` and `src/routes/experiments`:**
-- Purpose: Lightweight playground/demonstration routes for e2e checks and Paper.js experiments.
-- Generated: No.
+**`.planning/`:**
+- Purpose: Planning and mapping artifacts consumed by GSD workflows.
+- Generated: Yes.
 - Committed: Yes.
 
-**`.cursor/get-shit-done` and `.cursor/skills`:**
-- Purpose: Workflow automation, templates, and command skills used by GSD tooling.
+**`static/`:**
+- Purpose: Public files served directly by the static adapter.
 - Generated: No.
 - Committed: Yes.
 

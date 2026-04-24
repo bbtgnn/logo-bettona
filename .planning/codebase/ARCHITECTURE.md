@@ -4,108 +4,123 @@
 
 ## Pattern Overview
 
-**Overall:** Client-side SvelteKit single-page editor with domain-first modules and component-composed UI.
+**Overall:** Frontend feature-sliced architecture with route shell + state service + geometry pipeline modules.
 
 **Key Characteristics:**
-- Routing and shell are defined in `src/routes/+layout.svelte` and `src/routes/+page.svelte`, with rendering forced to static client mode via `src/routes/+layout.ts`.
-- Business state is centralized in persistent rune-sync stores in `src/lib/state/composition.ts` and consumed directly by UI components.
-- Geometry/rendering logic is isolated in pure TypeScript modules under `src/lib/geometry/` and invoked by canvas components.
+- UI composition is route-driven from `src/routes/+page.svelte` and delegated to focused components in `src/lib/components/`.
+- Domain logic is extracted into pure TypeScript modules in `src/lib/geometry/` and `src/lib/color/`.
+- Application state is centralized in `src/lib/state/composition.ts` and persisted through `rune-sync/localstorage`.
 
 ## Layers
 
-**Route and App Shell Layer:**
-- Purpose: Owns page composition, global CSS, and top-level navigation/entry behavior.
-- Location: `src/routes/`, `src/routes/+layout.svelte`, `src/routes/+page.svelte`, `src/routes/layout.css`.
-- Contains: Route-level Svelte files, demo/experiment routes, and global style tokens.
-- Depends on: UI components from `$lib/components` and shadcn wrappers in `$lib/shadcn`.
-- Used by: SvelteKit runtime bootstrapped from `src/app.html`.
+**Route & App Shell Layer:**
+- Purpose: Bootstraps SvelteKit app shell and page-level composition.
+- Location: `src/app.html`, `src/routes/+layout.ts`, `src/routes/+layout.svelte`, `src/routes/+page.svelte`
+- Contains: Layout flags, global styles import, root page composition.
+- Depends on: SvelteKit runtime and `$lib` components.
+- Used by: Browser entry flow for all routes.
 
 **Feature UI Layer:**
-- Purpose: Implements editor interactions for rings, palettes, settings, and export actions.
-- Location: `src/lib/components/`.
-- Contains: Stateful Svelte components such as `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/PreviewCanvas.svelte`, `src/lib/components/ColorsSection.svelte`.
-- Depends on: State module `src/lib/state/composition.ts`, geometry modules in `src/lib/geometry/`, and primitives in `src/lib/shadcn/ui/`.
-- Used by: Route page `src/routes/+page.svelte`.
+- Purpose: Renders controls, editor panels, and canvas containers.
+- Location: `src/lib/components/`
+- Contains: `Sidebar.svelte`, `RingEditor.svelte`, `PreviewCanvas.svelte`, `ColorsSection.svelte`, `SettingsSection.svelte`.
+- Depends on: `src/lib/state/composition.ts`, `src/lib/geometry/*`, `src/lib/shadcn/ui/*`.
+- Used by: Route pages, primarily `src/routes/+page.svelte`.
 
-**State and Domain Layer:**
-- Purpose: Defines composition domain model and mutating operations used across the editor.
-- Location: `src/lib/types.ts`, `src/lib/state/composition.ts`, `src/lib/color/apply.ts`.
-- Contains: Core types (`Path`, `Ring`, `Composition`) and state mutation functions (`addRing`, `updateRing`, `setColorMode`, palette management).
-- Depends on: `rune-sync/localstorage` persistence and color helpers.
-- Used by: Most editor components and exported via `src/lib/index.ts`.
+**State & Domain Orchestration Layer:**
+- Purpose: Owns composition state, color mode state, UI expansion state, and mutation actions.
+- Location: `src/lib/state/composition.ts`
+- Contains: `composition`, `colorMode`, `uiState`, and mutators (`addRing`, `updateRing`, `setColorMode`, `reorderRings`, etc.).
+- Depends on: `rune-sync/localstorage`, `src/lib/types.ts`, `src/lib/color/apply.ts`.
+- Used by: UI components and render-triggered effects.
 
-**Geometry and Rendering Layer:**
-- Purpose: Converts imported path data into ring geometry and paints final composition on Paper.js canvases.
-- Location: `src/lib/geometry/bend.ts`, `src/lib/geometry/compose.ts`, `src/lib/geometry/svg-import.ts`.
-- Contains: SVG import/parsing, ring path deformation, render ordering, fit-to-view scaling.
-- Depends on: Paper.js (`paper`) and shared domain types from `src/lib/types.ts`.
-- Used by: `src/lib/components/RingEditor.svelte`, `src/lib/components/RingCanvas.svelte`, `src/lib/components/PreviewCanvas.svelte`.
+**Geometry & Rendering Layer:**
+- Purpose: Converts ring templates to rendered Paper.js paths and manages draw lifecycle.
+- Location: `src/lib/geometry/`
+- Contains: `render-pipeline.ts`, `bend.ts`, `svg-import.ts`, `compose.ts`.
+- Depends on: `paper` and `src/lib/types.ts`.
+- Used by: `src/lib/components/PreviewCanvas.svelte`, `src/lib/components/RingEditor.svelte`, tests in `src/lib/geometry/*.spec.ts`.
+
+**Design System Layer:**
+- Purpose: Provides reusable UI primitives and styling contracts.
+- Location: `src/lib/shadcn/`
+- Contains: Generated and adapted shadcn-svelte primitives (sidebar, button, input, tooltip, sheet, etc.).
+- Depends on: Svelte, Bits UI ecosystem, Tailwind styles in `src/routes/layout.css`.
+- Used by: Feature components in `src/lib/components/`.
 
 ## Data Flow
 
-**Editor Interaction Flow:**
-1. User input in components (`src/lib/components/SettingsSection.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/ColorsSection.svelte`) calls mutation functions from `src/lib/state/composition.ts`.
-2. Mutations update rune-sync backed objects (`composition`, `colorMode`, `uiState`) in `src/lib/state/composition.ts`, persisting to localStorage.
-3. Reactive effects in canvas components (`src/lib/components/PreviewCanvas.svelte`, `src/lib/components/RingCanvas.svelte`) trigger geometry/render functions in `src/lib/geometry/compose.ts` and related modules.
-4. Paper.js view updates redraw visual output and optionally export to SVG from `src/lib/components/PreviewCanvas.svelte`.
+**Ring Editing to Canvas Render:**
 
-**SVG Import Flow:**
-1. File input in `src/lib/components/RingEditor.svelte` passes selected file to `importSvg` from `src/lib/geometry/svg-import.ts`.
-2. Import pipeline parses and validates path shape, rejecting compound paths in `src/lib/geometry/svg-import.ts`.
-3. Imported `Path` data is written into the selected ring through `updateRing` in `src/lib/state/composition.ts`.
-4. Updated ring data propagates to editors/previews and is rendered through `buildRingPath` in `src/lib/geometry/bend.ts`.
+1. User interaction in `src/lib/components/RingEditor.svelte` or `src/lib/components/Sidebar.svelte` invokes mutation functions from `src/lib/state/composition.ts`.
+2. `composition` and related state stores update and persist to local storage via `lsSync` in `src/lib/state/composition.ts`.
+3. Reactive effect in `src/lib/components/PreviewCanvas.svelte` observes `composition` and calls `createRenderPipeline().render(...)` from `src/lib/geometry/render-pipeline.ts`.
+4. Render pipeline validates input, builds ring paths with `buildRingPath` in `src/lib/geometry/bend.ts`, clears/updates Paper.js scope, and redraws canvas.
+
+**SVG Import to Ring Template:**
+
+1. File input in `src/lib/components/RingEditor.svelte` calls `importSvg(file, importScope)` in `src/lib/geometry/svg-import.ts`.
+2. SVG parser normalizes/imports the first valid path and converts segments to project `Path` shape in `segmentsToPath`.
+3. Resulting `templatePath` is applied through `updateRing(...)` in `src/lib/state/composition.ts`.
+4. Updated ring template is consumed on next render cycle by `src/lib/geometry/render-pipeline.ts`.
 
 **State Management:**
-- Use `lsSync` stores from `rune-sync/localstorage` in `src/lib/state/composition.ts` as the single source of truth for editor and palette state.
-- Keep domain mutations inside `src/lib/state/composition.ts`; components should call exported functions rather than mutate nested state ad hoc.
+- State is mutable reactive module state using rune-sync `lsSync` in `src/lib/state/composition.ts`.
+- UI state and model state are colocated in the same state module, with UI-only map at `uiState.expandedRings`.
 
 ## Key Abstractions
 
 **Composition Model:**
-- Purpose: Represents the full editable artifact (rings + palette + layout parameters).
-- Examples: `Composition` in `src/lib/types.ts`, `composition` store in `src/lib/state/composition.ts`.
-- Pattern: Strongly-typed shared model passed through reactive stores.
+- Purpose: Canonical app domain model for rings, palettes, and geometry parameters.
+- Examples: `src/lib/types.ts`, `src/lib/state/composition.ts`
+- Pattern: Shared TypeScript types with a single mutable source-of-truth state module.
 
-**Path Representation:**
-- Purpose: Store editable/imported vector paths as command + coordinate arrays.
-- Examples: `Path` in `src/lib/types.ts`, conversion logic in `src/lib/geometry/svg-import.ts` and `src/lib/components/RingCanvas.svelte`.
-- Pattern: Domain-specific serialized path format independent of Paper.js runtime objects.
+**Render Pipeline Boundary:**
+- Purpose: Encapsulates rendering lifecycle and input validation around Paper.js.
+- Examples: `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/compose.ts`
+- Pattern: Factory-based service (`createRenderPipeline`) returning explicit `render` and `dispose` methods.
 
-**Shadcn Wrapper Modules:**
-- Purpose: Consolidate primitive exports and keep feature components consuming stable wrapper interfaces.
-- Examples: `src/lib/shadcn/ui/sidebar/index.ts`, `src/lib/shadcn/ui/button/index.ts`, `src/lib/shadcn/ui/collapsible/index.ts`.
-- Pattern: Barrel re-export modules for UI primitives.
+**Path Conversion Boundary:**
+- Purpose: Normalizes SVG and template paths into internal `Path` command/coordinate representation.
+- Examples: `src/lib/geometry/svg-import.ts`, `src/lib/geometry/bend.ts`
+- Pattern: Adapter and transformation functions around a stable internal format (`Path` in `src/lib/types.ts`).
 
 ## Entry Points
 
-**Primary App Entry:**
-- Location: `src/routes/+page.svelte`.
-- Triggers: Browser navigation to root route.
-- Responsibilities: Composes sidebar editor and preview area using shadcn sidebar layout.
+**Application Entry Point:**
+- Location: `src/app.html`
+- Triggers: Browser load of SvelteKit app.
+- Responsibilities: Host HTML shell and SvelteKit placeholders.
 
-**Global Layout Entry:**
-- Location: `src/routes/+layout.svelte` with flags in `src/routes/+layout.ts`.
-- Triggers: Any route render.
-- Responsibilities: Injects global CSS, favicon, and route child rendering; enforces static prerender and disables SSR.
+**Layout Entry Point:**
+- Location: `src/routes/+layout.ts` and `src/routes/+layout.svelte`
+- Triggers: Route initialization.
+- Responsibilities: Static export config (`prerender`, `ssr`), global CSS import, favicon setup, child route rendering.
 
-**Experimental/Testing Entries:**
-- Location: `src/routes/demo/+page.svelte`, `src/routes/demo/playwright/+page.svelte`, `src/routes/experiments/+page.svelte`.
-- Triggers: Manual navigation to demo/experiment routes and e2e path.
-- Responsibilities: Host minimal routes for Playwright validation and Paper.js experimentation.
+**Main Feature Entry Point:**
+- Location: `src/routes/+page.svelte`
+- Triggers: Root route navigation.
+- Responsibilities: Compose sidebar/editor region and preview canvas region.
+
+**Experimental Entry Point:**
+- Location: `src/routes/experiments/+page.svelte` and `src/routes/experiments/paper.ts`
+- Triggers: Navigation to experiments route.
+- Responsibilities: Isolated Paper.js interaction experiments separate from main editor flow.
 
 ## Error Handling
 
-**Strategy:** Guard-return and validation-first behavior, with lightweight user-facing messaging in components.
+**Strategy:** Fail-fast validation at rendering boundaries; soft failure for per-ring rendering.
 
 **Patterns:**
-- Geometry/import modules return `null` on invalid/unsupported input instead of throwing outward (`src/lib/geometry/svg-import.ts`, `src/lib/geometry/bend.ts`).
-- UI components gate actions with early returns and local error state (`importError` in `src/lib/components/RingEditor.svelte`).
+- Input validation uses explicit assertions and throws `RenderPipelineError` in `src/lib/geometry/render-pipeline.ts`.
+- Per-ring rendering failures are downgraded to warnings and skip behavior in `src/lib/geometry/render-pipeline.ts`.
+- SVG import uses null-return fallback on invalid input in `src/lib/geometry/svg-import.ts`.
 
 ## Cross-Cutting Concerns
 
-**Logging:** No dedicated logging subsystem detected; runtime behavior is handled directly without structured logs.
-**Validation:** Input/path validation is implemented in `src/lib/geometry/svg-import.ts` and `src/lib/color/apply.ts` (e.g., hex color filtering).
-**Authentication:** Not applicable; no auth middleware, user identity flow, or protected server endpoints detected.
+**Logging:** Not detected as a centralized concern; no app-level logger module is present.
+**Validation:** Geometry/render input validation in `src/lib/geometry/render-pipeline.ts`; SVG structural validation in `src/lib/geometry/svg-import.ts`.
+**Authentication:** Not applicable for this static client-side editor (`src/routes/+layout.ts` sets `ssr = false` and no auth modules are present).
 
 ---
 

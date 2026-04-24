@@ -4,94 +4,127 @@
 
 ## Tech Debt
 
-**Highly coupled interactive canvas editor:**
-- Issue: `RingCanvas.svelte` combines path parsing, geometry transforms, drawing, and drag interaction handling in one large component, which makes behavior changes risky.
-- Files: `src/lib/components/RingCanvas.svelte`
-- Impact: Refactors and bugfixes in one interaction path can regress unrelated editing behavior.
-- Fix approach: Split into focused modules (`path-conversion`, `interaction`, `rendering`) and keep `RingCanvas.svelte` as orchestration-only.
+**Client state and domain logic are tightly coupled:**
+- Issue: UI-facing storage state, palette application, ring list mutations, and reordering all live in one mutable module.
+- Files: `src/lib/state/composition.ts`, `src/lib/components/Sidebar.svelte`, `src/lib/components/ColorsSection.svelte`
+- Impact: behavioral changes are harder to isolate, and regressions in one concern can affect unrelated editor behavior.
+- Fix approach: split `src/lib/state/composition.ts` into focused modules (`palette-state`, `ring-state`, `ui-state`) and keep orchestration in a thin facade API.
 
-**Global mutable preprocessor pipeline for SVG import:**
-- Issue: SVG preprocessors are stored in a module-level mutable array (`preprocessors`) without scoping to a specific editor/session.
-- Files: `src/lib/geometry/svg-import.ts`
-- Impact: Preprocessors can leak across consumers and tests if cleanup is missed, causing non-obvious import behavior changes.
-- Fix approach: Replace global registry with explicit preprocessor injection per `importSvgFromString()` call.
+**Geometry serialization logic duplicated across modules:**
+- Issue: path command/coordinate conversions and path construction are repeated in multiple places.
+- Files: `src/lib/geometry/svg-import.ts`, `src/lib/components/RingCanvas.svelte`, `src/lib/geometry/bend.ts`
+- Impact: subtle drift between conversion rules can produce non-equivalent geometry behavior and harder debugging.
+- Fix approach: extract a shared geometry codec utility in `src/lib/geometry/` and reuse it from import, editor, and bend/render code.
+
+**Pipeline lifecycle intentionally deferred:**
+- Issue: render pipeline exposes `dispose()` but it is currently a no-op with explicit defer comment.
+- Files: `src/lib/geometry/render-pipeline.ts`, `src/lib/components/PreviewCanvas.svelte`
+- Impact: future resources (subscriptions, caches, pooled objects) can leak if cleanup remains unimplemented.
+- Fix approach: define disposal contract now (clear retained references, unregister listeners) and test with a lifecycle spec.
 
 ## Known Bugs
 
-**Drag state can remain stale when drag ends outside valid drop target:**
-- Symptoms: Reordering can behave inconsistently after interrupted drag/drop because `dragFromIndex` only resets in drop handler.
-- Files: `src/lib/components/Sidebar.svelte`
-- Trigger: Start dragging a ring, then cancel/drop outside a valid drop zone.
-- Workaround: Perform a successful drop interaction before the next drag attempt.
+**Collapsed/expanded ring UI can drift after reorder/remove:**
+- Symptoms: ring panel open state can appear on the wrong ring after drag/drop reorder or ring deletion.
+- Files: `src/lib/state/composition.ts`, `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`
+- Trigger: reorder in `Sidebar.svelte` is index-based, while expanded state is stored as `expandedRings[index]`.
+- Workaround: manually re-open/close affected ring panels after reorder.
+
+**Duplicate palette colors can cause unstable keyed rendering:**
+- Symptoms: color swatches may remount or behave unexpectedly when duplicate color values exist in a palette.
+- Files: `src/lib/components/FullPaletteEditor.svelte`
+- Trigger: swatches are keyed by color value (`{#each active.colors as color (color)}`), which is non-unique for repeated colors.
+- Workaround: use unique colors in palette entries.
 
 ## Security Considerations
 
-**Unbounded SVG input processing from local file uploads:**
-- Risk: Arbitrarily large/complex SVGs are loaded into memory and parsed without explicit file size/complexity limits.
+**Unbounded SVG import from user input:**
+- Risk: very large or complex SVGs can cause client-side CPU/memory exhaustion during import and transform.
 - Files: `src/lib/components/RingEditor.svelte`, `src/lib/geometry/svg-import.ts`
-- Current mitigation: Invalid SVG parse is caught and returns `null`.
-- Recommendations: Enforce max file size and path segment thresholds before calling `importSVG`.
+- Current mitigation: malformed/unsupported SVGs return `null`; compound paths are rejected.
+- Recommendations: enforce file size and path complexity limits before `importSVG`, and surface explicit validation errors.
+
+**No centralized trust boundary for imported path data:**
+- Risk: imported path coordinates can include extreme values that stress rendering math and generate pathological bounds.
+- Files: `src/lib/geometry/svg-import.ts`, `src/lib/geometry/bend.ts`, `src/lib/geometry/render-pipeline.ts`
+- Current mitigation: render pipeline catches per-ring failures and continues.
+- Recommendations: add coordinate/ring parameter normalization and hard clamps in a single validation layer.
 
 ## Performance Bottlenecks
 
-**Full redraw on every reactive composition update:**
-- Problem: The preview triggers `renderComposition()` and `fitToView()` for any composition change, and `renderComposition()` clears/rebuilds the full scene each time.
-- Files: `src/lib/components/PreviewCanvas.svelte`, `src/lib/geometry/compose.ts`
-- Cause: Coarse-grained reactive redraw strategy with no incremental update path.
-- Improvement path: Track per-ring diffs and update only changed paths; debounce slider-driven updates.
-
-**Heavy interaction redraw loop in ring editor:**
-- Problem: Interactive edits rebuild visual controls and path state repeatedly through `draw()` and synchronization logic.
+**High-frequency full redraw during interactive editing:**
+- Problem: every drag event in the ring editor rebuilds geometry and updates view synchronously.
 - Files: `src/lib/components/RingCanvas.svelte`
-- Cause: Dense per-event computations and repeated object churn in mouse-drag handlers.
-- Improvement path: Cache immutable geometry artifacts and isolate expensive recalculations to changed segments.
+- Cause: `onMouseDrag` handlers recompute and emit full path updates on every pointer delta.
+- Improvement path: batch updates with `requestAnimationFrame`, debounce model sync, and avoid full scene rebuild when only handle visuals move.
+
+**Ring rendering scales with ring count and copy count:**
+- Problem: render cost grows quickly as copies increase because segments are rebuilt and tiled every render.
+- Files: `src/lib/geometry/bend.ts`, `src/lib/geometry/render-pipeline.ts`, `src/lib/components/PreviewCanvas.svelte`
+- Cause: per-render recomputation of transformed segments for every ring and copy.
+- Improvement path: memoize transformed templates by `(templatePath, ringHeight, copies)` and only recompute changed rings.
 
 ## Fragile Areas
 
-**Index-keyed list rendering for reorderable ring editors:**
-- Files: `src/lib/components/Sidebar.svelte`
-- Why fragile: `{#each composition.rings as ring, i (i)}` uses index as key, which can mismatch component identity when items are reordered.
-- Safe modification: Key by stable ring ID rather than index; add ID in `Ring` model and preserve across reorder.
-- Test coverage: No component tests assert identity/state correctness after reorder operations.
+**Large, interaction-dense editor component:**
+- Files: `src/lib/components/RingCanvas.svelte`
+- Why fragile: path conversion, drawing, drag behavior, smoothing logic, and UI synchronization are all in one ~400-line file.
+- Safe modification: isolate pure helpers (`buildPaperPath`, `paperPathToPath`, smoothing transforms) into `src/lib/geometry/` and add focused unit tests before behavior edits.
+- Test coverage: no dedicated tests for `RingCanvas.svelte`.
 
-**Ring geometry assumes valid non-zero copies without runtime guard:**
-- Files: `src/lib/geometry/bend.ts`, `src/lib/types.ts`
-- Why fragile: `buildRingPath()` computes `Math.PI / ring.copies`; invalid persisted data (`copies <= 0`) can generate invalid geometry math.
-- Safe modification: Add runtime validation/clamping in state update and geometry entry points.
-- Test coverage: Existing geometry tests focus on normal valid inputs only.
+**Complex path transformation algorithm with many geometric assumptions:**
+- Files: `src/lib/geometry/bend.ts`
+- Why fragile: algorithm combines bbox normalization, polar mapping, handle transformation, mirroring, and tiling in one code path.
+- Safe modification: preserve behavior with golden tests for representative templates before changing transformation math.
+- Test coverage: `src/lib/geometry/bend.svelte.spec.ts` exists, but it does not fully protect all degenerate/edge geometry inputs.
 
 ## Scaling Limits
 
-**Ring/path complexity grows without constraints:**
-- Current capacity: No enforced upper bounds for number of rings, `copies`, or imported path complexity.
-- Limit: Rendering and editing performance degrade as generated segment count increases (`copies` * segments * mirrored arc expansion).
-- Scaling path: Introduce guardrails (max rings, max copies, max path points) and preflight complexity checks on import.
+**Canvas rendering throughput is client-bound:**
+- Current capacity: suitable for small-to-moderate ring counts and copy counts on desktop-class browsers.
+- Limit: interaction smoothness degrades as `composition.rings.length` and per-ring `copies` grow.
+- Scaling path: reduce per-frame work (memoization + rAF scheduling), and consider worker/off-main-thread geometry preprocessing.
+
+**State persistence is local-storage only:**
+- Current capacity: single-browser, single-device persistence via `rune-sync/localstorage`.
+- Limit: no conflict resolution, collaboration, or large payload strategy.
+- Scaling path: introduce versioned persisted schema and optional remote persistence boundary.
 
 ## Dependencies at Risk
 
-**Canvas/geometry dependency is a single critical point of failure:**
-- Risk: Core render/import/edit workflows rely on `paper` API behavior.
-- Impact: A breaking API/runtime issue in `paper` affects preview rendering, SVG import, and ring editing simultaneously.
-- Migration plan: Create an adapter layer around geometry/render APIs to reduce direct dependency surface.
+**Framework and package manager mismatch in automation path:**
+- Risk: repository has `bun.lock` and deploy uses Bun, while local scripts and docs primarily use npm.
+- Impact: drift between local/dev and CI behavior, harder reproducibility when lockfile/tooling assumptions differ.
+- Migration plan: standardize on one package manager in `README.md`, scripts, and workflow (`.github/workflows/deploy.yml`).
 
 ## Missing Critical Features
 
-**No versioned migration for persisted local state:**
-- Problem: LocalStorage-backed state keys (`composition`, `color-mode`, `composition-ui`) have no schema versioning/migration path.
-- Blocks: Safe evolution of persisted `Composition`/palette shape without risking invalid legacy state.
+**Production-grade error reporting for render/import failures:**
+- Problem: render/import failures are surfaced as local warnings/null returns with no structured user feedback pipeline.
+- Blocks: reliable debugging in production and issue triage from non-technical users.
+
+**Meaningful end-to-end regression coverage for the main editor flow:**
+- Problem: only a minimal heading visibility e2e exists.
+- Blocks: confident refactors to editor interactions, drag/drop behavior, and import/export flows.
 
 ## Test Coverage Gaps
 
-**UI interaction flows are largely untested:**
-- What's not tested: Drag-and-drop ring reorder, ring editor input interactions, canvas editing interactions, and export behavior.
-- Files: `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/RingCanvas.svelte`, `src/lib/components/PreviewCanvas.svelte`
-- Risk: Regressions in core editor UX can ship undetected.
+**Ring editor interaction behavior is untested:**
+- What's not tested: anchor drag, handle drag, smooth-handle mirroring, clamp behavior, and event-to-model synchronization.
+- Files: `src/lib/components/RingCanvas.svelte`, `src/lib/components/RingEditor.svelte`
+- Risk: regressions in interactive editing can ship unnoticed.
 - Priority: High
 
-**E2E coverage is demo-only and does not exercise primary editor flow:**
-- What's not tested: Main route/editor journey on `src/routes/+page.svelte`.
+**State management edge cases around reorder/palette indexing:**
+- What's not tested: reorder + expanded-state consistency, index bounds for palette selection over list mutation.
+- Files: `src/lib/state/composition.ts`, `src/lib/components/Sidebar.svelte`, `src/lib/components/MonochromePaletteEditor.svelte`, `src/lib/components/FullPaletteEditor.svelte`
+- Risk: subtle UI inconsistency and incorrect state transitions.
+- Priority: High
+
+**E2E coverage is smoke-level only:**
+- What's not tested: SVG import, ring editing, ring reorder, palette switching, and SVG export workflows.
 - Files: `src/routes/demo/playwright/page.svelte.e2e.ts`, `src/routes/+page.svelte`
-- Risk: End-to-end failures in production path are not caught by CI.
+- Risk: major user journeys can break while tests still pass.
 - Priority: High
 
 ---

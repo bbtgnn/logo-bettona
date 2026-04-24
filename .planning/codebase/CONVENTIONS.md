@@ -5,95 +5,83 @@
 ## Naming Patterns
 
 **Files:**
-- Use kebab-case for TS modules and Svelte components, e.g. `src/lib/color/apply.ts`, `src/lib/geometry/svg-import.ts`, `src/lib/components/FullPaletteEditor.svelte`.
-- Use SvelteKit route naming (`+page.svelte`, `+layout.ts`), e.g. `src/routes/+page.svelte`, `src/routes/+layout.ts`.
-- Keep tests co-located with implementation and suffix with `.spec.ts` or `.e2e.ts`, e.g. `src/lib/color/apply.spec.ts`, `src/routes/demo/playwright/page.svelte.e2e.ts`.
+- Use `kebab-case` for regular TypeScript modules and Svelte components (examples: `src/lib/color/apply.ts`, `src/lib/geometry/render-pipeline.ts`, `src/lib/components/PreviewCanvas.svelte`).
+- Use suffix-based intent names for tests (`*.spec.ts` for Vitest, `*.e2e.ts` for Playwright) such as `src/lib/geometry/svg-import.svelte.spec.ts` and `src/routes/demo/playwright/page.svelte.e2e.ts`.
+- Use Svelte library patterns with extension-aware module exports (`index.ts` that re-exports from `.svelte`), as in `src/lib/shadcn/ui/button/index.ts`.
 
 **Functions:**
-- Use camelCase for exported and local functions, e.g. `applyColors`, `buildRingPath`, `setColorMode`, `handleDragStart`.
-- Use verb-led names for state mutators in `src/lib/state/composition.ts`, e.g. `addRing`, `removeRing`, `reorderRings`.
+- Use `camelCase` for functions and methods (`parseHexColors`, `createRenderPipeline`, `setColorMode`, `renderComposition`).
+- Use verb-first names for mutating state (`addRing`, `removeRing`, `updateRing`, `setActivePalette`) in `src/lib/state/composition.ts`.
+- Use `PascalCase` for error classes and exported types (`RenderPipelineError`, `RenderInput`) in `src/lib/geometry/render-pipeline.ts`.
 
 **Variables:**
-- Use camelCase for variables and constants (`dragFromIndex`, `gitignorePath`, `DEFAULT_COMPOSITION`, `HEX_RE`).
-- Use SCREAMING_SNAKE_CASE for module constants representing defaults/regexes, e.g. `DEFAULT_RING`, `HEX_RE`.
+- Use `UPPER_SNAKE_CASE` for constants (`HEX_RE`, `DEFAULT_COMPOSITION`, `DEFAULT_RING`).
+- Use descriptive local names that reflect role in pipeline/state logic (`warnings`, `renderedCount`, `skippedCount`, `monoPalette`).
 
 **Types:**
-- Define shared domain types in `src/lib/types.ts` with PascalCase names (`Path`, `Ring`, `Composition`, `ColorModeState`).
-- Use `type` aliases consistently rather than `interface` in this codebase section.
+- Centralize domain types in `src/lib/types.ts` and import as type-only where possible.
+- Prefer narrow union types for finite values (`ColorMode = 'monochrome' | 'palette' | 'manual'`).
 
 ## Code Style
 
 **Formatting:**
-- Tool: Prettier via `package.json` scripts (`lint`, `format`).
-- Required settings from `.prettierrc`: tabs (`useTabs: true`), single quotes, no trailing commas, `printWidth: 100`.
-- Apply Svelte and Tailwind-aware formatting with `prettier-plugin-svelte` and `prettier-plugin-tailwindcss`.
+- Tool used: Prettier (`.prettierrc`).
+- Key settings: tabs enabled, single quotes, no trailing commas, print width 100, Svelte parser override for `*.svelte`, Tailwind class sorting via `prettier-plugin-tailwindcss`.
 
 **Linting:**
-- Tool: ESLint flat config in `eslint.config.js`.
-- Base configs: `@eslint/js`, `typescript-eslint`, `eslint-plugin-svelte`, and `eslint-config-prettier`.
-- Disable `no-undef` for TypeScript projects as configured in `eslint.config.js`.
-- Avoid `any`; current exceptions are explicitly annotated in `src/lib/shadcn/utils.ts`.
+- Tool used: ESLint flat config (`eslint.config.js`) with `@eslint/js`, `typescript-eslint`, `eslint-plugin-svelte`, and `eslint-config-prettier`.
+- Key rules: `no-undef` is disabled for TypeScript projects; Svelte files (`*.svelte`, `*.svelte.ts`, `*.svelte.js`) are linted with parser options tied to `svelte.config.js`.
 
 ## Import Organization
 
 **Order:**
-1. External dependencies first (`paper`, `phosphor-svelte`, `vitest`).
-2. Internal alias imports second using `$lib` (for example in `src/lib/components/Sidebar.svelte` and `src/lib/state/composition.ts`).
-3. Relative imports last (`./apply`, `./greet`, `./RingEditor.svelte`).
+1. External packages first (`paper`, `vitest`, `rune-sync/localstorage`).
+2. Internal aliases next (`$lib/...`, `$app/...`).
+3. Local relative imports last (`./render-pipeline`, `./apply`).
 
 **Path Aliases:**
-- Use `$lib` as the primary alias for application modules (`src/lib/...`) as seen across `src/routes/+page.svelte` and `src/lib/geometry/bend.ts`.
-- Prefer explicit file extensions in some Svelte/UI imports where generated patterns require them, e.g. `$lib/shadcn/ui/button/index.js`.
+- Use `$lib/*` for application/library modules (`src/lib/components/PreviewCanvas.svelte`, `src/lib/state/composition.ts`).
+- Use `$app/*` for SvelteKit runtime helpers (`src/routes/demo/+page.svelte`).
 
 ## Error Handling
 
 **Patterns:**
-- Favor guard clauses and safe defaults over throwing in pure modules:
-  - `src/lib/color/apply.ts` returns fallback palettes/arrays for invalid or empty input.
-  - `src/lib/geometry/bend.ts` returns `null` for invalid geometry inputs.
-- Use optional chaining and null-aware control flow in component/event code (`e.dataTransfer?.setData(...)` in `src/lib/components/Sidebar.svelte`).
+- Validate inputs at module boundaries and throw typed domain errors (`RenderPipelineError`) in `src/lib/geometry/render-pipeline.ts`.
+- Wrap unknown exceptions with contextual messages (`toPipelineError`) before propagating.
+- Return safe fallbacks for user input parsing and empty-state conditions (`parseHexColors`, `applyColors` in `src/lib/color/apply.ts`).
+- Prefer early returns for guard clauses in UI and state mutation paths (`if (!scope) return;`, `if (ringCount === 0) return []`).
 
 ## Logging
 
-**Framework:** no app-level logging framework detected.
+**Framework:** None (no logging framework detected, minimal/no `console` logging in inspected app modules).
 
 **Patterns:**
-- Runtime logging calls are not present in inspected source files.
-- Prefer deterministic return values and explicit state updates over console-based debugging.
+- Communicate recoverable runtime issues through returned warning collections (`warnings: string[]` in `RenderResult`) instead of logs.
+- Prefer typed error flows and test assertions over ad-hoc runtime logging.
 
 ## Comments
 
 **When to Comment:**
-- Add focused comments around mathematically complex transforms and rendering rules, e.g. the transformation strategy in `src/lib/geometry/bend.ts`.
-- Keep comments concise and explanatory; avoid redundant line-by-line comments.
+- Add concise comments only for non-obvious intent, compatibility behavior, or algorithm boundaries.
+- Keep comments near the logic they clarify (examples in `src/lib/geometry/compose.ts` and `src/lib/geometry/render-pipeline.ts`).
 
 **JSDoc/TSDoc:**
-- JSDoc-style block comments are used selectively for complex functions (`buildRingPath`, `transformHandle` in `src/lib/geometry/bend.ts`).
-- Most straightforward state/UI functions rely on self-descriptive naming instead of doc blocks.
+- Lightweight JSDoc is used selectively for exported compatibility facades (`renderComposition`, `fitToView` in `src/lib/geometry/compose.ts`).
+- Most modules rely on strong TypeScript signatures instead of heavy doc blocks.
 
 ## Function Design
 
-**Size:** function size varies by domain.
-- Keep state and UI handlers short (`src/lib/state/composition.ts`, `src/lib/components/FullPaletteEditor.svelte`).
-- Allow larger pure transformation functions where algorithmic complexity requires it (`src/lib/geometry/bend.ts`).
+**Size:** Small-to-medium pure utilities and larger orchestrator functions are both used; keep helpers focused and keep orchestration inside dedicated modules (`src/lib/geometry/render-pipeline.ts`).
 
-**Parameters:**
-- Use typed parameters and `Partial<T>` patches for update operations (`updateRing`, `updateMonochromePalette`, `updateFullPalette` in `src/lib/state/composition.ts`).
-- Use union types for mode switches (`ColorMode` in `src/lib/types.ts` and `applyColors`).
+**Parameters:** Prefer strongly typed object parameters for complex operations (`RenderInput`) and scalar parameters for simple transforms (`applyPalette`, `setRingIncrement`).
 
-**Return Values:**
-- Pure helper modules return explicit arrays/nullable objects without side effects (`src/lib/color/apply.ts`, `src/lib/geometry/bend.ts`).
-- State modules mutate reactive/localstorage-backed stores in place via exported commands (`src/lib/state/composition.ts`).
+**Return Values:** Use explicit return types and stable result contracts (`RenderResult`, arrays of hex strings, typed domain objects).
 
 ## Module Design
 
-**Exports:**
-- Export named functions and type aliases from feature modules; default exports are uncommon outside framework config files.
-- Centralize reusable types in `src/lib/types.ts` and utility composition in `src/lib/shadcn/utils.ts`.
+**Exports:** Favor named exports for utilities and state operations (`src/lib/color/apply.ts`, `src/lib/state/composition.ts`), with targeted re-export barrels where component APIs need ergonomic access (`src/lib/shadcn/ui/button/index.ts`, `src/lib/index.ts`).
 
-**Barrel Files:**
-- Barrel files are used for UI primitives under `src/lib/shadcn/ui/*/index.ts` and for library exports in `src/lib/index.ts`.
-- Add new reusable UI module exports to the relevant local `index.ts` barrel to match existing access patterns.
+**Barrel Files:** Used in UI primitive directories and top-level `src/lib/index.ts`; keep barrels thin and avoid business logic inside them.
 
 ---
 

@@ -5,63 +5,67 @@
 ## Test Framework
 
 **Runner:**
-- Vitest `^4.1.0` configured through `vite.config.ts` (multi-project test setup).
-- Config location: `vite.config.ts`.
+- Vitest `^4.1.0` (configured in `vite.config.ts` via `test.projects`).
+- Config: `vite.config.ts`
 
 **Assertion Library:**
-- Vitest `expect` API for unit/server tests and browser assertions.
-- `@playwright/test` assertions for E2E in `src/routes/demo/playwright/page.svelte.e2e.ts`.
+- Vitest `expect` for unit/server tests.
+- Browser assertions via `vitest-browser-svelte` and `@vitest/browser` (`src/lib/vitest-examples/Welcome.svelte.spec.ts`).
+- Playwright `expect` for E2E (`src/routes/demo/playwright/page.svelte.e2e.ts`).
 
 **Run Commands:**
 ```bash
-npm run test:unit         # Run Vitest projects
-npm run test              # Run unit tests in run mode, then Playwright e2e
-npm run test:e2e          # Run Playwright end-to-end tests
+npm run test:unit        # Run Vitest projects
+npm run test:unit -- --watch  # Watch mode
+npm run test             # Unit (run mode) + Playwright E2E
 ```
 
 ## Test File Organization
 
 **Location:**
-- Tests are co-located with source modules in `src/lib/...` and route demos in `src/routes/...`.
+- Co-located with source files under `src/` (examples: `src/lib/color/apply.ts` with `src/lib/color/apply.spec.ts`, `src/lib/geometry/render-pipeline.ts` with `src/lib/geometry/render-pipeline.svelte.spec.ts`).
 
 **Naming:**
-- Unit/component tests use `.spec.ts`:
-  - `src/lib/color/apply.spec.ts`
-  - `src/lib/geometry/bend.svelte.spec.ts`
-  - `src/lib/vitest-examples/greet.spec.ts`
-- E2E tests use `.e2e.ts`:
-  - `src/routes/demo/playwright/page.svelte.e2e.ts`
+- Unit/integration-like specs use `*.spec.ts`.
+- Svelte browser specs use `*.svelte.spec.ts`.
+- End-to-end specs use `*.e2e.ts`.
 
 **Structure:**
 ```
-src/lib/<feature>/<module>.ts
-src/lib/<feature>/<module>.spec.ts
-src/lib/<feature>/<component>.svelte
-src/lib/<feature>/<component>.svelte.spec.ts
-src/routes/<feature>/<page>.svelte.e2e.ts
+src/
+  lib/
+    <feature>/
+      <module>.ts
+      <module>.spec.ts
+      <module>.svelte.spec.ts
+  routes/
+    demo/playwright/
+      page.svelte.e2e.ts
 ```
 
 ## Test Structure
 
 **Suite Organization:**
 ```typescript
-describe('applyColors', () => {
-	it('manual mode returns current colors unchanged', () => {
-		expect(applyColors('manual', mono, full, current, 2)).toEqual(current);
+import { beforeEach, describe, expect, it } from 'vitest';
+
+describe('createRenderPipeline().render', () => {
+	it('renders one path per renderable ring in deterministic order', () => {
+		// arrange
+		// act
+		// assert
 	});
 });
 ```
 
 **Patterns:**
-- Use `describe` and focused `it` blocks with behavior-oriented names (`src/lib/color/apply.spec.ts`).
-- Use lifecycle hooks where setup/cleanup is required:
-  - `beforeEach` for paper.js scope initialization (`src/lib/geometry/bend.svelte.spec.ts`, `src/lib/geometry/compose.svelte.spec.ts`).
-  - `afterEach` cleanup for shared registration state (`clearPreprocessors()` in `src/lib/geometry/svg-import.svelte.spec.ts`).
-- Browser component tests use async DOM assertions (`src/lib/vitest-examples/Welcome.svelte.spec.ts`).
+- Setup pattern: initialize fresh `paper.PaperScope` in `beforeEach` (`src/lib/geometry/*.svelte.spec.ts`).
+- Teardown pattern: explicit cleanup in `afterEach` where module-level registries exist (`clearPreprocessors` in `src/lib/geometry/svg-import.svelte.spec.ts`).
+- Assertion pattern: use exact structural assertions for deterministic behavior (`toEqual`, `toHaveLength`, `toThrow`) and tolerance checks for geometry (`toBeCloseTo`, bounded epsilon).
 
 ## Mocking
 
-**Framework:** Vitest mocks/spies via `vi`.
+**Framework:** Vitest `vi`
 
 **Patterns:**
 ```typescript
@@ -72,10 +76,12 @@ expect(preprocessor).toHaveBeenCalledOnce();
 ```
 
 **What to Mock:**
-- Use `vi.fn` for callback/observer behavior where invocation is the contract (`src/lib/geometry/svg-import.svelte.spec.ts`).
+- Boundary callbacks and observer-style hooks (example above in `src/lib/geometry/svg-import.svelte.spec.ts`).
+- Invalid/throwing boundary contracts with explicit fake objects to verify error wrapping (`throwingScope` in `src/lib/geometry/render-pipeline.svelte.spec.ts`).
 
 **What NOT to Mock:**
-- Do not mock core geometry logic; tests instantiate real `paper.PaperScope` and validate generated path properties in `src/lib/geometry/bend.svelte.spec.ts` and `src/lib/geometry/compose.svelte.spec.ts`.
+- Core geometry/render behavior; tests use real `paper` scope instances to validate rendering and bounds behavior.
+- Pure deterministic utility logic (`src/lib/color/apply.spec.ts`, `src/lib/vitest-examples/greet.spec.ts`).
 
 ## Fixtures and Factories
 
@@ -91,11 +97,12 @@ const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
 ```
 
 **Location:**
-- Inline constants and builders inside each test file (`rectPath`, `twoRingComposition`, `simpleSvg`) rather than shared fixture directories.
+- Fixtures are local constants/factories inside each spec file (`rectPath`, `composition`, `baseRing`, inline SVG strings).
+- No shared `fixtures/` directory is detected.
 
 ## Coverage
 
-**Requirements:** no explicit coverage threshold configuration detected.
+**Requirements:** None enforced by configuration; no coverage thresholds or `--coverage` script detected in `package.json` or `vite.config.ts`.
 
 **View Coverage:**
 ```bash
@@ -105,34 +112,33 @@ npx vitest run --coverage
 ## Test Types
 
 **Unit Tests:**
-- Pure function tests for parsing and color application in `src/lib/color/apply.spec.ts`.
-- Basic utility sample test in `src/lib/vitest-examples/greet.spec.ts`.
+- Pure function and state-transition behavior in Node environment (`src/lib/color/apply.spec.ts`, `src/lib/vitest-examples/greet.spec.ts`).
 
 **Integration Tests:**
-- Geometry rendering and SVG import behavior with real paper.js runtime:
-  - `src/lib/geometry/bend.svelte.spec.ts`
-  - `src/lib/geometry/compose.svelte.spec.ts`
-  - `src/lib/geometry/svg-import.svelte.spec.ts`
-- Browser-rendered Svelte component integration test in `src/lib/vitest-examples/Welcome.svelte.spec.ts`.
+- Module-level integration with real `paper` rendering primitives and pipeline internals (`src/lib/geometry/render-pipeline.svelte.spec.ts`, `src/lib/geometry/compose.svelte.spec.ts`, `src/lib/geometry/bend.svelte.spec.ts`).
 
 **E2E Tests:**
-- Playwright is used with static preview server bootstrap (`playwright.config.ts`).
-- Current E2E coverage is minimal and validates page visibility in `src/routes/demo/playwright/page.svelte.e2e.ts`.
+- Playwright is used (`playwright.config.ts` and `src/routes/demo/playwright/page.svelte.e2e.ts`), currently with a minimal smoke path assertion.
 
 ## Common Patterns
 
 **Async Testing:**
 ```typescript
-render(Welcome, { host: 'SvelteKit', guest: 'Vitest' });
-await expect.element(page.getByRole('heading', { level: 1 })).toHaveTextContent('Hello, SvelteKit!');
+test('has expected h1', async ({ page }) => {
+	await page.goto('/demo/playwright');
+	await expect(page.locator('h1')).toBeVisible();
+});
 ```
 
 **Error Testing:**
 ```typescript
-it('returns null for malformed input', () => {
-	const result = importSvgFromString('not valid svg at all <<<', scope);
-	expect(result).toBeNull();
-});
+expect(() =>
+	pipeline.render({
+		composition,
+		scope: undefined as unknown as paper.PaperScope,
+		viewport: { width: 600, height: 600, padding: 32 }
+	})
+).toThrow(RenderPipelineError);
 ```
 
 ---
