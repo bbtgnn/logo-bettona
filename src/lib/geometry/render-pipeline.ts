@@ -1,6 +1,7 @@
 import paper from 'paper';
 import type { Composition } from '$lib/types';
 import { buildRingPath } from './bend';
+import { interpolatePath, validatePathCompatibility } from './path-morph';
 
 type RenderViewport = {
 	width: number;
@@ -120,8 +121,26 @@ export function createRenderPipeline(): {
 				if (ring.copies <= 0) {
 					throw new Error('ring copies must be greater than zero');
 				}
+
+				let effectiveRing = ring;
+				if (ring.templatePath && ring.secondaryTemplatePath) {
+					const compatibility = validatePathCompatibility(ring.templatePath, ring.secondaryTemplatePath);
+					if (compatibility.ok) {
+						effectiveRing = {
+							...ring,
+							templatePath: interpolatePath(
+								ring.templatePath,
+								ring.secondaryTemplatePath,
+								ring.morphT ?? 0
+							)
+						};
+					} else {
+						warnings.push(`Ring ${i} morph fallback: ${compatibility.reason}`);
+					}
+				}
+
 				const radius = composition.baseRadius + composition.ringIncrement * i;
-				const ringPath = buildRingPath(ring, radius, scope);
+				const ringPath = buildRingPath(effectiveRing, radius, scope);
 
 				if (!ringPath) {
 					skippedCount += 1;
@@ -129,7 +148,7 @@ export function createRenderPipeline(): {
 					continue;
 				}
 
-				ringPath.fillColor = new paper.Color(ring.color);
+				ringPath.fillColor = new paper.Color(effectiveRing.color);
 				ringPath.strokeColor = null;
 				renderedCount += 1;
 			} catch (error) {

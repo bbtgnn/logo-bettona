@@ -1,6 +1,7 @@
 import { lsSync } from 'rune-sync/localstorage';
 import type { ColorModeState, ColorMode, Composition, FullPalette, MonochromePalette, Ring } from '$lib/types';
 import { applyColors } from '$lib/color/apply';
+import { validatePathCompatibility } from '$lib/geometry/path-morph';
 
 const DEFAULT_COMPOSITION: Composition = {
 	baseRadius: 100,
@@ -30,8 +31,14 @@ const DEFAULT_RING: Ring = {
 			66.54953384995142, 180, 67.38673193607579
 		]
 	},
+	secondaryTemplatePath: null,
+	morphT: 0,
 	ringHeight: 0.12
 };
+
+function clamp01(value: number): number {
+	return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
 
 export const composition = lsSync<Composition>('composition', DEFAULT_COMPOSITION);
 
@@ -123,6 +130,82 @@ export function updateRing(index: number, patch: Partial<Ring>) {
 	composition.rings = composition.rings.map((ring, i) =>
 		i === index ? { ...ring, ...patch } : ring
 	);
+}
+
+export function setRingMorphT(index: number, t: number) {
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, morphT: clamp01(t) } : ring
+	);
+}
+
+export function createRingMorphTarget(index: number) {
+	const ring = composition.rings[index];
+	if (!ring || !ring.templatePath) return;
+	const templatePath = ring.templatePath;
+	composition.rings = composition.rings.map((candidate, i) =>
+		i === index
+			? {
+					...candidate,
+					secondaryTemplatePath: {
+						cmds: [...templatePath.cmds],
+						crds: [...templatePath.crds]
+					}
+				}
+			: candidate
+	);
+}
+
+export function removeRingMorphTarget(index: number) {
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, secondaryTemplatePath: null, morphT: 0 } : ring
+	);
+}
+
+export type UpdateRingPathVariantResult = { ok: true } | { ok: false; reason: string };
+
+/**
+ * Updates primary or secondary template path. When both paths exist, enforces strict
+ * structural compatibility; rejects the update without mutating state if incompatible.
+ */
+export function updateRingPathVariant(
+	index: number,
+	variant: 'primary' | 'secondary',
+	path: Ring['templatePath']
+): UpdateRingPathVariantResult {
+	const ring = composition.rings[index];
+	if (!ring) {
+		return { ok: false, reason: 'Ring not found' };
+	}
+
+	if (variant === 'primary') {
+		if (!path && ring.secondaryTemplatePath) {
+			return { ok: false, reason: 'Primary path cannot be empty while a morph target exists' };
+		}
+		if (path && ring.secondaryTemplatePath) {
+			const compatibility = validatePathCompatibility(path, ring.secondaryTemplatePath);
+			if (!compatibility.ok) {
+				return compatibility;
+			}
+		}
+		composition.rings = composition.rings.map((r, i) => (i === index ? { ...r, templatePath: path } : r));
+		return { ok: true };
+	}
+
+	// secondary
+	if (!path) {
+		return { ok: false, reason: 'Use Remove morph target to clear the secondary path' };
+	}
+	if (!ring.templatePath) {
+		return { ok: false, reason: 'Primary path is required to edit a morph target' };
+	}
+	const compatibility = validatePathCompatibility(ring.templatePath, path);
+	if (!compatibility.ok) {
+		return compatibility;
+	}
+	composition.rings = composition.rings.map((r, i) =>
+		i === index ? { ...r, secondaryTemplatePath: path } : r
+	);
+	return { ok: true };
 }
 
 export function reorderRings(fromIndex: number, toIndex: number) {

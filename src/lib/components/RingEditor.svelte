@@ -6,7 +6,17 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
-	import { updateRing, removeRing, setRingExpanded, isRingExpanded, colorMode } from '$lib/state/composition';
+	import {
+		updateRing,
+		removeRing,
+		setRingExpanded,
+		isRingExpanded,
+		colorMode,
+		createRingMorphTarget,
+		removeRingMorphTarget,
+		setRingMorphT,
+		updateRingPathVariant
+	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
@@ -25,8 +35,20 @@
 		ondrop?: (e: DragEvent) => void;
 	} = $props();
 
-	let open = $state(isRingExpanded(index));
+	let open = $state(false);
 	let importError = $state<string | null>(null);
+	let ringPathError = $state<string | null>(null);
+	let editVariant = $state<'primary' | 'secondary'>('primary');
+
+	$effect(() => {
+		open = isRingExpanded(index);
+	});
+
+	$effect(() => {
+		if (!ring.secondaryTemplatePath && editVariant === 'secondary') {
+			editVariant = 'primary';
+		}
+	});
 
 	// Dedicated PaperScope for SVG import (not for display — RingCanvas has its own)
 	const importScope = new paper.PaperScope();
@@ -44,7 +66,19 @@
 			return;
 		}
 
-		updateRing(index, { templatePath: path });
+		ringPathError = null;
+		const result = updateRingPathVariant(index, editVariant, path);
+		if (!result.ok) {
+			ringPathError = result.reason;
+		}
+	}
+
+	function applyPathFromEditor(newPath: NonNullable<Ring['templatePath']>) {
+		ringPathError = null;
+		const result = updateRingPathVariant(index, editVariant, newPath);
+		if (!result.ok) {
+			ringPathError = result.reason;
+		}
 	}
 </script>
 
@@ -83,10 +117,72 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="px-3 pb-3 space-y-3">
+			{#if ring.secondaryTemplatePath}
+				<div class="flex items-center gap-2">
+					<Button
+						variant={editVariant === 'primary' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (editVariant = 'primary')}
+					>
+						Primary
+					</Button>
+					<Button
+						variant={editVariant === 'secondary' ? 'default' : 'outline'}
+						size="sm"
+						onclick={() => (editVariant = 'secondary')}
+					>
+						Secondary
+					</Button>
+				</div>
+			{/if}
+
 			<RingCanvas
-				templatePath={ring.templatePath}
-				onchange={(newPath) => updateRing(index, { templatePath: newPath })}
+				templatePath={editVariant === 'secondary' ? ring.secondaryTemplatePath : ring.templatePath}
+				onchange={(newPath) => applyPathFromEditor(newPath)}
+				label={`Path editor (${editVariant})`}
 			/>
+
+			{#if ringPathError}
+				<p class="text-xs text-destructive">{ringPathError}</p>
+			{/if}
+
+			{#if !ring.secondaryTemplatePath}
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => {
+						ringPathError = null;
+						createRingMorphTarget(index);
+					}}
+				>
+					Create morph target
+				</Button>
+			{:else}
+				<div class="space-y-2">
+					<div class="flex items-center justify-between gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={() => {
+								ringPathError = null;
+								removeRingMorphTarget(index);
+								editVariant = 'primary';
+							}}
+						>
+							Remove morph target
+						</Button>
+						<span class="text-xs text-muted-foreground">Morph t: {ring.morphT.toFixed(2)}</span>
+					</div>
+					<Slider
+						type="single"
+						min={0}
+						max={1}
+						step={0.01}
+						value={ring.morphT}
+						onValueChange={(v) => setRingMorphT(index, v)}
+					/>
+				</div>
+			{/if}
 
 			<div class="flex flex-col gap-1">
 				<Label for="svg-upload-{index}" class="text-xs">Import SVG</Label>

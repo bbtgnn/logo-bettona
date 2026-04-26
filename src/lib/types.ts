@@ -7,6 +7,8 @@ export type Ring = {
 	copies: number;
 	color: string;
 	templatePath: Path | null;
+	secondaryTemplatePath: Path | null;
+	morphT: number;
 	ringHeight: number;
 };
 

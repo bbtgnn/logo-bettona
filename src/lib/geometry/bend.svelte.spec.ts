@@ -21,6 +21,8 @@ const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
 	color: '#000000',
 	ringHeight: 0.5,
 	templatePath: rectPath,
+	secondaryTemplatePath: null,
+	morphT: 0,
 	...overrides
 });
 

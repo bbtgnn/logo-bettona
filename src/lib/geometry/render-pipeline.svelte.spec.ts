@@ -15,12 +15,36 @@ const rectPath: Path = {
 	crds: [0, 0, 100, 0, 100, 50, 0, 50]
 };
 
+const shiftedRectPath: Path = {
+	cmds: ['M', 'L', 'L', 'L', 'Z'],
+	crds: [10, 0, 110, 0, 110, 50, 10, 50]
+};
+
+const incompatiblePath: Path = {
+	cmds: ['M', 'Q', 'Z'],
+	crds: [0, 0, 50, 25, 100, 0]
+};
+
 const composition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
 	rings: [
-		{ copies: 4, color: '#ff0000', templatePath: rectPath, ringHeight: 0.4 },
-		{ copies: 4, color: '#0000ff', templatePath: rectPath, ringHeight: 0.4 }
+		{
+			copies: 4,
+			color: '#ff0000',
+			templatePath: rectPath,
+			secondaryTemplatePath: null,
+			morphT: 0,
+			ringHeight: 0.4
+		},
+		{
+			copies: 4,
+			color: '#0000ff',
+			templatePath: rectPath,
+			secondaryTemplatePath: null,
+			morphT: 0,
+			ringHeight: 0.4
+		}
 	],
 	monochromePalettes: [{ main: '#000', bg: '#fff' }],
 	fullPalettes: [{ colors: ['#000', '#fff'] }]
@@ -71,6 +95,50 @@ describe('createRenderPipeline().render', () => {
 		expect(result.warnings).toHaveLength(1);
 		expect(result.warnings[0]).toMatch(/^Ring 0 skipped: template path is not renderable$/);
 		expect(result.renderDurationMs).toBeGreaterThanOrEqual(0);
+	});
+
+	it('interpolates ring template path when secondary path exists', () => {
+		const pipeline = createRenderPipeline();
+		const result = pipeline.render({
+			composition: {
+				...composition,
+				rings: [
+					{
+						...composition.rings[0],
+						templatePath: rectPath,
+						secondaryTemplatePath: shiftedRectPath,
+						morphT: 0.5
+					}
+				]
+			},
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+
+		expect(result.renderedCount).toBe(1);
+		expect(result.warnings).toEqual([]);
+	});
+
+	it('falls back to primary path when morph paths incompatible', () => {
+		const pipeline = createRenderPipeline();
+		const result = pipeline.render({
+			composition: {
+				...composition,
+				rings: [
+					{
+						...composition.rings[0],
+						templatePath: rectPath,
+						secondaryTemplatePath: incompatiblePath,
+						morphT: 0.5
+					}
+				]
+			},
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+
+		expect(result.renderedCount).toBe(1);
+		expect(result.warnings.some((warning) => warning.includes('morph fallback'))).toBe(true);
 	});
 
 	it('skips a ring and continues rendering when one ring throws', () => {

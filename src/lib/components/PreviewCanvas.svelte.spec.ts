@@ -73,6 +73,8 @@ describe('PreviewCanvas.svelte', () => {
 					cmds: ['M', 'L', 'L', 'L', 'Z'],
 					crds: [0, 0, 100, 0, 100, 50, 0, 50]
 				},
+				secondaryTemplatePath: null,
+				morphT: 0,
 				ringHeight: 0.25
 			}
 		];

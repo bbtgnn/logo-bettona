@@ -10,8 +10,11 @@
 		paddingRect: { strokeColor: '#e2e8f0', strokeWidth: 1 } // very light
 	};
 
-	let { templatePath, onchange }: { templatePath: Path | null; onchange?: (path: Path) => void } =
-		$props();
+	let {
+		templatePath,
+		onchange,
+		label = 'Path editor'
+	}: { templatePath: Path | null; onchange?: (path: Path) => void; label?: string } = $props();
 
 	// --- Point transform helpers (local copy, not imported from experiments) ---
 
@@ -299,7 +302,7 @@
 
 					if (smooth && inCircle) {
 						const inLen = seg.handleIn.length;
-						seg.handleIn = seg.handleOut.normalize().negate().multiply(inLen);
+						seg.handleIn = seg.handleOut.normalize().multiply(-inLen);
 					}
 
 					syncHandleItems(segIdx);
@@ -330,7 +333,7 @@
 
 					if (smooth && outCircle) {
 						const outLen = seg.handleOut.length;
-						seg.handleOut = seg.handleIn.normalize().negate().multiply(outLen);
+						seg.handleOut = seg.handleIn.normalize().multiply(-outLen);
 					}
 
 					syncHandleItems(segIdx);
@@ -396,6 +399,9 @@
 </script>
 
 <div class="w-full aspect-square bg-muted/50 rounded border flex items-center justify-center overflow-hidden relative">
+	<span class="absolute left-2 top-2 rounded bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+		{label}
+	</span>
 	{#if !templatePath}
 		<span class="text-xs text-muted-foreground absolute">Upload an SVG to preview</span>
 	{/if}
