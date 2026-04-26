@@ -1,77 +1,79 @@
 # Technology Stack
 
-**Analysis Date:** 2026-04-24
+**Analysis Date:** 2026-04-26
 
 ## Languages
 
 **Primary:**
-- TypeScript - Application logic and tests in `src/lib/**/*.ts`, route config in `src/routes/+layout.ts`, and config in `vite.config.ts`/`playwright.config.ts`.
-- Svelte (with TypeScript) - UI components and pages in `src/routes/**/*.svelte` and `src/lib/components/**/*.svelte`.
+- TypeScript (strict) — application source under `src/` (`tsconfig.json` extends `.svelte-kit/tsconfig.json`).
+- Svelte 5 — UI and runes; components in `src/lib/components/`, `src/routes/`.
 
 **Secondary:**
-- JavaScript (ESM) - Tooling configuration in `svelte.config.js` and `eslint.config.js`.
-- CSS - Global route styling in `src/routes/layout.css`.
+- JavaScript — config only (`svelte.config.js`, `eslint.config.js`).
 
 ## Runtime
 
 **Environment:**
-- Node.js runtime for development/build/test scripts declared in `package.json`.
-- Browser runtime for the shipped app (static prerender with client-side rendering) configured in `src/routes/+layout.ts`.
+- Browser — primary execution (`src/routes/+layout.ts` sets `ssr = false`, `prerender = true` for static output).
+- Node.js — Vitest **server** project (`vite.config.ts` `environment: 'node'`) for non-Svelte unit tests.
 
 **Package Manager:**
-- npm scripts are the primary task interface (`dev`, `build`, `test`, `lint`) in `package.json`.
-- Lockfile: present (`bun.lock`), indicating Bun is also used for dependency locking.
+- Bun — lockfile `bun.lock`; CI uses `bun i` and `bun run build` (`.github/workflows/deploy.yml`).
+- Lockfile: present (`bun.lock`).
 
 ## Frameworks
 
 **Core:**
-- SvelteKit (`@sveltejs/kit`) - Application framework and routing, configured via `svelte.config.js` and route files in `src/routes/`.
-- Svelte 5 (`svelte`) - Component/runtime layer used across `src/lib/components/` and `src/lib/shadcn/ui/`.
+- SvelteKit `^2.50.2` — routing, build, `$lib` alias (`svelte.config.js`).
+- Vite `^7.3.1` — bundler and dev server (`vite.config.ts`).
+- `@sveltejs/adapter-static` `^3.0.10` — static site generation (`svelte.config.js`).
 
 **Testing:**
-- Vitest (`vitest`) - Unit/component test runner configured in `vite.config.ts`.
-- Playwright (`@playwright/test`) - E2E runner configured in `playwright.config.ts`.
-- Vitest browser mode (`@vitest/browser-playwright`, `vitest-browser-svelte`) - Browser component tests in `src/**/*.svelte.spec.ts`.
+- Vitest `^4.1.0` — dual-project setup in `vite.config.ts`: **client** (browser, Playwright provider, Chromium) for `src/**/*.svelte.{test,spec}.{js,ts}`; **server** (Node) for other `src/**/*.{test,spec}.{js,ts}` excluding Svelte browser specs.
+- `@playwright/test` `^1.58.2` + `playwright` — E2E (`playwright.config.ts`, `**/*.e2e.{ts,js}`) and Vitest browser provider.
+- `@vitest/browser-playwright` `^4.1.0`, `vitest-browser-svelte` `^2.0.2` — component tests in real browser.
 
 **Build/Dev:**
-- Vite (`vite`) - Dev server and bundler via scripts in `package.json` and config in `vite.config.ts`.
-- Tailwind CSS v4 (`tailwindcss`, `@tailwindcss/vite`) - Styling pipeline wired in `vite.config.ts`.
-- Adapter Static (`@sveltejs/adapter-static`) - Static build target set in `svelte.config.js`.
+- `@tailwindcss/vite` `^4.1.18`, `tailwindcss` `^4.1.18` — styling (`vite.config.ts`, `src/routes/layout.css` referenced from `.prettierrc`).
+- `bits-ui` `^2.16.3` — headless primitives for shadcn-style UI under `src/lib/shadcn/`.
 
 ## Key Dependencies
 
 **Critical:**
-- `paper` - Vector geometry/drawing engine used in rendering and geometry modules (`src/lib/geometry/*.ts`, `src/lib/components/*Canvas.svelte`).
-- `rune-sync` - Local persistence/state sync via `lsSync` in `src/lib/state/composition.ts`.
-- `bits-ui` - Headless UI primitives used in `src/lib/shadcn/ui/**`.
+- `paper` `^0.12.18` — vector paths, segments, hit testing, SVG import, ring construction and preview rendering. Used in `src/lib/geometry/bend.ts`, `src/lib/geometry/svg-import.ts`, `src/lib/geometry/compose.ts`, `src/lib/geometry/render-pipeline.ts`, `src/lib/components/RingCanvas.svelte`, `src/lib/components/PreviewCanvas.svelte`, `src/lib/components/RingEditor.svelte`, `src/routes/experiments/paper.ts`, and multiple `*.spec.ts` files.
+- **Path morph (primary ↔ secondary templates):** morph logic itself is **pure TypeScript** in `src/lib/geometry/path-morph.ts` (`validatePathCompatibility`, `interpolatePath`, `PathMorphError`) — no Paper.js calls inside that module. Paper is used **after** morph when `src/lib/geometry/render-pipeline.ts` applies `interpolatePath` then `buildRingPath` from `bend.ts`, and for interactive editing in `RingCanvas.svelte`.
 
-**Infrastructure:**
-- `tailwind-variants`, `tailwind-merge`, `clsx` - Utility styling composition in `src/lib/shadcn/utils.ts` and UI components.
-- `phosphor-svelte` - Icon library consumed in UI components like `src/lib/components/RingEditor.svelte`.
-- ESLint/Prettier/TypeScript toolchain - Static analysis and formatting configured in `eslint.config.js`, `tsconfig.json`, and `package.json`.
+**Infrastructure / client persistence:**
+- `rune-sync` `^0.2.1` — `lsSync` from `rune-sync/localstorage` in `src/lib/state/composition.ts` for reactive state synced to `localStorage` (composition, color mode, UI expansion).
+
+**UI utilities:**
+- `clsx`, `tailwind-merge`, `tailwind-variants` — class composition (`src/lib/shadcn/utils.ts` pattern).
+- `phosphor-svelte` `^3.1.0` — icons.
+- `@fontsource-variable/jetbrains-mono` — typography.
+- `@internationalized/date` — present as devDependency (calendar-related stacks if used from bits-ui).
 
 ## Configuration
 
 **Environment:**
-- No project `.env` files detected in repository root (`.env*` not detected).
-- No runtime env-variable reads detected in application source under `src/` (`import.meta.env`, `process.env`, `$env` not detected).
+- No committed `.env` / `.env.example` detected at repo root (glob). Runtime is client-static; deploy injects `BASE_PATH` in CI only (see `INTEGRATIONS.md`).
 
 **Build:**
-- `svelte.config.js` configures Svelte compiler runes mode and static adapter.
-- `vite.config.ts` configures SvelteKit plugin, Tailwind plugin, and multi-project Vitest setup.
-- `tsconfig.json` extends generated SvelteKit config with strict TypeScript settings.
-- `playwright.config.ts` configures E2E execution against preview server.
-- `eslint.config.js` configures JS/TS/Svelte linting and Prettier compatibility.
+- `vite.config.ts` — plugins: Tailwind Vite, SvelteKit; Vitest projects.
+- `svelte.config.js` — `adapter-static()`, Svelte 5 **runes** enabled for non-`node_modules` files via `compilerOptions.runes`.
+- `playwright.config.ts` — preview server for E2E: `npm run build && npm run preview` on port `4173`.
+- `eslint.config.js` — flat config: `typescript-eslint`, `eslint-plugin-svelte`, Prettier integration, `.gitignore` honored via `@eslint/compat`.
+- `.prettierrc` — tabs, single quotes, Svelte + Tailwind Prettier plugins.
 
 ## Platform Requirements
 
 **Development:**
-- Node.js-compatible environment with npm scripts from `package.json`.
-- Browser automation prerequisites for Playwright tests (`playwright.config.ts`).
+- Bun (per lockfile and CI) or compatible npm-compatible client for scripts in `package.json`.
+- Node compatible with Vite 7 / Vitest 4 (for tooling and Vitest Node project).
+- Chromium for Vitest browser tests and Playwright.
 
 **Production:**
-- Static hosting target (generated assets from `npm run build`) based on `@sveltejs/adapter-static` in `svelte.config.js` and `prerender`/`ssr` settings in `src/routes/+layout.ts`.
+- Static assets deployed to **GitHub Pages** (workflow builds to `build/`, artifact upload). SPA behavior implied by `ssr = false` + static adapter.
 
 ---
 
-*Stack analysis: 2026-04-24*
+*Stack analysis: 2026-04-26*
