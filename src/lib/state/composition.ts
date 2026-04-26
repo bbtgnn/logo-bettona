@@ -146,6 +146,7 @@ export function createRingMorphTarget(index: number) {
 		i === index
 			? {
 					...candidate,
+					morphT: clamp01(candidate.morphT ?? 0),
 					secondaryTemplatePath: {
 						cmds: [...templatePath.cmds],
 						crds: [...templatePath.crds]

@@ -171,14 +171,14 @@
 						>
 							Remove morph target
 						</Button>
-						<span class="text-xs text-muted-foreground">Morph t: {ring.morphT.toFixed(2)}</span>
+						<span class="text-xs text-muted-foreground">Morph t: {(ring.morphT ?? 0).toFixed(2)}</span>
 					</div>
 					<Slider
 						type="single"
 						min={0}
 						max={1}
 						step={0.01}
-						value={ring.morphT}
+						value={ring.morphT ?? 0}
 						onValueChange={(v) => setRingMorphT(index, v)}
 					/>
 				</div>
