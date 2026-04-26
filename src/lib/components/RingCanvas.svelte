@@ -142,6 +142,9 @@
 		const scope = new paper.PaperScope();
 		scope.setup(canvas);
 
+		// Skip redraw while dragging so parent path updates do not reset Paper mid-gesture.
+		// `isDragging` is non-reactive; if it stays true (e.g. lost mouseup), switching primary/secondary
+		// remounts this canvas via `{#key editVariant}` in RingEditor so draw runs again.
 		$effect(() => {
 			if (!isDragging) {
 				draw(scope, templatePath, onchange, setDragging);

@@ -136,11 +136,13 @@
 				</div>
 			{/if}
 
-			<RingCanvas
-				templatePath={editVariant === 'secondary' ? ring.secondaryTemplatePath : ring.templatePath}
-				onchange={(newPath) => applyPathFromEditor(newPath)}
-				label={`Path editor (${editVariant})`}
-			/>
+			{#key editVariant}
+				<RingCanvas
+					templatePath={editVariant === 'secondary' ? ring.secondaryTemplatePath : ring.templatePath}
+					onchange={applyPathFromEditor}
+					label={`Path editor (${editVariant})`}
+				/>
+			{/key}
 
 			{#if ringPathError}
 				<p class="text-xs text-destructive">{ringPathError}</p>
