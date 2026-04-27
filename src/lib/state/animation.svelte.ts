@@ -1,5 +1,7 @@
-import { animate } from 'animejs';
 import { composition, setRingMorphT } from './composition';
+import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
+import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
+import { createAnimationRuntime } from './animation-drivers/runtime';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
@@ -44,35 +46,31 @@ export const animationState = $state<AnimationState>({
 	alternate: false
 });
 
-type AnimeTarget = { t: number };
-
-type AnimeInstance = {
-	play?: () => unknown;
-	resume?: () => unknown;
-	pause?: () => unknown;
-	seek?: (value: number) => unknown;
-	cancel?: () => unknown;
-	revert?: () => unknown;
-};
-
-type AnimeUpdatePayload = {
-	progress?: number;
-};
-
-type AnimeOptions = {
-	t: number;
-	duration: number;
-	loop: boolean;
-	alternate: boolean;
-	autoplay: boolean;
-	ease: 'linear';
-	onUpdate: (animation: AnimeUpdatePayload) => void;
-	onComplete: () => void;
-};
-
-let currentAnimation: AnimeInstance | null = null;
 let lastRingCount = 0;
 let animatedIndices: number[] = [];
+let frameRequestId: number | null = null;
+let startedAtMs: number | null = null;
+let pausedElapsedMs = 0;
+
+const runtime = createAnimationRuntime({
+	applyRingT: (index, t) => setRingMorphT(index, t)
+});
+
+runtime.registerDriver(
+	'audioBars',
+	createAudioBarsDriver({
+		getConfig: () => animationState.audioBars,
+		getRingCount: () => composition.rings.length,
+		readBars: () => []
+	})
+);
+
+runtime.registerDriver(
+	'dataSeries',
+	createDataSeriesDriver({
+		getConfig: () => animationState.dataSeries
+	})
+);
 
 function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -95,73 +93,106 @@ function applyMorphT(t: number) {
 }
 
 function cleanupCurrentAnimation() {
-	currentAnimation?.pause?.();
-	currentAnimation?.cancel?.();
-	currentAnimation?.revert?.();
+	if (frameRequestId !== null) {
+		cancelAnimationFrame(frameRequestId);
+		frameRequestId = null;
+	}
 }
 
 function stopInternal(resetProgress = true) {
 	cleanupCurrentAnimation();
+	runtime.setMode(null);
 	if (resetProgress) {
 		applyMorphT(0);
 		animationState.progress = 0;
 	}
-	currentAnimation = null;
+	startedAtMs = null;
+	pausedElapsedMs = 0;
 	animationState.isPlaying = false;
 	animationState.isPaused = false;
 }
 
-function createAnimeAnimation(target: AnimeTarget, options: AnimeOptions): AnimeInstance {
-	return animate(target, options);
+function hasRunnableMode(): boolean {
+	return animationState.mode !== null;
 }
 
-function startNewAnimation() {
+function hasMorphTargets(): boolean {
 	animatedIndices = getMorphRingIndices();
 	lastRingCount = composition.rings.length;
-	animationState.progress = 0;
+	return animatedIndices.length > 0;
+}
 
-	if (animatedIndices.length === 0) {
-		stopInternal(true);
+function tick(nowMs: number) {
+	if (!animationState.isPlaying) return;
+	if (!Number.isFinite(nowMs)) {
+		frameRequestId = requestAnimationFrame(tick);
 		return;
 	}
 
-	const target = { t: 0 };
-	const handleUpdate = (_animation: AnimeUpdatePayload) => {
-		applyMorphT(clamp01(target.t));
-		animationState.progress = clamp01(target.t);
-	};
+	if (startedAtMs === null) {
+		startedAtMs = nowMs - pausedElapsedMs;
+	}
+	const elapsedMs = Math.max(0, nowMs - startedAtMs);
+	const elapsedSec = elapsedMs / 1000;
+	const durationSec = Math.max(0.1, animationState.durationSec);
+	const progress = clamp01(elapsedSec / durationSec);
 
-	const handleComplete = () => {
-		applyMorphT(1);
+	if (hasRunnableMode()) {
+		runtime.tick(nowMs);
+		animationState.progress = progress;
+	} else {
+		applyMorphT(progress);
+		animationState.progress = progress;
+	}
+
+	if (progress >= 1 && !animationState.loop) {
 		animationState.isPlaying = false;
 		animationState.isPaused = false;
-		animationState.progress = 1;
-		currentAnimation = null;
-	};
+		pausedElapsedMs = 0;
+		startedAtMs = null;
+		frameRequestId = null;
+		return;
+	}
 
-	currentAnimation = createAnimeAnimation(target, {
-		t: 1,
-		duration: Math.max(0.1, animationState.durationSec) * 1000,
-		loop: animationState.loop,
-		alternate: animationState.alternate,
-		autoplay: true,
-		ease: 'linear',
-		onUpdate: handleUpdate,
-		onComplete: handleComplete
-	});
+	if (progress >= 1 && animationState.loop) {
+		startedAtMs = nowMs;
+		pausedElapsedMs = 0;
+		if (!hasRunnableMode()) {
+			applyMorphT(0);
+			animationState.progress = 0;
+		}
+	}
 
+	frameRequestId = requestAnimationFrame(tick);
+}
+
+function startNewAnimation() {
+	lastRingCount = composition.rings.length;
+	if (!hasRunnableMode() && !hasMorphTargets()) {
+		stopInternal(true);
+		return;
+	}
+	animationState.progress = 0;
+	startedAtMs = null;
+	pausedElapsedMs = 0;
+	if (animationState.mode) {
+		runtime.setMode(animationState.mode);
+	}
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
+	frameRequestId = requestAnimationFrame(tick);
 }
 
 function reconfigureCurrentAnimation() {
-	if (!currentAnimation) return;
+	if (!animationState.isPlaying && !animationState.isPaused) return;
 
 	const wasPlaying = animationState.isPlaying;
 	const wasPaused = animationState.isPaused;
+	const currentProgress = animationState.progress;
 
 	cleanupCurrentAnimation();
-	currentAnimation = null;
+	startedAtMs = null;
+	pausedElapsedMs = currentProgress * Math.max(0.1, animationState.durationSec) * 1000;
 
 	startNewAnimation();
 
@@ -187,6 +218,9 @@ export function setAnimationAlternate(value: boolean) {
 
 export function setAnimationMode(mode: AnimationMode): void {
 	animationState.mode = mode;
+	if (animationState.isPlaying) {
+		runtime.setMode(mode);
+	}
 }
 
 export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>): void {
@@ -194,27 +228,31 @@ export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>)
 }
 
 export function togglePlay() {
-	if (!currentAnimation) {
+	if (!animationState.isPlaying && !animationState.isPaused) {
 		startNewAnimation();
 		return;
 	}
 
 	if (animationState.isPlaying) {
-		currentAnimation.pause?.();
+		cleanupCurrentAnimation();
+		if (startedAtMs !== null) {
+			pausedElapsedMs = Math.max(0, animationState.progress * Math.max(0.1, animationState.durationSec) * 1000);
+		}
 		animationState.isPlaying = false;
 		animationState.isPaused = true;
 		return;
 	}
 
-	try {
-		currentAnimation.play?.();
-	} catch {
-		// If anime internal timer state is stale (seen after pause in loop/alternate),
-		// recreate from current settings rather than crashing UI event handlers.
-		startNewAnimation();
+	if (!hasRunnableMode() && !hasMorphTargets()) {
+		stopInternal(true);
+		return;
+	}
+	if (animationState.mode) {
+		runtime.setMode(animationState.mode);
 	}
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
+	frameRequestId = requestAnimationFrame(tick);
 }
 
 export function stopAnimation(resetProgress = true) {

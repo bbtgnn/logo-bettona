@@ -1,32 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const animeAnimate = vi.hoisted(() =>
-	vi.fn(() => ({
-		play: vi.fn(),
-		pause: vi.fn(),
-		resume: vi.fn(() => {
-			throw new Error('resume should not be called');
-		}),
-		seek: vi.fn(),
-		cancel: vi.fn(),
-		revert: vi.fn()
-	}))
-);
-
-type AnimateCall = {
-	target: { t: number };
-	options: { onUpdate?: (payload: { progress?: number }) => void };
-};
-
-function getLatestAnimateCall(): AnimateCall {
-	const call = animeAnimate.mock.calls.at(-1) as [unknown, unknown] | undefined;
-	if (!call) throw new Error('Expected animate() to be called');
-	return {
-		target: call[0] as { t: number },
-		options: call[1] as { onUpdate?: (payload: { progress?: number }) => void }
-	};
-}
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockComposition = {
 	rings: [
@@ -35,23 +8,49 @@ const mockComposition = {
 	]
 };
 
-vi.mock('animejs', () => ({
-	animate: animeAnimate
-}));
-
 vi.mock('./composition', () => ({
 	composition: mockComposition,
 	setRingMorphT: vi.fn()
 }));
 
+const rafCallbacks: FrameRequestCallback[] = [];
+let requestAnimationFrameMock: ReturnType<typeof vi.fn> | null = null;
+
+function installRafMock() {
+	requestAnimationFrameMock = vi.fn((callback: FrameRequestCallback) => {
+		rafCallbacks.push(callback);
+		return rafCallbacks.length;
+	});
+	const cancelAnimationFrameMock = vi.fn((id: number) => {
+		const index = id - 1;
+		if (index >= 0 && index < rafCallbacks.length) {
+			rafCallbacks[index] = () => undefined;
+		}
+	});
+	vi.stubGlobal('requestAnimationFrame', requestAnimationFrameMock);
+	vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrameMock);
+	return { requestAnimationFrameMock, cancelAnimationFrameMock };
+}
+
+function flushNextAnimationFrame(nowMs: number) {
+	const callback = rafCallbacks.shift();
+	if (!callback) throw new Error('Expected queued requestAnimationFrame callback');
+	callback(nowMs);
+}
+
 describe('animation controller', () => {
 	beforeEach(() => {
 		vi.resetModules();
-		animeAnimate.mockClear();
+		rafCallbacks.length = 0;
+		installRafMock();
 		mockComposition.rings = [
 			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
 			{ secondaryTemplatePath: null, morphT: 0 }
 		];
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
 	});
 
 	it('notifies Svelte consumers when exported state changes', async () => {
@@ -69,7 +68,7 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPlaying).toBe(false);
 		animation.togglePlay();
 		expect(animation.animationState.isPlaying).toBe(true);
-		expect(animeAnimate).toHaveBeenCalledOnce();
+		expect(requestAnimationFrameMock).toHaveBeenCalled();
 	});
 
 	it('pauses when togglePlay is invoked while playing', async () => {
@@ -120,19 +119,17 @@ describe('animation controller', () => {
 
 		expect(animation.animationState.isPlaying).toBe(false);
 		expect(animation.animationState.progress).toBe(0);
-		expect(animeAnimate).not.toHaveBeenCalled();
+		expect(requestAnimationFrameMock).not.toHaveBeenCalled();
 	});
 
 	it('updates progress in loop mode from animated morph value', async () => {
 		const animation = await import('./animation');
 		animation.setAnimationLoop(true);
 		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(420);
 
-		const running = getLatestAnimateCall();
-		running.target.t = 0.42;
-		running.options.onUpdate?.({});
-
-		expect(animation.animationState.progress).toBe(0.42);
+		expect(animation.animationState.progress).toBeCloseTo(0.14, 5);
 	});
 
 	it('keeps play/pause functional after changing checkboxes while playing', async () => {
@@ -172,5 +169,68 @@ describe('animation controller', () => {
 
 		expect(animation.animationState.mode).toBe('dataSeries');
 		expect(animation.animationState.dataSeries.seriesByRingIndex[0]).toEqual([0, 1, 0.5]);
+	});
+});
+
+describe('animation runtime integration', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		vi.clearAllMocks();
+		rafCallbacks.length = 0;
+		mockComposition.rings = [
+			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ secondaryTemplatePath: null, morphT: 0 }
+		];
+	});
+
+	it('setAnimationMode(mode) drives runtime mode while playing', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const { setRingMorphT } = await import('./composition');
+		const animation = await import('./animation');
+
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 10] },
+			speed: 1,
+			loop: false
+		});
+		animation.setAnimationMode('dataSeries');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(500);
+
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
+		expect(animation.animationState.mode).toBe('dataSeries');
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('setDataSeriesConfig updates are consumed dynamically by dataSeries driver', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const { setRingMorphT } = await import('./composition');
+		const animation = await import('./animation');
+
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 10] },
+			speed: 1,
+			loop: false
+		});
+		animation.setAnimationMode('dataSeries');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(500);
+		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
+
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 20] },
+			speed: 2
+		});
+		flushNextAnimationFrame(750);
+		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 1);
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
 	});
 });
