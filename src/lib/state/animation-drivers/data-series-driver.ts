@@ -59,8 +59,11 @@ function interpolateSeries(series: number[], progress: number): number {
 	return series[leftIndex] * (1 - alpha) + series[rightIndex] * alpha;
 }
 
-export function createDataSeriesDriver(config: DataSeriesConfig): AnimationDriver {
-	const normalizedSeriesByRing = buildNormalizedSeriesMap(config.seriesByRingIndex);
+type CreateDataSeriesDriverDeps = {
+	getConfig: () => DataSeriesConfig;
+};
+
+export function createDataSeriesDriver(deps: CreateDataSeriesDriverDeps): AnimationDriver {
 	let startedAtMs: number | null = null;
 
 	return {
@@ -77,6 +80,8 @@ export function createDataSeriesDriver(config: DataSeriesConfig): AnimationDrive
 				startedAtMs = nowMs;
 			}
 
+			const config = deps.getConfig();
+			const normalizedSeriesByRing = buildNormalizedSeriesMap(config.seriesByRingIndex);
 			const elapsedSec = Math.max(0, (nowMs - startedAtMs) / 1000);
 			const speed = Number.isFinite(config.speed) ? Math.max(0, config.speed) : 1;
 			const rawProgress = elapsedSec * speed;

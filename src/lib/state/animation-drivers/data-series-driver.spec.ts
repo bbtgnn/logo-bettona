@@ -4,12 +4,14 @@ import { createDataSeriesDriver } from './data-series-driver';
 describe('createDataSeriesDriver', () => {
 	it('interpolates per ring over normalized series with variable lengths', () => {
 		const driver = createDataSeriesDriver({
+			getConfig: () => ({
 			seriesByRingIndex: {
 				0: [10, 20, 30],
 				2: [100, 300]
 			},
 			speed: 1,
 			loop: false
+			})
 		});
 
 		driver.init();
@@ -24,6 +26,7 @@ describe('createDataSeriesDriver', () => {
 
 	it('omits rings with missing or empty series from frame output', () => {
 		const driver = createDataSeriesDriver({
+			getConfig: () => ({
 			seriesByRingIndex: {
 				0: [0, 10],
 				1: [],
@@ -31,6 +34,7 @@ describe('createDataSeriesDriver', () => {
 			},
 			speed: 1,
 			loop: false
+			})
 		});
 
 		driver.init();
@@ -47,11 +51,13 @@ describe('createDataSeriesDriver', () => {
 
 	it('anchors absolute timestamps so first sample does not jump to completion', () => {
 		const driver = createDataSeriesDriver({
+			getConfig: () => ({
 			seriesByRingIndex: {
 				0: [0, 10]
 			},
 			speed: 1,
 			loop: false
+			})
 		});
 
 		driver.init();
@@ -60,5 +66,34 @@ describe('createDataSeriesDriver', () => {
 
 		expect(firstFrame).toEqual({ 0: 0 });
 		expect(secondFrame).toEqual({ 0: 0.5 });
+	});
+
+	it('reads latest config dynamically after driver creation', () => {
+		let config = {
+			seriesByRingIndex: {
+				0: [0, 10]
+			},
+			speed: 1,
+			loop: false
+		};
+		const driver = createDataSeriesDriver({
+			getConfig: () => config
+		});
+
+		driver.init();
+		driver.frame(0);
+		const beforeUpdate = driver.frame(500);
+
+		config = {
+			seriesByRingIndex: {
+				0: [0, 20]
+			},
+			speed: 2,
+			loop: false
+		};
+		const afterUpdate = driver.frame(750);
+
+		expect(beforeUpdate).toEqual({ 0: 0.5 });
+		expect(afterUpdate).toEqual({ 0: 1 });
 	});
 });
