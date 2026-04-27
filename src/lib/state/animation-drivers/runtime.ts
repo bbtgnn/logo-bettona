@@ -19,10 +19,13 @@ export function createAnimationRuntime(deps: RuntimeDeps) {
 	let mode: AnimationDriverType | null = null;
 
 	function registerDriver(type: AnimationDriverType, driver: AnimationDriver): void {
+		const previousDriver = drivers.get(type);
 		drivers.set(type, driver);
 		// Contract: activating a mode before registration is allowed;
 		// registering that active mode later initializes it immediately.
+		// If replacing an active driver, dispose previous then init new exactly once.
 		if (mode === type) {
+			previousDriver?.dispose();
 			driver.init();
 		}
 	}

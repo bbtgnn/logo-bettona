@@ -80,4 +80,29 @@ describe('createAnimationRuntime', () => {
 		expect(dataInit).toHaveBeenCalledOnce();
 		expect(dataDispose).toHaveBeenCalledOnce();
 	});
+
+	it('disposes previous active driver when replacing same active mode', () => {
+		const previousInit = vi.fn();
+		const previousDispose = vi.fn();
+		const nextInit = vi.fn();
+		const nextDispose = vi.fn();
+		const runtime = createAnimationRuntime({ applyRingT: vi.fn() });
+
+		runtime.registerDriver('dataSeries', {
+			init: previousInit,
+			dispose: previousDispose,
+			frame: () => ({})
+		});
+		runtime.setMode('dataSeries');
+		runtime.registerDriver('dataSeries', {
+			init: nextInit,
+			dispose: nextDispose,
+			frame: () => ({})
+		});
+
+		expect(previousInit).toHaveBeenCalledOnce();
+		expect(previousDispose).toHaveBeenCalledOnce();
+		expect(nextInit).toHaveBeenCalledOnce();
+		expect(nextDispose).not.toHaveBeenCalled();
+	});
 });
