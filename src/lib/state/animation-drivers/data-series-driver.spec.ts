@@ -13,6 +13,7 @@ describe('createDataSeriesDriver', () => {
 		});
 
 		driver.init();
+		driver.frame(0);
 		const frame = driver.frame(500);
 
 		expect(frame).toEqual({
@@ -33,6 +34,7 @@ describe('createDataSeriesDriver', () => {
 		});
 
 		driver.init();
+		driver.frame(0);
 		const frame = driver.frame(500);
 
 		expect(frame).toEqual({
@@ -41,5 +43,22 @@ describe('createDataSeriesDriver', () => {
 		});
 		expect(frame[1]).toBeUndefined();
 		expect(frame[2]).toBeUndefined();
+	});
+
+	it('anchors absolute timestamps so first sample does not jump to completion', () => {
+		const driver = createDataSeriesDriver({
+			seriesByRingIndex: {
+				0: [0, 10]
+			},
+			speed: 1,
+			loop: false
+		});
+
+		driver.init();
+		const firstFrame = driver.frame(100000);
+		const secondFrame = driver.frame(100500);
+
+		expect(firstFrame).toEqual({ 0: 0 });
+		expect(secondFrame).toEqual({ 0: 0.5 });
 	});
 });

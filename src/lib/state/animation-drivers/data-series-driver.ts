@@ -61,17 +61,21 @@ function interpolateSeries(series: number[], progress: number): number {
 
 export function createDataSeriesDriver(config: DataSeriesConfig): AnimationDriver {
 	const normalizedSeriesByRing = buildNormalizedSeriesMap(config.seriesByRingIndex);
-	let startedAtMs = 0;
+	let startedAtMs: number | null = null;
 
 	return {
 		init() {
-			startedAtMs = 0;
+			// Anchor elapsed time to the first observed frame timestamp after activation.
+			startedAtMs = null;
 		},
 		dispose() {
-			startedAtMs = 0;
+			startedAtMs = null;
 		},
 		frame(nowMs) {
 			if (!Number.isFinite(nowMs)) return {};
+			if (startedAtMs === null) {
+				startedAtMs = nowMs;
+			}
 
 			const elapsedSec = Math.max(0, (nowMs - startedAtMs) / 1000);
 			const speed = Number.isFinite(config.speed) ? Math.max(0, config.speed) : 1;
