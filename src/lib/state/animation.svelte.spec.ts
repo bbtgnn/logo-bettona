@@ -233,4 +233,62 @@ describe('animation runtime integration', () => {
 		void cancelAnimationFrameMock;
 		vi.unstubAllGlobals();
 	});
+
+	it('preserves pause/resume continuity in dataSeries mode', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const { setRingMorphT } = await import('./composition');
+		const animation = await import('./animation');
+
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 10] },
+			speed: 1,
+			loop: false
+		});
+		animation.setAnimationMode('dataSeries');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(500);
+		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
+
+		animation.togglePlay();
+		animation.togglePlay();
+		flushNextAnimationFrame(10_500);
+
+		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
+
+		flushNextAnimationFrame(10_750);
+		flushNextAnimationFrame(11_000);
+		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.75);
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('applies alternate progression to controller progress path', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+
+		animation.setAnimationDurationSec(1);
+		animation.setAnimationLoop(true);
+		animation.setAnimationAlternate(true);
+		animation.togglePlay();
+
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(500);
+		expect(animation.animationState.progress).toBeCloseTo(0.5, 5);
+
+		flushNextAnimationFrame(1000);
+		expect(animation.animationState.progress).toBeCloseTo(1, 5);
+
+		flushNextAnimationFrame(1500);
+		expect(animation.animationState.progress).toBeCloseTo(0.5, 5);
+
+		flushNextAnimationFrame(2000);
+		expect(animation.animationState.progress).toBeCloseTo(0, 5);
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
 });

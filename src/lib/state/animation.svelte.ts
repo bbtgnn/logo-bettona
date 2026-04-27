@@ -49,8 +49,8 @@ export const animationState = $state<AnimationState>({
 let lastRingCount = 0;
 let animatedIndices: number[] = [];
 let frameRequestId: number | null = null;
-let startedAtMs: number | null = null;
-let pausedElapsedMs = 0;
+let lastTickNowMs: number | null = null;
+let logicalElapsedMs = 0;
 
 const runtime = createAnimationRuntime({
 	applyRingT: (index, t) => setRingMorphT(index, t)
@@ -106,8 +106,8 @@ function stopInternal(resetProgress = true) {
 		applyMorphT(0);
 		animationState.progress = 0;
 	}
-	startedAtMs = null;
-	pausedElapsedMs = 0;
+	lastTickNowMs = null;
+	logicalElapsedMs = 0;
 	animationState.isPlaying = false;
 	animationState.isPaused = false;
 }
@@ -122,6 +122,26 @@ function hasMorphTargets(): boolean {
 	return animatedIndices.length > 0;
 }
 
+function getProgressFromElapsed(elapsedMs: number): number {
+	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
+	const cycles = Math.max(0, elapsedMs / durationMs);
+
+	if (!animationState.alternate) {
+		return animationState.loop && cycles > 0 ? cycles - Math.floor(cycles) : clamp01(cycles);
+	}
+
+	const cyclePosition = cycles % 2;
+	const triangle = cyclePosition <= 1 ? cyclePosition : 2 - cyclePosition;
+	return clamp01(triangle);
+}
+
+function hasCompleted(elapsedMs: number): boolean {
+	if (animationState.loop) return false;
+	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
+	const cycles = Math.max(0, elapsedMs / durationMs);
+	return cycles >= (animationState.alternate ? 2 : 1);
+}
+
 function tick(nowMs: number) {
 	if (!animationState.isPlaying) return;
 	if (!Number.isFinite(nowMs)) {
@@ -129,40 +149,28 @@ function tick(nowMs: number) {
 		return;
 	}
 
-	if (startedAtMs === null) {
-		startedAtMs = nowMs - pausedElapsedMs;
+	if (lastTickNowMs !== null) {
+		logicalElapsedMs += Math.max(0, nowMs - lastTickNowMs);
 	}
-	const elapsedMs = Math.max(0, nowMs - startedAtMs);
-	const elapsedSec = elapsedMs / 1000;
-	const durationSec = Math.max(0.1, animationState.durationSec);
-	const progress = clamp01(elapsedSec / durationSec);
+	lastTickNowMs = nowMs;
+	const progress = getProgressFromElapsed(logicalElapsedMs);
 
 	if (hasRunnableMode()) {
-		runtime.tick(nowMs);
+		runtime.tick(logicalElapsedMs);
 		animationState.progress = progress;
 	} else {
 		applyMorphT(progress);
 		animationState.progress = progress;
 	}
 
-	if (progress >= 1 && !animationState.loop) {
+	if (hasCompleted(logicalElapsedMs)) {
 		animationState.isPlaying = false;
 		animationState.isPaused = false;
-		pausedElapsedMs = 0;
-		startedAtMs = null;
+		lastTickNowMs = null;
+		logicalElapsedMs = 0;
 		frameRequestId = null;
 		return;
 	}
-
-	if (progress >= 1 && animationState.loop) {
-		startedAtMs = nowMs;
-		pausedElapsedMs = 0;
-		if (!hasRunnableMode()) {
-			applyMorphT(0);
-			animationState.progress = 0;
-		}
-	}
-
 	frameRequestId = requestAnimationFrame(tick);
 }
 
@@ -173,8 +181,8 @@ function startNewAnimation() {
 		return;
 	}
 	animationState.progress = 0;
-	startedAtMs = null;
-	pausedElapsedMs = 0;
+	lastTickNowMs = null;
+	logicalElapsedMs = 0;
 	if (animationState.mode) {
 		runtime.setMode(animationState.mode);
 	}
@@ -188,11 +196,9 @@ function reconfigureCurrentAnimation() {
 
 	const wasPlaying = animationState.isPlaying;
 	const wasPaused = animationState.isPaused;
-	const currentProgress = animationState.progress;
 
 	cleanupCurrentAnimation();
-	startedAtMs = null;
-	pausedElapsedMs = currentProgress * Math.max(0.1, animationState.durationSec) * 1000;
+	lastTickNowMs = null;
 
 	startNewAnimation();
 
@@ -235,9 +241,7 @@ export function togglePlay() {
 
 	if (animationState.isPlaying) {
 		cleanupCurrentAnimation();
-		if (startedAtMs !== null) {
-			pausedElapsedMs = Math.max(0, animationState.progress * Math.max(0.1, animationState.durationSec) * 1000);
-		}
+		lastTickNowMs = null;
 		animationState.isPlaying = false;
 		animationState.isPaused = true;
 		return;
