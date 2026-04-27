@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
+	import AnimationSection from './AnimationSection.svelte';
 	import RingEditor from './RingEditor.svelte';
 	import ColorsSection from './ColorsSection.svelte';
 	import { composition, addRing, reorderRings } from '$lib/state/composition';
@@ -32,8 +33,10 @@
 </script>
 
 <SidebarUI.Sidebar>
-	<SidebarUI.SidebarContent class="divide-y divide-border">
+	<SidebarUI.SidebarContent class="divide-y divide-border" data-testid="sidebar-content">
 		<SettingsSection />
+
+		<AnimationSection />
 
 		<ColorsSection />
 
