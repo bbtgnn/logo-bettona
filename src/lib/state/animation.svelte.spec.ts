@@ -159,4 +159,18 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPlaying).toBe(true);
 		expect(animation.animationState.isPaused).toBe(false);
 	});
+
+	it('stores selected driver mode and accepts dataSeries config updates', async () => {
+		const animation = await import('./animation');
+
+		animation.setAnimationMode('dataSeries');
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: {
+				0: [0, 1, 0.5]
+			}
+		});
+
+		expect(animation.animationState.mode).toBe('dataSeries');
+		expect(animation.animationState.dataSeries.seriesByRingIndex[0]).toEqual([0, 1, 0.5]);
+	});
 });

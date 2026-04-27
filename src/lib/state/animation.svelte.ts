@@ -1,23 +1,44 @@
 import { animate } from 'animejs';
 import { composition, setRingMorphT } from './composition';
+import type {
+	AnimationDriverType,
+	AudioBarsConfig,
+	DataSeriesConfig
+} from './animation-drivers/types';
 
-export type AnimationMode = 'morphSweep';
+export type AnimationMode = AnimationDriverType | null;
 
 export type AnimationState = {
 	mode: AnimationMode;
 	isPlaying: boolean;
 	isPaused: boolean;
 	progress: number;
+	audioBars: AudioBarsConfig;
+	dataSeries: DataSeriesConfig;
 	durationSec: number;
 	loop: boolean;
 	alternate: boolean;
 };
 
+const defaultAudioBarsConfig: AudioBarsConfig = {
+	smoothing: 0.5,
+	minHz: 20,
+	maxHz: 20000
+};
+
+const defaultDataSeriesConfig: DataSeriesConfig = {
+	seriesByRingIndex: {},
+	speed: 1,
+	loop: false
+};
+
 export const animationState = $state<AnimationState>({
-	mode: 'morphSweep',
+	mode: null,
 	isPlaying: false,
 	isPaused: false,
 	progress: 0,
+	audioBars: defaultAudioBarsConfig,
+	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
 	loop: false,
 	alternate: false
@@ -162,6 +183,14 @@ export function setAnimationLoop(value: boolean) {
 export function setAnimationAlternate(value: boolean) {
 	animationState.alternate = value;
 	reconfigureCurrentAnimation();
+}
+
+export function setAnimationMode(mode: AnimationMode): void {
+	animationState.mode = mode;
+}
+
+export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>): void {
+	animationState.dataSeries = { ...animationState.dataSeries, ...next };
 }
 
 export function togglePlay() {
