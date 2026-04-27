@@ -140,3 +140,20 @@ Behavior:
 ## 10) Future Extension Notes
 
 This design deliberately centralizes animation runtime in `src/lib/state/animation.ts` so future animation types can be added behind a mode adapter interface with minimal impact to sidebar UI and composition persistence boundaries.
+
+## 11) Follow-up UX Guardrail (2026-04-27)
+
+Add an inline warning in the `Animation` section when no rings are morph-capable (no ring has `secondaryTemplatePath`).
+
+### Behavior contract
+
+- Condition: `composition.rings.some((ring) => ring.secondaryTemplatePath)` is `false`.
+- Warning visibility: always visible while condition is `false` (not tied to play attempts).
+- Warning text: `Animation won’t run until at least one ring has a secondary path.`
+- Play button: disabled while the condition is `false`.
+- Existing controller guardrails remain in place (`togglePlay()` no-op path when no morph-capable rings) as runtime safety backup.
+
+### UI intent
+
+- Keep warning compact and visually subtle, using a small yellow tinted style to indicate caution instead of error.
+- Place warning near the top of the animation controls so the reason for disabled play is immediately clear.

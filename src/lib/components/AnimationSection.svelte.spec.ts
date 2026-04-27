@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { tick } from 'svelte';
 
+type RingMock = {
+	secondaryTemplatePath: { cmds: string[]; crds: number[] } | null;
+	morphT: number;
+};
+
 const animationApi = vi.hoisted(() => ({
 	animationState: {
 		mode: 'morphSweep',
@@ -22,7 +27,7 @@ const animationApi = vi.hoisted(() => ({
 
 const compositionApi = vi.hoisted(() => ({
 	composition: {
-		rings: [{ secondaryTemplatePath: null, morphT: 0 }]
+		rings: [{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 }] as RingMock[]
 	}
 }));
 
@@ -38,13 +43,15 @@ describe('AnimationSection', () => {
 		animationApi.setAnimationLoop.mockClear();
 		animationApi.setAnimationAlternate.mockClear();
 		animationApi.handleCompositionChanged.mockClear();
-		compositionApi.composition.rings = [{ secondaryTemplatePath: null, morphT: 0 }];
+		compositionApi.composition.rings = [
+			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 }
+		];
 	});
 
 	it('renders playback controls and progress', async () => {
 		render(AnimationSection);
 
-		await expect.element(page.getByText('Animation')).toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Animation' })).toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Play' })).toBeInTheDocument();
 		await expect.element(page.getByLabelText('Duration (s)')).toBeInTheDocument();
 		await expect.element(page.getByLabelText('Loop')).toBeInTheDocument();
@@ -66,6 +73,32 @@ describe('AnimationSection', () => {
 
 		await userEvent.click(page.getByLabelText('Alternate'));
 		expect(animationApi.setAnimationAlternate).toHaveBeenLastCalledWith(true);
+	});
+
+	it('shows warning and disables Play when no rings have secondary paths', async () => {
+		compositionApi.composition.rings = [
+			{ secondaryTemplatePath: null, morphT: 0 },
+			{ secondaryTemplatePath: null, morphT: 0.2 }
+		];
+		render(AnimationSection);
+
+		await expect
+			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
+			.toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Play' })).toBeDisabled();
+	});
+
+	it('hides warning and enables Play when at least one ring has a secondary path', async () => {
+		compositionApi.composition.rings = [
+			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ secondaryTemplatePath: null, morphT: 0.2 }
+		];
+		render(AnimationSection);
+
+		await expect
+			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
+			.not.toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Play' })).toBeEnabled();
 	});
 
 	it('checks composition safety when rendered', async () => {

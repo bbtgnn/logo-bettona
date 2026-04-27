@@ -17,6 +17,9 @@
 	const progressPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, animationState.progress)) * 100)
 	);
+const hasMorphRings = $derived(
+	composition.rings.some((ring) => ring.secondaryTemplatePath !== null)
+);
 
 	$effect(() => {
 		composition.rings.length;
@@ -31,6 +34,14 @@
 
 	{#snippet content()}
 		<div class="space-y-3">
+			{#if !hasMorphRings}
+				<p
+					class="rounded border border-yellow-300 bg-yellow-100 px-2 py-1 text-[11px] text-yellow-900"
+				>
+					Animation won’t run until at least one ring has a secondary path.
+				</p>
+			{/if}
+
 			<div class="flex items-end gap-2">
 				<div class="flex flex-1 flex-col gap-1">
 					<Label for="animation-duration" class="text-xs">Duration (s)</Label>
@@ -43,7 +54,7 @@
 						oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
 					/>
 				</div>
-				<Button onclick={togglePlay} aria-pressed={animationState.isPlaying}
+				<Button onclick={togglePlay} aria-pressed={animationState.isPlaying} disabled={!hasMorphRings}
 					>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
 				>
 			</div>
