@@ -151,3 +151,9 @@ This design intentionally trades maximal flexibility for clarity and implementat
 - Per-ring scalar output aligns with existing morph pipeline.
 - Strict persisted-vs-ephemeral boundaries reduce reactive/persistence churn.
 - The architecture remains extensible by adding new driver types later without changing render core contracts.
+
+## Task 7 Verification Note (2026-04-27)
+
+- Current implementation still resets playback in `handleCompositionChanged()` when ring topology changes while playing.
+- This behavior deviates from the topology rules above for driver modes (`audioBars` should adapt next frame; `dataSeries` should hold unchanged rings without implicit reset).
+- Regression coverage for runtime hold/topology behavior was added at driver/runtime unit level, but controller-level topology reset remains an acknowledged gap.

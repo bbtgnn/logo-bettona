@@ -24,6 +24,31 @@ describe('createAnimationRuntime', () => {
 		]);
 	});
 
+	it('keeps omitted ring indices untouched across consecutive frames', () => {
+		const applyRingT = vi.fn();
+		const runtime = createAnimationRuntime({ applyRingT });
+		let frameIndex = 0;
+		runtime.registerDriver('dataSeries', {
+			init: () => undefined,
+			dispose: () => undefined,
+			frame: () => {
+				frameIndex += 1;
+				if (frameIndex === 1) return { 0: 0.2, 1: 0.8 };
+				return { 0: 0.4 };
+			}
+		});
+
+		runtime.setMode('dataSeries');
+		runtime.tick(0);
+		runtime.tick(16);
+
+		expect(applyRingT.mock.calls).toEqual([
+			[0, 0.2],
+			[1, 0.8],
+			[0, 0.4]
+		]);
+	});
+
 	it('mode null means no frame application', () => {
 		const applyRingT = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT });

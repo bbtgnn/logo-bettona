@@ -33,4 +33,22 @@ describe('createAudioBarsDriver', () => {
 		expect(nonIntegerCountDriver.frame(1000)).toEqual({ 0: 0.2, 1: 1 });
 		expect(infiniteCountDriver.frame(1000)).toEqual({});
 	});
+
+	it('adapts output topology when ring count changes between frames', () => {
+		let ringCount = 2;
+		const driver = createAudioBarsDriver({
+			getConfig: () => ({ smoothing: 0.5, minHz: 20, maxHz: 16000 }),
+			getRingCount: () => ringCount,
+			readBars: () => [0.1, 0.6, 0.9]
+		});
+
+		driver.init();
+		expect(driver.frame(0)).toEqual({ 0: 0.1, 1: 0.6 });
+
+		ringCount = 3;
+		expect(driver.frame(16)).toEqual({ 0: 0.1, 1: 0.6, 2: 0.9 });
+
+		ringCount = 1;
+		expect(driver.frame(32)).toEqual({ 0: 0.1 });
+	});
 });

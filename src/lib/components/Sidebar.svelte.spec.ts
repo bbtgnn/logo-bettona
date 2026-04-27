@@ -16,7 +16,7 @@ vi.mock('$lib/shadcn/ui/sidebar/context.svelte.js', () => sidebarContext);
 
 vi.mock('$lib/state/animation', () => ({
 	animationState: {
-		mode: 'morphSweep',
+		mode: null,
 		isPlaying: false,
 		isPaused: false,
 		progress: 0,
@@ -25,6 +25,7 @@ vi.mock('$lib/state/animation', () => ({
 		alternate: false
 	},
 	togglePlay: vi.fn(),
+	setAnimationMode: vi.fn(),
 	setAnimationDurationSec: vi.fn(),
 	setAnimationLoop: vi.fn(),
 	setAnimationAlternate: vi.fn(),
