@@ -88,7 +88,7 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPaused).toBe(false);
 	});
 
-	it('resets when composition ring count changes during playback', async () => {
+	it('resets when composition ring count changes during legacy playback', async () => {
 		const animation = await import('./animation');
 		animation.togglePlay();
 		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
@@ -97,7 +97,7 @@ describe('animation controller', () => {
 		expect(animation.animationState.progress).toBe(0);
 	});
 
-	it('resets when animated ring targets become stale during playback', async () => {
+	it('resets when animated ring targets become stale during legacy playback', async () => {
 		const animation = await import('./animation');
 		animation.togglePlay();
 		mockComposition.rings = [
@@ -109,6 +109,29 @@ describe('animation controller', () => {
 
 		expect(animation.animationState.isPlaying).toBe(false);
 		expect(animation.animationState.progress).toBe(0);
+	});
+
+	it('keeps driver playback running when composition topology changes', async () => {
+		const animation = await import('./animation');
+		animation.setAnimationMode('dataSeries');
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 10] },
+			speed: 1,
+			loop: false
+		});
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(300);
+		expect(animation.animationState.isPlaying).toBe(true);
+		expect(animation.animationState.progress).toBeCloseTo(0.1, 5);
+
+		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
+		animation.handleCompositionChanged();
+		expect(animation.animationState.isPlaying).toBe(true);
+
+		flushNextAnimationFrame(600);
+		expect(animation.animationState.isPlaying).toBe(true);
+		expect(animation.animationState.progress).toBeCloseTo(0.2, 5);
 	});
 
 	it('keeps idle state when no ring has a morph target', async () => {

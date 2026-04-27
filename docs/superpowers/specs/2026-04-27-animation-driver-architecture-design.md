@@ -154,6 +154,6 @@ This design intentionally trades maximal flexibility for clarity and implementat
 
 ## Task 7 Verification Note (2026-04-27)
 
-- Current implementation still resets playback in `handleCompositionChanged()` when ring topology changes while playing.
-- This behavior deviates from the topology rules above for driver modes (`audioBars` should adapt next frame; `dataSeries` should hold unchanged rings without implicit reset).
-- Regression coverage for runtime hold/topology behavior was added at driver/runtime unit level, but controller-level topology reset remains an acknowledged gap.
+- Follow-up fix applied: driver modes no longer force-reset playback on topology changes in `handleCompositionChanged()`.
+- Legacy mode (`mode = null`) still keeps conservative reset behavior on topology drift.
+- Regression coverage now includes controller-level driver-mode continuity across topology changes.

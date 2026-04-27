@@ -272,6 +272,14 @@ export function handleCompositionChanged() {
 		return;
 	}
 
+	// Driver modes own their per-ring frame output semantics:
+	// topology updates should be absorbed without forcing a playback reset.
+	if (animationState.mode) {
+		lastRingCount = composition.rings.length;
+		animatedIndices = currentIndices;
+		return;
+	}
+
 	const hasCompositionChanged =
 		composition.rings.length !== lastRingCount ||
 		!haveSameIndices(currentIndices, animatedIndices);
