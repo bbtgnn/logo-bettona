@@ -33,4 +33,51 @@ describe('createAnimationRuntime', () => {
 
 		expect(applyRingT).not.toHaveBeenCalled();
 	});
+
+	it('auto-inits a driver registered for the currently active mode', () => {
+		const init = vi.fn();
+		const frame = vi.fn(() => ({ 0: 0.4 }));
+		const applyRingT = vi.fn();
+		const runtime = createAnimationRuntime({ applyRingT });
+
+		runtime.setMode('dataSeries');
+		runtime.registerDriver('dataSeries', {
+			init,
+			dispose: vi.fn(),
+			frame
+		});
+		runtime.tick(10);
+
+		expect(init).toHaveBeenCalledOnce();
+		expect(frame).toHaveBeenCalledWith(10);
+		expect(applyRingT).toHaveBeenCalledWith(0, 0.4);
+	});
+
+	it('disposes previous mode and inits next mode on switch', () => {
+		const audioInit = vi.fn();
+		const audioDispose = vi.fn();
+		const dataInit = vi.fn();
+		const dataDispose = vi.fn();
+		const runtime = createAnimationRuntime({ applyRingT: vi.fn() });
+
+		runtime.registerDriver('audioBars', {
+			init: audioInit,
+			dispose: audioDispose,
+			frame: () => ({})
+		});
+		runtime.registerDriver('dataSeries', {
+			init: dataInit,
+			dispose: dataDispose,
+			frame: () => ({})
+		});
+
+		runtime.setMode('audioBars');
+		runtime.setMode('dataSeries');
+		runtime.setMode(null);
+
+		expect(audioInit).toHaveBeenCalledOnce();
+		expect(audioDispose).toHaveBeenCalledOnce();
+		expect(dataInit).toHaveBeenCalledOnce();
+		expect(dataDispose).toHaveBeenCalledOnce();
+	});
 });

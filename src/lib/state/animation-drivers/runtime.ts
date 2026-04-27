@@ -20,6 +20,11 @@ export function createAnimationRuntime(deps: RuntimeDeps) {
 
 	function registerDriver(type: AnimationDriverType, driver: AnimationDriver): void {
 		drivers.set(type, driver);
+		// Contract: activating a mode before registration is allowed;
+		// registering that active mode later initializes it immediately.
+		if (mode === type) {
+			driver.init();
+		}
 	}
 
 	function setMode(nextMode: AnimationDriverType | null): void {
