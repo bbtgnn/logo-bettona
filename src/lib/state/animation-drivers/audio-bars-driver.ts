@@ -16,6 +16,12 @@ function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
+function normalizeRingCount(value: number): number {
+	if (!Number.isFinite(value)) return 0;
+	if (!Number.isInteger(value)) return Math.max(0, Math.floor(value));
+	return Math.max(0, value);
+}
+
 export function createAudioBarsDriver(deps: CreateAudioBarsDriverDeps): AnimationDriver {
 	return {
 		init() {
@@ -25,7 +31,7 @@ export function createAudioBarsDriver(deps: CreateAudioBarsDriverDeps): Animatio
 			// no-op in v1
 		},
 		frame(_nowMs) {
-			const ringCount = Math.max(0, deps.getRingCount());
+			const ringCount = normalizeRingCount(deps.getRingCount());
 			const bars = deps.readBars();
 			const frame: Record<number, number> = {};
 
