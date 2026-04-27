@@ -1,134 +1,126 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## Directory Layout
 
 ```
 logo-bettona/
 ├── src/
-│   ├── app.d.ts              # SvelteKit ambient types
+│   ├── app.d.ts                      # SvelteKit ambient types
 │   ├── lib/
-│   │   ├── assets/           # Static assets (e.g. favicon)
-│   │   ├── color/            # Palette application (`apply.ts`)
-│   │   ├── components/     # App UI: sidebar, editors, preview canvas
-│   │   ├── geometry/       # bend, path-morph, render-pipeline, svg-import
-│   │   ├── shadcn/         # Generated/adapted UI primitives
-│   │   ├── state/          # composition + rune-sync persistence
-│   │   ├── types.ts        # Path, Ring, Composition, palette types
-│   │   ├── index.ts        # Public lib exports (if any)
-│   │   └── vitest-examples/# Sample tests (non-feature)
+│   │   ├── assets/                   # Static assets
+│   │   ├── color/                    # Palette application logic + tests
+│   │   ├── components/               # Sidebar sections, ring editor, preview canvas
+│   │   ├── geometry/                 # Path morph, bending, render pipeline, composition facade
+│   │   ├── shadcn/                   # UI primitives
+│   │   ├── state/                    # Composition persistence + animation controller
+│   │   ├── types.ts                  # Core domain types
+│   │   ├── index.ts                  # Public exports
+│   │   └── vitest-examples/          # Example tests
 │   └── routes/
-│       ├── +layout.svelte   # Root layout, CSS
-│       ├── +layout.ts       # Layout load (minimal)
-│       ├── +page.svelte     # Main shape editor page
-│       ├── demo/            # Demo / Playwright routes
-│       └── experiments/     # Experimental pages
-├── static/                  # SvelteKit static files
-├── playwright.config.ts
-├── vite.config.ts
+│       ├── +layout.svelte            # Root layout
+│       ├── +layout.ts                # Layout loader
+│       ├── +page.svelte              # Main editor route
+│       ├── demo/                     # Demo routes
+│       └── experiments/              # Experimental routes
+├── static/                           # Static files served by SvelteKit
 ├── package.json
+├── vite.config.ts
+├── playwright.config.ts
 └── tsconfig.json
 ```
 
 ## Directory Purposes
 
 **`src/routes/`:**
-- Purpose: SvelteKit pages and layouts.
-- Contains: `+page.svelte` (editor shell), optional demos under `demo/`, `experiments/`.
+- Purpose: App entry routes and layout framing.
+- Contains: root layout files and main editor page.
 - Key files: `src/routes/+page.svelte`, `src/routes/+layout.svelte`
 
 **`src/lib/components/`:**
-- Purpose: Feature-level Svelte components (not generic design system).
-- Contains: Ring list/editor, preview canvas, color/settings sections, sidebar wrapper.
-- Key files: `src/lib/components/Sidebar.svelte`, `src/lib/components/RingEditor.svelte`, `src/lib/components/RingCanvas.svelte`, `src/lib/components/PreviewCanvas.svelte`
+- Purpose: Feature UI components for editing and preview.
+- Contains: `Sidebar.svelte`, `SettingsSection.svelte`, `AnimationSection.svelte`, `ColorsSection.svelte`, `RingEditor.svelte`, `RingCanvas.svelte`, `PreviewCanvas.svelte`.
+- Key files: `src/lib/components/Sidebar.svelte`, `src/lib/components/AnimationSection.svelte`, `src/lib/components/PreviewCanvas.svelte`
 
 **`src/lib/state/`:**
-- Purpose: Persistent reactive state and mutations.
-- Contains: Composition defaults, ring morph helpers, palette CRUD.
-- Key files: `src/lib/state/composition.ts`
+- Purpose: Reactive app state and controller logic.
+- Contains: persisted composition model and playback controller.
+- Key files: `src/lib/state/composition.ts`, `src/lib/state/animation.svelte.ts`, `src/lib/state/animation.ts`
 
 **`src/lib/geometry/`:**
-- Purpose: Pure and Paper-bound geometry: bending template paths into rings, morphing, rendering, SVG import.
-- Contains: `bend.ts`, `path-morph.ts`, `render-pipeline.ts`, `svg-import.ts`, co-located `*.svelte.spec.ts` tests.
-- Key files: `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/path-morph.ts`, `src/lib/geometry/bend.ts`
-
-**`src/lib/types.ts`:**
-- Purpose: Shared TypeScript types for paths, rings, composition, color modes.
-- Contains: `Ring.secondaryTemplatePath`, `Ring.morphT` alongside `templatePath`.
-
-**`src/lib/shadcn/`:**
-- Purpose: UI primitives (sidebar, slider, button, sheet, etc.).
-- Contains: Svelte components + small `index.ts` barrels per widget.
-
-**`src/lib/color/`:**
-- Purpose: Applying monochrome / full palette / manual colors to rings.
+- Purpose: Geometry transformations and render orchestration.
+- Contains: `bend.ts`, `path-morph.ts`, `render-pipeline.ts`, `svg-import.ts`, `compose.ts`, plus co-located `*.svelte.spec.ts` tests.
+- Key files: `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/path-morph.ts`, `src/lib/geometry/compose.ts`
 
 ## Key File Locations
 
 **Entry Points:**
-- `src/routes/+page.svelte`: Main UI — sidebar inset + `PreviewCanvas`.
-- `src/routes/+layout.svelte`: Global styles and document head.
+- `src/routes/+page.svelte`: Wires `Sidebar` and `PreviewCanvas` in the editor screen.
+- `src/lib/components/Sidebar.svelte`: Defines section order and placement of animation controls.
 
 **Configuration:**
-- `vite.config.ts`: Vite + SvelteKit plugin.
-- `playwright.config.ts`: E2E.
-- `package.json`: Scripts and dependencies (`paper`, `rune-sync`, Svelte 5).
+- `package.json`: scripts/dependencies (`animejs`, `paper`, `rune-sync`, Svelte 5 tooling).
+- `vite.config.ts`: build/dev config.
+- `playwright.config.ts`: E2E settings.
 
 **Core Logic:**
-- `src/lib/types.ts`: `Path`, `Ring` (primary + secondary template + `morphT`), `Composition`.
-- `src/lib/state/composition.ts`: LocalStorage-backed `composition`; morph lifecycle (`createRingMorphTarget`, `removeRingMorphTarget`, `setRingMorphT`, `updateRingPathVariant`).
-- `src/lib/geometry/path-morph.ts`: `validatePathCompatibility`, `interpolatePath` (linear coordinate blend).
-- `src/lib/geometry/render-pipeline.ts`: Per-ring morph then `buildRingPath`, fit, export path for preview.
-- `src/lib/geometry/bend.ts`: `buildRingPath` — polar mapping from template bbox to ring tiles.
+- `src/lib/state/composition.ts`: source of truth for ring data, morph target lifecycle, and path variant validation.
+- `src/lib/state/animation.svelte.ts`: animation controller that maps timeline progress into `setRingMorphT` updates.
+- `src/lib/geometry/render-pipeline.ts`: render-time interpolation (`interpolatePath`) and radial ring drawing (`buildRingPath`).
+- `src/lib/types.ts`: shared model (`Composition`, `Ring`, `Path`).
 
-**Canvas preview:**
-- `src/lib/components/PreviewCanvas.svelte`: Main 600×600 canvas; `$effect` drives `createRenderPipeline().render({ composition, scope, viewport })` so **morph interpolation is visible here** whenever `morphT` or either template path changes.
+**Animation Placement:**
+- `src/lib/components/Sidebar.svelte`: mounts `AnimationSection` immediately after `SettingsSection` and before `ColorsSection`.
+- `src/lib/components/AnimationSection.svelte`: playback controls, loop/alternate toggles, progress bar, and composition change safety hook.
 
 **Testing:**
-- `src/lib/geometry/*.svelte.spec.ts`, `src/lib/state/composition.svelte.spec.ts`, `src/lib/components/PreviewCanvas.svelte.spec.ts`: Vitest browser/component tests co-located with modules.
+- `src/lib/state/animation.svelte.spec.ts`: controller behavior and stale-composition safety.
+- `src/lib/components/AnimationSection.svelte.spec.ts`: UI wiring to animation controller actions.
+- `src/lib/geometry/*.svelte.spec.ts` and `src/lib/state/composition.svelte.spec.ts`: geometry/state invariants.
 
 ## Naming Conventions
 
 **Files:**
-- Svelte components: `PascalCase.svelte` (e.g. `RingEditor.svelte`, `PreviewCanvas.svelte`).
-- TS modules: `kebab-case.ts` in geometry (`render-pipeline.ts`, `path-morph.ts`) or short domain names (`bend.ts`, `composition.ts`).
-- Specs: `*.svelte.spec.ts` next to implementation.
+- UI components use `PascalCase.svelte` (for example `AnimationSection.svelte`).
+- State and geometry modules use lowercase/kebab TypeScript filenames (for example `composition.ts`, `animation.svelte.ts`, `render-pipeline.ts`).
+- Tests are co-located and use `*.svelte.spec.ts`.
 
 **Directories:**
-- `src/lib/` grouping by concern: `components/`, `geometry/`, `state/`, `shadcn/`, `color/`.
+- Organize by concern under `src/lib/` (`components`, `state`, `geometry`, `color`, `shadcn`).
 
 ## Where to Add New Code
 
-**New Feature:**
-- Primary UI: `src/lib/components/`; wire from `Sidebar.svelte` or `+page.svelte` as appropriate.
-- Shared logic: `src/lib/geometry/` or `src/lib/state/` depending on whether it is rendering/math vs persisted state.
+**New animation feature or control:**
+- UI control surface: `src/lib/components/AnimationSection.svelte`.
+- Playback/controller behavior: `src/lib/state/animation.svelte.ts`.
+- Section placement changes: `src/lib/components/Sidebar.svelte`.
 
-**New persisted field on rings:**
-- Extend `Ring` in `src/lib/types.ts`.
-- Default and migrations in `src/lib/state/composition.ts` (`DEFAULT_RING`, any load normalization if added later).
-- If it affects drawing, update `src/lib/geometry/render-pipeline.ts` and/or `src/lib/geometry/bend.ts`.
-- If user-editable, extend `RingEditor.svelte` (or a child component).
+**New composition or ring morph field:**
+- Type definition: `src/lib/types.ts`.
+- Persistence/defaults/mutations: `src/lib/state/composition.ts`.
+- Render behavior for field: `src/lib/geometry/render-pipeline.ts` or `src/lib/geometry/bend.ts`.
 
-**Morph-related changes:**
-- Interpolation math: `src/lib/geometry/path-morph.ts`.
-- When to blend vs fallback: `src/lib/geometry/render-pipeline.ts` loop over `composition.rings`.
-- Edit rules and persistence: `src/lib/state/composition.ts` (`updateRingPathVariant`, morph target helpers).
+**New morph algorithm behavior:**
+- Compatibility/interpolation rules: `src/lib/geometry/path-morph.ts`.
+- Ring application order and fallback behavior: `src/lib/geometry/render-pipeline.ts`.
 
-**Utilities:**
-- Small color helpers: `src/lib/color/apply.ts`.
-- Generic UI: prefer `src/lib/shadcn/` patterns before ad-hoc CSS.
+**Utilities and exports:**
+- Public re-exports: `src/lib/index.ts`.
+- Keep compatibility facades in `src/lib/geometry/compose.ts` only when needed for legacy call sites.
 
 ## Special Directories
 
 **`.planning/`:**
-- Purpose: GSD planning artifacts and codebase maps (this file).
-- Generated: No (maintained by workflow).
-- Committed: Typically yes for team visibility.
+- Purpose: planning artifacts and codebase map documents.
+- Generated: No.
+- Committed: Yes.
 
 **`src/lib/shadcn/`:**
-- Purpose: vendored or generated UI kit; treat as low-churn unless upgrading components.
+- Purpose: component primitives and helpers used by feature components.
+- Generated: Partially (vendor-style UI layer).
+- Committed: Yes.
 
 ---
 
-*Structure analysis: 2026-04-26*
+*Structure analysis: 2026-04-27*

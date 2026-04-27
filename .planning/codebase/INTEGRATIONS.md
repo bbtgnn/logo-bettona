@@ -1,60 +1,67 @@
 # External Integrations
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## APIs & External Services
 
-**HTTP / SaaS backends:**
-- Not applicable — no first-party REST/GraphQL client or server routes in `src/` for remote APIs. The app is a prerendered, client-rendered static front end.
+**Remote APIs:**
+- Not detected - no REST/GraphQL client integration in `src/**` and no server API route layer.
 
-**Third-party libraries (in-process, not network):**
-- Paper.js (`paper`) — local vector engine for path I/O and rendering (see `STACK.md`). Experiments: `src/routes/experiments/+page.svelte` imports `src/routes/experiments/paper.ts`.
+**In-process third-party engines:**
+- `animejs` (`animate`) - timeline engine integrated in `src/lib/state/animation.svelte.ts` for morph playback state transitions.
+  - SDK/Client: `animejs`
+  - Auth: Not applicable
+- `paper` - vector/path engine used by ring editing and rendering (`src/lib/geometry/**`, `src/lib/components/RingEditor.svelte`, `src/lib/components/RingCanvas.svelte`).
+  - SDK/Client: `paper`
+  - Auth: Not applicable
 
 ## Data Storage
 
 **Databases:**
 - Not applicable.
 
-**Browser storage:**
-- `localStorage` — via `rune-sync` `lsSync` in `src/lib/state/composition.ts` for keys such as `composition`, `color-mode`, `composition-ui`. Persisted `Ring` shape includes `secondaryTemplatePath` and `morphT` (`src/lib/types.ts`).
+**Browser persistence:**
+- `localStorage` via `rune-sync/localstorage` in `src/lib/state/composition.ts`.
+  - Connection: Browser `localStorage` keys (`composition`, `color-mode`, `composition-ui`)
+  - Client: `lsSync` from `rune-sync`
 
 **File Storage:**
-- Local filesystem only in the sense of **user-selected files** in the browser: `importSvg(file: File, ...)` in `src/lib/geometry/svg-import.ts` uses the File API; no cloud upload path in code.
+- Local browser file input for SVG import only (`src/lib/components/RingEditor.svelte` -> `src/lib/geometry/svg-import.ts`).
 
 **Caching:**
-- None beyond browser defaults for static assets after deploy.
+- None configured beyond browser static asset caching.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Not applicable — no sign-in, tokens, or OAuth flows in application source.
+- Not applicable.
+  - Implementation: No auth middleware/tokens/session state in `src/**`.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None integrated (no Sentry/Datadog SDK in `package.json`).
+- None integrated.
 
 **Logs:**
-- Development/console only; no server-side logging pipeline.
+- Client-side console logging only (for example compatibility fallback logging in `src/lib/geometry/render-pipeline.ts`).
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- GitHub Pages — `.github/workflows/deploy.yml` builds and deploys via `actions/deploy-pages@v4` with `actions/upload-pages-artifact@v3` pointing at `build/`.
+- GitHub Pages static deployment via `.github/workflows/deploy.yml`.
 
 **CI Pipeline:**
-- GitHub Actions on push to `main`: checkout, `oven-sh/setup-bun@v2`, `bun i`, `bun run build` with environment variable `BASE_PATH` set to `/${{ github.event.repository.name }}` for repository-subpath hosting.
-
-**Local E2E:**
-- Playwright starts preview with `npm run build && npm run preview` (`playwright.config.ts`); not the same as Pages `BASE_PATH` unless configured separately for local runs.
+- GitHub Actions workflow builds with Bun then deploys Pages artifact from `build/`.
+- Build-time base path is injected with `BASE_PATH` in `.github/workflows/deploy.yml`.
 
 ## Environment Configuration
 
 **Required env vars:**
-- None for local dev inferred from source (no `$env/static` / `process.env` usage found for app config in a quick repo scan). **CI:** `BASE_PATH` is set in `.github/workflows/deploy.yml` for the build step.
+- `BASE_PATH` (CI build variable in `.github/workflows/deploy.yml`).
 
 **Secrets location:**
-- Not applicable for this repo’s app layer. Do not commit `.env` files; none were listed at repo root.
+- Not applicable for application runtime.
+- `.env` files are intentionally git-ignored by `.gitignore`.
 
 ## Webhooks & Callbacks
 
@@ -64,18 +71,26 @@
 **Outgoing:**
 - None.
 
-## Morph feature integration surface
+## Animation Integration Surface
 
-**State and validation (client-only):**
-- `src/lib/state/composition.ts` — `createRingMorphTarget`, `removeRingMorphTarget`, `setRingMorphT`, `updateRingPathVariant` with `validatePathCompatibility` from `src/lib/geometry/path-morph.ts`.
-- Serialization of morph fields happens through the same `lsSync` composition payload as the rest of the ring model.
+**Animation state module:**
+- `src/lib/state/animation.svelte.ts` owns playback state (`isPlaying`, `isPaused`, `progress`, `durationSec`, `loop`, `alternate`) and animejs lifecycle.
+- `src/lib/state/animation.ts` provides public re-export boundary for consumers.
 
-**Rendering integration:**
-- `src/lib/geometry/render-pipeline.ts` — when both `templatePath` and `secondaryTemplatePath` exist, validates compatibility; on success uses `interpolatePath(..., ring.morphT ?? 0)` before `buildRingPath`; on mismatch logs a warning string and falls back to unmorphed primary behavior for that ring.
+**Animation with composition model:**
+- `src/lib/state/animation.svelte.ts` drives `morphT` updates through `setRingMorphT` from `src/lib/state/composition.ts`.
+- `src/lib/state/composition.ts` persists morph fields and compatibility-checked target updates (`updateRingPathVariant`, `createRingMorphTarget`, `removeRingMorphTarget`).
+- `src/lib/types.ts` defines persisted ring morph contract (`secondaryTemplatePath`, `morphT`).
 
-**User-facing controls:**
-- `src/lib/components/RingEditor.svelte` — morph target creation/removal and `morphT` slider; separate PaperScope for SVG import (`importScope`).
+**Animation UI section:**
+- `src/lib/components/Sidebar.svelte` integrates `AnimationSection` between settings and color/rings sections.
+- `src/lib/components/AnimationSection.svelte` exposes duration, loop, alternate, play/pause, and progress bar controls wired to animation state actions.
+
+**Animation-related tests:**
+- `src/lib/state/animation.svelte.spec.ts` validates animejs integration behavior, play/pause toggling, loop/alternate safety, and composition change handling.
+- `src/lib/components/AnimationSection.svelte.spec.ts` validates control wiring and composition change checks in UI.
+- `src/lib/components/Sidebar.svelte.spec.ts` verifies animation section placement/order in sidebar layout.
 
 ---
 
-*Integration audit: 2026-04-26*
+*Integration audit: 2026-04-27*

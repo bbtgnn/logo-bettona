@@ -1,127 +1,132 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## Naming Patterns
 
 **Files:**
 
-- Svelte components: PascalCase — `RingEditor.svelte`, `PreviewCanvas.svelte`, `RingCanvas.svelte` under `src/lib/components/`.
-- Library modules: kebab-case TypeScript — `path-morph.ts`, `render-pipeline.ts`, `svg-import.ts` under `src/lib/geometry/` and siblings.
-- State modules: single logical name — `composition.ts` in `src/lib/state/`.
-- Vitest: co-located tests next to implementation; see `TESTING.md` for the `*.svelte.spec.ts` vs `*.spec.ts` split enforced by `vite.config.ts`.
+- Svelte components use PascalCase in `src/lib/components/` (`RingEditor.svelte`, `PreviewCanvas.svelte`, `AnimationSection.svelte`).
+- Domain/state modules use lower-case kebab or single-topic names in `src/lib/state/` and `src/lib/geometry/` (`composition.ts`, `animation.svelte.ts`, `render-pipeline.ts`, `path-morph.ts`).
+- State re-export modules use plain passthrough names (`src/lib/state/animation.ts` re-exports `./animation.svelte`).
+- Tests are co-located with implementations and follow `*.spec.ts` or `*.svelte.spec.ts` suffixes per `vite.config.ts`.
 
 **Functions:**
 
-- Verb-led exported functions for mutations and actions — `addRing`, `updateRingPathVariant`, `createRingMorphTarget`, `setRingMorphT`, `interpolatePath`, `validatePathCompatibility`, `createRenderPipeline`.
-- Small helpers use descriptive names — `clamp01` in `src/lib/state/composition.ts`.
+- Exported actions use verb-first names (`togglePlay`, `setAnimationDurationSec`, `handleCompositionChanged`, `updateRingPathVariant`, `createRingMorphTarget`).
+- Internal helpers stay short and explicit (`clamp01`, `getMorphRingIndices`, `haveSameIndices` in `src/lib/state/animation.svelte.ts`).
 
 **Variables:**
 
-- `camelCase` for locals and bindings; Svelte 5 runes use `$state` / `$props` identifiers in lower camelCase (`editVariant`, `ringPathError`, `importScope`).
+- `camelCase` for locals and state (`progressPercent`, `currentAnimation`, `animatedIndices`, `lastRingCount`).
+- Svelte rune state objects use `$state(...)` with mutable properties (`animationState.progress`, `animationState.isPlaying`).
 
 **Types:**
 
-- Domain types live in `src/lib/types.ts` — `Path`, `Ring`, `Composition`, `ColorModeState`, etc.
-- String-literal unions for modes — `'primary' | 'secondary'`, `'monochrome' | 'palette' | 'manual'`.
-- Discriminated results for fallible updates — `UpdateRingPathVariantResult` in `src/lib/state/composition.ts` is `{ ok: true } | { ok: false; reason: string }`, aligned with `validatePathCompatibility` return shape from `src/lib/geometry/path-morph.ts`.
+- Domain types are centralized in `src/lib/types.ts` (`Path`, `Ring`, `Composition`, `ColorModeState`).
+- Literal union types encode mode/state domains (`AnimationMode = 'morphSweep'`, path variant `'primary' | 'secondary'`).
+- Discriminated result unions are preferred for recoverable validation (`{ ok: true } | { ok: false; reason: string }` in `src/lib/state/composition.ts`).
 
 ## Code Style
 
 **Formatting:**
 
-- Prettier drives formatting; config in `.prettierrc`.
-- **Tabs** for indentation (`"useTabs": true`).
-- **Single quotes** for strings; **no trailing commas** (`"trailingComma": "none"`).
-- **Print width** 100.
-- Plugins: `prettier-plugin-svelte`, `prettier-plugin-tailwindcss` with `"tailwindStylesheet": "./src/routes/layout.css"`.
-- Svelte files use the `svelte` parser via Prettier `overrides` in `.prettierrc`.
+- Prettier config in `.prettierrc` is authoritative.
+- Use tabs, single quotes, no trailing commas, and print width 100.
+- Svelte files use the `svelte` parser override.
+- Tailwind class ordering is normalized via `prettier-plugin-tailwindcss`.
 
 **Linting:**
 
-- Flat config in `eslint.config.js`: `@eslint/js` recommended, `typescript-eslint` recommended, `eslint-plugin-svelte` recommended, `eslint-config-prettier` + `svelte.configs.prettier` to avoid style conflicts with Prettier.
-- `no-undef` is **off** (TypeScript owns undefined-symbol checking).
-- Svelte/TS files use `projectService: true` and `svelteConfig` from `./svelte.config.js` for typed linting of `**/*.svelte`, `**/*.svelte.ts`, `**/*.svelte.js`.
-- Project scripts: `npm run lint` runs `prettier --check .` then `eslint .`; `npm run format` runs `prettier --write .`.
+- Flat ESLint config in `eslint.config.js` composes `@eslint/js`, `typescript-eslint`, and `eslint-plugin-svelte` recommended sets plus Prettier compatibility.
+- `no-undef` is disabled for TypeScript files.
+- Typed linting for `**/*.svelte`, `**/*.svelte.ts`, `**/*.svelte.js` uses `projectService: true` and `svelteConfig`.
+- Use `npm run lint` (`prettier --check . && eslint .`) and `npm run format` (`prettier --write .`).
 
 ## Import Organization
 
-**Order (observed in `src/lib/components/RingEditor.svelte` and similar):**
-
-1. Default or namespace third-party — e.g. `import paper from 'paper'`.
-2. Internal UI primitives — `$lib/shadcn/ui/...`.
-3. Icon packages — `phosphor-svelte`.
-4. App state and geometry — `$lib/state/composition`, `$lib/geometry/svg-import`.
-5. Relative sibling components — `./RingCanvas.svelte`.
-6. Type-only imports last among groups — `import type { Ring } from '$lib/types'`.
+**Order:**
+1. Third-party packages first (`animejs`, `paper`, `vitest`, `svelte`).
+2. Internal alias imports (`$lib/...`) for state, geometry, UI primitives.
+3. Relative sibling imports last (`./SidebarCollapsible.svelte`, `./animation.svelte`).
+4. `import type` grouped with other imports but kept explicit.
 
 **Path Aliases:**
 
-- Use `$lib/...` for everything under `src/lib/` (SvelteKit convention); do not deep-relative-cross into `src` from unrelated trees when `$lib` is clearer.
+- Prefer `$lib/...` for modules under `src/lib/` and avoid long relative traversals.
 
 ## Error Handling
 
 **Patterns:**
 
-- **Result objects** for user-actionable failures without exceptions — `updateRingPathVariant` in `src/lib/state/composition.ts` returns `{ ok: false; reason: string }` and does not mutate rings when validation fails (see tests in `src/lib/state/composition.svelte.spec.ts`).
-- **Typed errors** for invalid interpolation — `PathMorphError` from `src/lib/geometry/path-morph.ts` thrown by `interpolatePath` when paths are incompatible; `validatePathCompatibility` returns `{ ok: false, reason: string }` for the same rule set.
-- **UI surfacing** — `RingEditor.svelte` sets `ringPathError` from `result.reason` when `updateRingPathVariant` fails; `importError` for SVG import failures from `importSvg`.
+- Use result objects for user-facing validation paths (`updateRingPathVariant` returns rejection reason instead of throwing).
+- Throw typed errors for strict invariants in geometry (`PathMorphError`, `RenderPipelineError`).
+- In animation control flow, handle third-party runtime failures defensively (`togglePlay` wraps `currentAnimation.play?.()` in `try/catch` and recreates animation).
+- Surface recoverable errors in component state (`ringPathError`, `importError`) instead of console-only handling.
 
 ## Logging
 
-**Framework:** No dedicated logging library detected; errors are user-facing strings in UI state.
+**Framework:** No dedicated logging framework detected.
 
 **Patterns:**
 
-- Prefer returning structured reasons over `console` for domain validation paths consumed by components.
+- Prefer deterministic state transitions and returned reasons over runtime logging.
+- Warnings for render fallback paths are emitted inside geometry rendering (`src/lib/geometry/render-pipeline.ts`) and asserted in tests.
 
 ## Comments
 
 **When to Comment:**
 
-- JSDoc on non-obvious public APIs — e.g. `updateRingPathVariant` documents primary vs secondary rules and non-mutation on rejection in `src/lib/state/composition.ts`.
-- Inline comments where behavior is non-obvious — e.g. dedicated `PaperScope` for SVG import vs display scope in `RingEditor.svelte`.
+- Add comments only for non-obvious cross-library behavior (example: stale anime timer recovery in `src/lib/state/animation.svelte.ts`).
+- Keep behavior contracts in JSDoc on exported APIs with business constraints (`updateRingPathVariant` in `src/lib/state/composition.ts`).
 
 **JSDoc/TSDoc:**
 
-- Use on exported functions that encode business rules (`updateRingPathVariant`). Omit on trivial one-liners unless the type system is insufficient.
+- Use on exported state/action APIs where mutation guarantees or compatibility constraints are not obvious from signatures.
 
 ## Function Design
 
-**Size:** Prefer focused functions; large UI stays in `.svelte` with extracted behavior in `$lib` modules (`path-morph`, `render-pipeline`, `composition`).
+**Size:** Keep UI orchestration inside `.svelte` components and move reusable behavior into focused `$lib/state` and `$lib/geometry` modules.
 
 **Parameters:**
 
-- Pass indices and patches explicitly (`updateRing(index, patch)`); use literal variant parameters (`'primary' | 'secondary'`) where the call site is discrete.
+- Pass ring index and explicit variant/mode literals (`setRingMorphT(index, t)`, `updateRingPathVariant(index, variant, path)`).
+- Clamp/sanitize user numeric input at state boundaries (`setAnimationDurationSec`, `setRingMorphT`, animation `clamp01`).
 
 **Return Values:**
 
-- Use discriminated unions for success/failure at module boundaries; keep `void` for pure UI event handlers that only mutate local `$state` or call stores.
+- Use `void` for direct state mutation handlers (`togglePlay`, `setAnimationLoop`).
+- Use typed result unions for operations that can fail without throwing.
 
 ## Module Design
 
 **Exports:**
 
-- Named exports for state and geometry (`composition`, `createRingMorphTarget`, `interpolatePath`).
-- Svelte components default-exported implicitly by file.
+- State modules expose named bindings and action functions (`animationState`, `togglePlay`, `stopAnimation`).
+- Components remain single-file default exports.
 
 **Barrel Files:**
 
-- shadcn-style barrels under `src/lib/shadcn/ui/<component>/index.js` — import from those index files in components (`RingEditor.svelte` uses `$lib/shadcn/ui/collapsible/index.js`, etc.).
+- shadcn/ui components are imported through barrel `index.js` modules (`$lib/shadcn/ui/button/index.js`, `$lib/shadcn/ui/input/index.js`).
+- Thin re-export modules (`src/lib/state/animation.ts`) provide stable import paths to `.svelte.ts` logic.
 
-## Svelte 5 and UI Patterns
+## Svelte 5 and Animation Patterns
 
-**Runes (project default):** `svelte.config.js` enables `runes: true` for all app files outside `node_modules`. Components use `$props()`, `$state()`, and `$effect()`.
+**Runes baseline:** `svelte.config.js` enables `runes: true`; components use `$props`, `$state`, `$effect`, `$derived`, and `untrack`.
 
-**`RingEditor.svelte` patterns (morph-related):**
+**Animation state conventions (`src/lib/state/animation.svelte.ts`):**
 
-- Props: destructure `ring`, `index`, optional drag handlers from `$props()` with an explicit inline type for the props object.
-- Sync collapsible open state from shared UI state with `$effect(() => { open = isRingExpanded(index); })`.
-- When `secondaryTemplatePath` is removed, `$effect` resets `editVariant` to `'primary'` if it was `'secondary'`.
-- **Primary vs secondary editing:** `editVariant` toggles UI; `{#key editVariant}` remounts `RingCanvas` when switching so the editor binds to the correct path.
-- **Morph target lifecycle:** `createRingMorphTarget` / `removeRingMorphTarget` from `src/lib/state/composition.ts`; slider uses `setRingMorphT(index, v)` with `bits-ui` `Slider` `value` / `onValueChange`.
-- **Path updates:** Always route path changes through `updateRingPathVariant(index, editVariant, path)` and branch on `result.ok`; clear `ringPathError` before attempts.
+- Keep a single mutable state object (`animationState`) as source of truth for play/pause/progress.
+- Track external engine handles (`currentAnimation`) in module scope and centralize teardown in helper functions (`cleanupCurrentAnimation`, `stopInternal`).
+- Derive animated ring targets from composition (`getMorphRingIndices`) and revalidate on composition changes (`handleCompositionChanged`).
+- Reconfigure active animations when options mutate (`setAnimationLoop`, `setAnimationAlternate`, `setAnimationDurationSec`).
+
+**Animation UI conventions (`src/lib/components/AnimationSection.svelte`):**
+
+- Bind controls directly to state actions via event handlers (`oninput`, `onchange`, `onclick`).
+- Derive display values from store state (`progressPercent`) and clamp to `[0, 100]`.
+- Use `$effect` + `untrack(handleCompositionChanged)` to perform safety checks on ring list changes without creating nested reactive dependencies.
 
 ---
 
-*Convention analysis: 2026-04-26*
+*Convention analysis: 2026-04-27*

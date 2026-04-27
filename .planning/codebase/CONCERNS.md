@@ -1,151 +1,139 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## Tech Debt
 
-**Render pipeline disposal:**
+**Render pipeline disposal remains a no-op:**
 
-- Issue: `dispose` on the render pipeline is a no-op with a comment that lifecycle is deferred.
-- Files: `src/lib/geometry/render-pipeline.ts`
-- Impact: Long-lived sessions that create many pipeline instances could leak Paper.js resources; current `PreviewCanvas.svelte` creates one pipeline per component instance, which is acceptable but the API suggests disposal without delivering it.
-- Fix approach: Implement scope teardown or document that callers must own scope lifetime; align `dispose` with actual cleanup.
+- Issue: `dispose()` still does not release Paper.js resources and the comment explicitly defers lifecycle ownership.
+- Files: `src/lib/geometry/render-pipeline.ts`, `src/lib/components/PreviewCanvas.svelte`
+- Impact: Animation now drives frequent render churn; if multiple preview scopes are mounted/unmounted over long sessions, cleanup semantics stay ambiguous and hard to reason about.
+- Fix approach: Either implement real scope teardown in `dispose()` or rename/document it as intentionally inert so callers do not assume cleanup occurs.
 
-**Stale TDD comment in morph unit tests:**
+**Animation controller duplicates clamping/domain logic:**
 
-- Issue: `path-morph.svelte.spec.ts` opens with a comment claiming tests are an intentional red state for a not-yet-implemented module; the module exists and tests pass.
-- Files: `src/lib/geometry/path-morph.svelte.spec.ts`
-- Impact: Misleading maintainers about test intent and readiness.
-- Fix approach: Remove or rewrite the comment to describe current behavior.
+- Issue: `clamp01` exists in both animation and composition state layers with independent ownership.
+- Files: `src/lib/state/animation.svelte.ts`, `src/lib/state/composition.ts`, `src/lib/geometry/path-morph.ts`
+- Impact: Maintainability risk when morph bounds behavior changes; subtle differences can produce drift between persisted and animated values.
+- Fix approach: Centralize clamp semantics in one shared utility and cover Infinity/NaN behavior in a single test matrix.
 
-**Dual-path morph: unguarded `updateRing`:**
+**Controller restart path increases behavioral complexity:**
 
-- Issue: `updateRing` merges arbitrary `Partial<Ring>` into persisted state without running `validatePathCompatibility`. Callers can set `templatePath` and `secondaryTemplatePath` to incompatible shapes in one or two steps, bypassing `updateRingPathVariant`.
-- Files: `src/lib/state/composition.ts`, any future caller of `updateRing`
-- Impact: LocalStorage or code paths can store inconsistent morph pairs; render falls back silently (see below) while state remains “invalid” until edited through validated APIs.
-- Fix approach: Route all path mutations through `updateRingPathVariant`, or add an internal guard in `updateRing` when both paths are non-null, or normalize on load.
+- Issue: `reconfigureCurrentAnimation()` recreates anime instances and then conditionally re-toggles play/pause state.
+- Files: `src/lib/state/animation.svelte.ts`
+- Impact: Harder to modify safely; future edits to toggle semantics can break paused-state preservation or introduce regressions in loop/alternate mode.
+- Fix approach: Split pause/play state transitions into explicit controller methods and test each transition as a state machine table.
 
 ## Known Bugs
 
-**Morph fallback warnings not surfaced in the main preview:**
+**Render warnings are still dropped by preview UI:**
 
-- Symptoms: When morph paths are incompatible, `createRenderPipeline().render` pushes `Ring N morph fallback: …` into `result.warnings`, but `PreviewCanvas.svelte` ignores the return value entirely.
+- Symptoms: `renderPipeline.render()` returns warnings, including morph fallback and skipped-ring diagnostics, but preview rendering ignores the return payload.
 - Files: `src/lib/components/PreviewCanvas.svelte`, `src/lib/geometry/render-pipeline.ts`
-- Trigger: Persist or construct a composition with matching presence of `templatePath` and `secondaryTemplatePath` but mismatched `cmds` or `crds` length (e.g. via `updateRing` or hand-edited localStorage).
-- Workaround: Use unit tests or temporary logging to inspect `warnings`; fix state via Ring editor validated import or remove morph target.
-
-**Silent no-op when `createRingMorphTarget` is called with a missing ring:**
-
-- Issue: `createRingMorphTarget` returns early if `composition.rings[index]` is falsy or lacks `templatePath` without feedback.
-- Files: `src/lib/state/composition.ts`
-- Impact: Defensive but opaque for incorrect indices or empty primary paths.
-- Fix approach: Return a result type or throw in debug-only paths; unlikely in UI-driven flows.
+- Trigger: Incompatible primary/secondary paths or per-ring render failures during live animation/playback.
+- Workaround: Inspect warnings via tests/dev instrumentation; no in-app visibility for users.
 
 ## Security Considerations
 
-**Client-only composition integrity:**
+**Client-controlled animation and morph state integrity:**
 
-- Risk: Tampered or imported JSON in `lsSync`-backed storage can set morph fields to inconsistent values.
-- Files: `src/lib/state/composition.ts`, `src/lib/geometry/render-pipeline.ts`
-- Current mitigation: Render-time `validatePathCompatibility` and primary-path fallback; per-ring try/catch continues drawing other rings.
-- Recommendations: Treat as low severity (no server trust boundary). If compositions are ever shared or loaded from network, add a single normalization/validation pass on ingest.
+- Risk: Local `lsSync` composition data can be tampered with to inject malformed morph/path values; animation will apply those values to all targeted rings each tick.
+- Files: `src/lib/state/composition.ts`, `src/lib/state/animation.svelte.ts`, `src/lib/geometry/render-pipeline.ts`
+- Current mitigation: Render pipeline validates path compatibility and skips/falls back on failures; `setRingMorphT()` clamps animated writes.
+- Recommendations: Add one normalization pass at composition load boundaries if storage/import trust broadens beyond local single-user usage.
 
 ## Performance Bottlenecks
 
-**Full Paper.js redraw on every composition tick:**
+**Animation tick forces full-scene redraw:**
 
-- Problem: `PreviewCanvas.svelte` runs `renderPipeline.render` inside an `$effect` keyed on the whole `composition` object. Any ring field change clears the project and rebuilds all rings, including `validatePathCompatibility` and `interpolatePath` for each ring that has a secondary path.
-- Files: `src/lib/components/PreviewCanvas.svelte`, `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/path-morph.ts`
-- Cause: No incremental updates or memoization of interpolated paths.
-- Improvement path: Debounce rapid slider input, memoize interpolated `Path` by `(primary, secondary, morphT)` hash, or split preview updates from full export pipeline.
+- Problem: Controller `onUpdate` calls `setRingMorphT()` for every morph-capable ring, and `PreviewCanvas.svelte` reacts by re-running full `renderPipeline.render()` over the whole composition.
+- Files: `src/lib/state/animation.svelte.ts`, `src/lib/state/composition.ts`, `src/lib/components/PreviewCanvas.svelte`, `src/lib/geometry/render-pipeline.ts`
+- Cause: No incremental rendering path and no frame-throttled write batching for morph updates.
+- Improvement path: Batch morph writes per frame, throttle UI updates to rAF cadence, and/or introduce partial redraw strategies for unchanged rings.
 
-**Per-ring Paper.js work in `buildRingPath`:**
+**Per-frame interpolation + bend work scales with ring count:**
 
-- Problem: `bend.ts` builds temporary paths and segments per ring; cost grows with ring count and `copies`.
-- Files: `src/lib/geometry/bend.ts` (~290 lines)
-- Cause: inherent geometry cost, amplified when combined with full-scene rerenders above.
-- Improvement path: Profile with realistic ring counts; consider lowering preview resolution or throttling morph slider.
+- Problem: During playback, each render can hit compatibility checks, interpolation, and `buildRingPath()` geometry creation for many rings.
+- Files: `src/lib/geometry/path-morph.ts`, `src/lib/geometry/bend.ts`, `src/lib/geometry/render-pipeline.ts`
+- Cause: Computationally heavy geometry pipeline repeated on every animation frame.
+- Improvement path: Memoize interpolated path snapshots for repeated `t` buckets in preview mode and profile hot paths with realistic ring/copies counts.
 
 ## Fragile Areas
 
-**Path morph compatibility is structural only:**
+**Animation lifecycle ownership is UI-coupled but implicit:**
 
-- Files: `src/lib/geometry/path-morph.ts`
-- Why fragile: Compatibility is exact command sequence equality and coordinate count equality. Geometrically “similar” paths from `RingCanvas.svelte` or `svg-import.ts` can diverge in command choice (`L` vs `C`) while looking alike; users may not understand why morph fails or falls back.
-- Safe modification: Extend `validatePathCompatibility` only with explicit tests in `path-morph.svelte.spec.ts`; keep render pipeline fallback behavior aligned with new rules.
-- Test coverage: Command mismatch covered; coordinate-length mismatch reason exists in code but lacks a dedicated unit test assertion.
+- Files: `src/lib/components/AnimationSection.svelte`, `src/lib/state/animation.svelte.ts`
+- Why fragile: Composition-change safety is triggered by `AnimationSection` mount effect; if section placement/visibility changes, runtime safeguards may stop running while controller state remains module-global.
+- Safe modification: Keep composition-change guard in a top-level always-mounted runtime module or document that animation safety depends on sidebar section mount.
+- Test coverage: `AnimationSection.svelte.spec.ts` checks one render-time call only; it does not assert behavior under conditional mounting/unmounting.
 
-**Large interactive path editor:**
+**Path compatibility remains structurally strict:**
 
-- Files: `src/lib/components/RingCanvas.svelte` (~412 lines)
-- Why fragile: Couples Paper.js hit-testing, path serialization, and morph-unaware editing; regressions affect both primary and secondary variants fed from `RingEditor.svelte`.
-- Safe modification: Prefer small, tested helpers; run `RingCanvas`-related specs after edits.
-- Test coverage: Rely on integration via editor flows; no dedicated morph+editor matrix in unit tests.
-
-**`clamp01` semantics differ between modules:**
-
-- Files: `src/lib/geometry/path-morph.ts` (`Number.isNaN` → 0; non-finite positives can clamp high), `src/lib/state/composition.ts` (`Number.isFinite` → else 0 for state `morphT`)
-- Why fragile: Divergent handling of `Infinity`/`NaN` between interpolation and persisted `morphT` can confuse debugging if bad values ever enter state.
-- Safe modification: Share one `clamp01` utility or align semantics and add tests.
+- Files: `src/lib/geometry/path-morph.ts`, `src/lib/state/composition.ts`
+- Why fragile: Controller amplifies this by continuously reusing morph targets; seemingly similar user-edited paths can still fail and fall back.
+- Safe modification: Adjust compatibility rules only with matching updates to composition validators and render fallback tests.
+- Test coverage: Core mismatches are covered, but warning-surface behavior in UI remains untested.
 
 ## Scaling Limits
 
-**LocalStorage-backed composition size:**
+**Animation write frequency vs local persistence model:**
 
-- Current capacity: Entire `Composition` JSON in browser localStorage via `rune-sync`.
-- Limit: Storage quota and JSON parse/stringify cost; large coordinate arrays from SVG import multiply size.
-- Scaling path: Move composition to IndexedDB or server persistence; compress paths or use binary formats if needed.
+- Current capacity: Entire composition is persisted via `rune-sync` localStorage state.
+- Limit: High-frequency morph updates can increase serialization/reactivity pressure as ring count grows, especially when multiple rings animate simultaneously.
+- Scaling path: Decouple transient animation state from persisted composition or persist morph snapshots at lower cadence.
 
 ## Dependencies at Risk
 
-**Paper.js (`paper` ^0.12.18):**
+**Anime.js API coupling through hand-rolled instance typing:**
 
-- Risk: Large API surface used in `bend.ts`, `RingCanvas.svelte`, `render-pipeline.ts`, and SVG import; upgrades can change path bounds or segment behavior.
-- Impact: Subtle morph or bend regressions without visual diff tests.
-- Migration plan: Pin version until visual regression suite exists; upgrade in a branch with full `npm run test` and manual preview checks.
+- Risk: Controller defines a custom `AnimeInstance` shape (`play/pause/cancel/revert`) rather than importing stable library types.
+- Files: `src/lib/state/animation.svelte.ts`, `package.json`
+- Impact: Runtime breakage risk on anime.js upgrades (`animejs` `^4.3.6`) if methods/semantics shift while TypeScript still compiles.
+- Migration plan: Type against official anime.js exports where possible and pin/upgrade with focused controller regression tests.
+
+**Paper.js render cost sensitivity increased by animation:**
+
+- Risk: Existing Paper.js rendering hotspots now run on every playback frame rather than only on explicit edit interactions.
+- Files: `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/bend.ts`, `src/lib/components/PreviewCanvas.svelte`
+- Impact: FPS degradation on larger compositions becomes more likely.
+- Migration plan: Keep `paper` pinned until frame-budget benchmarks and preview performance tests exist.
 
 ## Missing Critical Features
 
-**No in-app surfacing of render warnings:**
+**No runtime performance guardrails for playback:**
 
-- Problem: Operators cannot see `RenderResult.warnings` from the pipeline when morph falls back or a ring is skipped.
-- Blocks: Transparent debugging of “why does my morph not blend?” without devtools.
+- Problem: Playback has no adaptive quality/fps controls, ring-count guardrails, or auto-throttle when frame cost spikes.
+- Blocks: Predictable responsiveness on low-end devices and large compositions.
 
-**No automated test gate on deploy:**
+**No user-visible fallback/error channel during animation:**
 
-- Problem: GitHub Actions workflow `.github/workflows/deploy.yml` runs `bun run build` only; it does not run `npm run test` or Playwright.
-- Blocks: Confidence that morph regressions are caught before production deploys.
+- Problem: Users cannot see when animation is falling back due to morph incompatibility or ring render failures.
+- Blocks: Self-service debugging of animation correctness in the UI.
 
 ## Test Coverage Gaps
 
-**`validatePathCompatibility` coordinate-length branch:**
+**Animation + preview integration under real render load:**
 
-- What's not tested: Explicit expectation for `Path coordinates must have the same length to interpolate` when `cmds` match but `crds.length` differs.
-- Files: `src/lib/geometry/path-morph.ts`, `src/lib/geometry/path-morph.svelte.spec.ts`
-- Risk: Refactor could drop the length check without failing tests.
+- What's not tested: End-to-end playback where `togglePlay()` drives `setRingMorphT()` and triggers `PreviewCanvas` pipeline redraw repeatedly.
+- Files: `src/lib/state/animation.svelte.spec.ts`, `src/lib/components/PreviewCanvas.svelte.spec.ts`
+- Risk: Regressions in frame updates or render throughput can ship without detection.
+- Priority: High
+
+**Animation safety behavior under UI lifecycle changes:**
+
+- What's not tested: Unmount/remount of `AnimationSection.svelte` while animation is active and whether composition safety checks remain enforced.
+- Files: `src/lib/components/AnimationSection.svelte`, `src/lib/components/AnimationSection.svelte.spec.ts`, `src/lib/state/animation.svelte.ts`
+- Risk: Orphaned animation runtime state in future layout refactors.
 - Priority: Medium
 
-**Primary path update rejected when incompatible with existing secondary:**
+**Deploy pipeline still skips automated tests:**
 
-- What's not tested: `updateRingPathVariant(index, 'primary', path)` when `ring.secondaryTemplatePath` is set and the new primary fails compatibility; code path exists in `composition.ts`.
-- Files: `src/lib/state/composition.ts`, `src/lib/state/composition.svelte.spec.ts`
-- Risk: Regression in primary-edit validation for morph rings.
+- What's not tested: CI deploy path does not gate on `test:unit` or `test:e2e`.
+- Files: `.github/workflows/deploy.yml`, `package.json`
+- Risk: Animation/controller regressions can reach deployment undetected.
 - Priority: Medium
-
-**End-to-end morph beyond create/remove:**
-
-- What's not tested: Adjusting morph `t`, switching Primary/Secondary editors, SVG import rejection messages in live browser, or visual outcome of interpolation (Playwright only asserts “Morph t:” visibility).
-- Files: `src/routes/demo/playwright/page.svelte.e2e.ts`, `src/lib/components/RingEditor.svelte`
-- Risk: Slider or variant toggle regressions ship unnoticed.
-- Priority: Medium
-
-**Pipeline warning consumption in UI:**
-
-- What's not tested: No component or integration test asserts that the app should display morph fallback warnings to users (currently no UI).
-- Files: `src/lib/components/PreviewCanvas.svelte`
-- Risk: If warnings are later added, behavior is undefined in tests.
-- Priority: Low until product requires visible warnings.
 
 ---
 
-*Concerns audit: 2026-04-26*
+*Concerns audit: 2026-04-27*

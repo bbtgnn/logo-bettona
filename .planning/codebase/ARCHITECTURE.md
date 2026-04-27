@@ -1,135 +1,127 @@
 # Architecture
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## Pattern Overview
 
-**Overall:** Client-only SvelteKit SPA with local-first state, Paper.js for vector geometry, and a thin render pipeline that turns domain models into canvas/SVG output.
+**Overall:** Client-only SvelteKit editor with local-first reactive state, a dedicated animation controller for morph playback, and a Paper.js render pipeline that derives ring geometry from composition state.
 
 **Key Characteristics:**
-- Domain types (`Composition`, `Ring`, `Path`) live in TypeScript and persist via `rune-sync` localStorage.
-- Two Paper.js usage modes: per-widget scopes for editing (`RingCanvas`) and import (`RingEditor`), and a dedicated preview scope in `PreviewCanvas`.
-- Ring geometry is template-driven: a flat `Path` (cmds + crds) is bent around a circle in `buildRingPath`; optional morphing blends two compatible paths before bending.
+- Sidebar sections are ordered by editing workflow in `src/lib/components/Sidebar.svelte`: `SettingsSection` -> `AnimationSection` -> `ColorsSection` -> ring editors.
+- Ring morph animation is controller-driven in `src/lib/state/animation.svelte.ts` and writes only `morphT` through `setRingMorphT` from `src/lib/state/composition.ts`.
+- Preview rendering remains stateless and derived: `src/lib/components/PreviewCanvas.svelte` reacts to `composition` and delegates all drawing/morph blending to `src/lib/geometry/render-pipeline.ts`.
 
 ## Layers
 
-**Presentation (routes + layout):**
-- Purpose: Shell, navigation chrome, and placement of sidebar vs main preview.
+**Presentation (routes + shell):**
+- Purpose: Application frame and split layout between sidebar and preview canvas.
 - Location: `src/routes/+page.svelte`, `src/routes/+layout.svelte`
-- Contains: Svelte 5 UI composition, shadcn sidebar provider.
-- Depends on: `Sidebar`, `PreviewCanvas`.
-- Used by: Browser entry via SvelteKit.
+- Contains: shadcn sidebar provider/inset and main editor viewport.
+- Depends on: `src/lib/components/Sidebar.svelte`, `src/lib/components/PreviewCanvas.svelte`
+- Used by: SvelteKit browser entry.
 
-**Feature components:**
-- Purpose: User-facing editors and preview.
+**Feature components (sidebar and editors):**
+- Purpose: User controls for settings, animation playback, colors, and per-ring editing.
 - Location: `src/lib/components/`
-- Contains: `Sidebar.svelte` (rings list), `RingEditor.svelte` (per-ring controls + path editor), `RingCanvas.svelte` (interactive path), `PreviewCanvas.svelte` (full composition preview), color/settings sections.
-- Depends on: `$lib/state/composition`, `$lib/geometry/*`, shadcn UI.
-- Used by: `+page.svelte`.
+- Contains: `SettingsSection.svelte`, `AnimationSection.svelte`, `ColorsSection.svelte`, `RingEditor.svelte`, `RingCanvas.svelte`, `PreviewCanvas.svelte`.
+- Depends on: `src/lib/state/composition.ts`, `src/lib/state/animation.svelte.ts`, `src/lib/geometry/*`, shadcn UI.
+- Used by: `src/routes/+page.svelte`.
 
-**Application state:**
-- Purpose: Serializable composition, color mode, UI expansion flags; mutations that enforce morph/path rules.
+**Composition state layer:**
+- Purpose: Persisted composition model, palette state, ring CRUD/reorder, and morph path integrity rules.
 - Location: `src/lib/state/composition.ts`
-- Contains: `composition`, `colorMode`, `uiState` (`lsSync`), CRUD for rings/palettes, `setRingMorphT`, `createRingMorphTarget`, `removeRingMorphTarget`, `updateRingPathVariant`.
-- Depends on: `$lib/types`, `$lib/color/apply`, `$lib/geometry/path-morph` (`validatePathCompatibility`).
-- Used by: Components and preview `$effect` dependencies.
+- Contains: `composition`, `colorMode`, `uiState`, `setRingMorphT`, `createRingMorphTarget`, `removeRingMorphTarget`, `updateRingPathVariant`.
+- Depends on: `src/lib/types.ts`, `src/lib/color/apply.ts`, `src/lib/geometry/path-morph.ts`.
+- Used by: ring editors, animation controller, preview rendering.
 
-**Domain types:**
-- Purpose: Single source of truth for data shapes.
-- Location: `src/lib/types.ts`
-- Contains: `Path`, `Ring` (includes `templatePath`, `secondaryTemplatePath`, `morphT`, `ringHeight`, `copies`, `color`), `Composition`, palette types.
-- Depends on: None.
-- Used by: State, geometry, render pipeline.
+**Animation controller layer:**
+- Purpose: Playback lifecycle for morph sweep animation across all rings with a secondary path.
+- Location: `src/lib/state/animation.svelte.ts` (re-exported by `src/lib/state/animation.ts`)
+- Contains: `animationState`, `togglePlay`, `setAnimationDurationSec`, `setAnimationLoop`, `setAnimationAlternate`, `handleCompositionChanged`, `stopAnimation`.
+- Depends on: `animejs` (`animate`), `composition` and `setRingMorphT` from `src/lib/state/composition.ts`.
+- Used by: `src/lib/components/AnimationSection.svelte`.
 
-**Geometry core:**
-- Purpose: Path bending, SVG import, path morph validation/interpolation, orchestrated render.
-- Location: `src/lib/geometry/bend.ts`, `src/lib/geometry/svg-import.ts`, `src/lib/geometry/path-morph.ts`, `src/lib/geometry/render-pipeline.ts`
-- Contains: `buildRingPath`, `importSvg`, `validatePathCompatibility` / `interpolatePath`, `createRenderPipeline().render`.
-- Depends on: `paper`, `$lib/types`.
-- Used by: `RingCanvas` (bend not always direct—editor uses path as-is), `RingEditor` (import), `render-pipeline` (bend + morph).
-
-**Design system (shadcn-svelte):**
-- Purpose: Reusable primitives (buttons, sliders, sidebar).
-- Location: `src/lib/shadcn/`
-- Depends on: bits-ui patterns, Tailwind.
-- Used by: Feature components.
+**Geometry/render core:**
+- Purpose: Morph compatibility checks, path interpolation, radial path composition, and canvas drawing.
+- Location: `src/lib/geometry/path-morph.ts`, `src/lib/geometry/bend.ts`, `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/compose.ts`
+- Contains: `validatePathCompatibility`, `interpolatePath`, `buildRingPath`, `createRenderPipeline().render`, `renderComposition`.
+- Depends on: `paper`, `src/lib/types.ts`.
+- Used by: `PreviewCanvas.svelte`, `RingEditor.svelte` (import flow), legacy callers through `compose.ts`.
 
 ## Data Flow
 
-**Composition edit → preview (including morph interpolation):**
+**Animation control placement and trigger flow:**
 
-1. User edits rings in the sidebar: `Sidebar.svelte` iterates `composition.rings` and mounts `RingEditor.svelte` per index.
-2. `RingEditor` calls `updateRing`, `setRingMorphT`, `createRingMorphTarget`, `removeRingMorphTarget`, or `updateRingPathVariant` from `src/lib/state/composition.ts`. Those functions mutate the `composition` rune (localStorage-backed).
-3. `Ring` shape in `src/lib/types.ts` carries `templatePath` (primary), optional `secondaryTemplatePath`, and `morphT` in `[0, 1]`. When both paths exist, `updateRingPathVariant` requires `validatePathCompatibility` from `src/lib/geometry/path-morph.ts` so cmds and crds lengths match before accepting primary or secondary updates.
-4. `PreviewCanvas.svelte` holds a `paper.PaperScope` on the main canvas. An `$effect` reads `composition` and calls `createRenderPipeline().render()` in `src/lib/geometry/render-pipeline.ts`.
-5. For each ring (outer to inner), the render loop builds `effectiveRing`: if both `templatePath` and `secondaryTemplatePath` are set, it runs `validatePathCompatibility`; on success it replaces `templatePath` with `interpolatePath(primary, secondary, ring.morphT ?? 0)` (linear per-coordinate blend, cmds copied from primary). On failure it logs a warning and uses the unblended ring (fallback).
-6. `buildRingPath(effectiveRing, radius, scope)` in `src/lib/geometry/bend.ts` maps the (possibly interpolated) template into a closed tiled ring at the composition radius for that index, then Paper.js draws and `fitToView` scales the layer to the viewport.
+1. `src/lib/components/Sidebar.svelte` mounts `AnimationSection.svelte` between `SettingsSection.svelte` and `ColorsSection.svelte`.
+2. `AnimationSection.svelte` reads/writes `animationState` and controller actions from `src/lib/state/animation.svelte.ts`.
+3. An `$effect` in `AnimationSection.svelte` tracks `composition.rings.length` and calls `handleCompositionChanged()` via `untrack` to stop stale playback when ring topology changes.
 
-**Path editing (primary vs secondary, no interpolation on this canvas):**
+**Morph playback flow (controller -> composition -> render):**
 
-1. `RingEditor` tracks `editVariant`: `'primary' | 'secondary'`. If `secondaryTemplatePath` is null, only primary editing applies; `createRingMorphTarget` seeds secondary as a copy of primary with clamped `morphT`.
-2. `{#key editVariant}` remounts `RingCanvas.svelte` so the editor scope resets when switching which variant is edited.
-3. `RingCanvas` receives `templatePath` bound to either `ring.templatePath` or `ring.secondaryTemplatePath` and emits `onchange` → `applyPathFromEditor` → `updateRingPathVariant(index, editVariant, newPath)` with the same compatibility rules as imports.
+1. User clicks Play in `AnimationSection.svelte`; `togglePlay()` starts/reuses an anime instance.
+2. `startNewAnimation()` in `src/lib/state/animation.svelte.ts` computes `animatedIndices` from rings where `secondaryTemplatePath` exists.
+3. Every anime update writes `t` to each target ring via `setRingMorphT(index, t)` in `src/lib/state/composition.ts` and mirrors progress to `animationState.progress`.
+4. `PreviewCanvas.svelte` has an `$effect` on `composition`; each `morphT` update triggers `renderPipeline.render(...)`.
+5. `render()` in `src/lib/geometry/render-pipeline.ts` composes `effectiveRing` per index: if primary and secondary paths are compatible, it applies `interpolatePath(primary, secondary, morphT)` before `buildRingPath(...)`.
+6. Paper.js fills each rendered ring and fits the result to the viewport.
 
-**SVG import:**
+**Ring morph authoring flow (composition/ring updates):**
 
-1. `RingEditor` uses a dedicated one-pixel `paper.PaperScope` for `importSvg` (`src/lib/geometry/svg-import.ts`), then applies the result via `updateRingPathVariant` for the active variant.
-
-**Color mode:**
-
-1. `applyColors` in `src/lib/color/apply.ts` is invoked from `composition.ts` when mode or palette changes; ring colors update in bulk without touching path geometry.
+1. `RingEditor.svelte` creates/removes morph targets through `createRingMorphTarget()` and `removeRingMorphTarget()` in `src/lib/state/composition.ts`.
+2. Primary/secondary variant edits (canvas or SVG import) are routed through `updateRingPathVariant(index, variant, path)`.
+3. `updateRingPathVariant` enforces compatibility with `validatePathCompatibility` and rejects incompatible writes with `{ ok: false, reason }`, preserving existing composition state.
 
 **State Management:**
-
-- Primary store: `composition` and related runes from `rune-sync` (`lsSync`) in `src/lib/state/composition.ts`.
-- Svelte 5 `$effect` in `PreviewCanvas` subscribes to `composition` implicitly by referencing it, triggering re-render on any ring field change (including `morphT`).
+- Persisted source of truth: `composition`, `colorMode`, `uiState` from `lsSync` in `src/lib/state/composition.ts`.
+- Ephemeral runtime control: `animationState` and anime instance internals in `src/lib/state/animation.svelte.ts`.
+- Rendering reads current state only; no render cache is stored in state.
 
 ## Key Abstractions
 
-**Path (flat vector):**
-- Purpose: Serializable SVG-like path as parallel `cmds` and `crds` arrays.
-- Examples: `src/lib/types.ts`
-- Pattern: Explicit command stream; morphing assumes structural equality between two `Path` values.
+**Composition + Ring model:**
+- Purpose: Serializable editor state including geometry templates and morph scalar.
+- Examples: `src/lib/types.ts`, `src/lib/state/composition.ts`
+- Pattern: Ring-level immutable replacement updates (array map/filter/splice) to trigger reactive redraw.
 
-**Ring morph (secondary template + morphT):**
-- Purpose: Animate or design in-between shapes by blending two topologically identical paths before polar bend.
-- Examples: `src/lib/types.ts` (`secondaryTemplatePath`, `morphT`), `src/lib/state/composition.ts`, `src/lib/geometry/path-morph.ts`, `src/lib/geometry/render-pipeline.ts`
-- Pattern: State holds two paths + scalar `t`; render-time `interpolatePath`; editor-time strict validation on writes.
+**Animation controller:**
+- Purpose: Centralized play/pause/reconfigure logic for morph sweeps across eligible rings.
+- Examples: `src/lib/state/animation.svelte.ts`, `src/lib/components/AnimationSection.svelte`
+- Pattern: Controller owns timeline and eligibility (`animatedIndices`), but delegates actual ring value writes to composition actions.
 
 **Render pipeline:**
-- Purpose: Validate inputs, clear scope, draw all rings, fit view, return metrics/warnings.
+- Purpose: Deterministic conversion from composition data to Paper.js scene with warnings and metrics.
 - Examples: `src/lib/geometry/render-pipeline.ts`
-- Pattern: Factory `createRenderPipeline()` returning `{ render, dispose }`; morph applied inside per-ring loop before `buildRingPath`.
+- Pattern: Validate input -> clear scope -> ring loop with morph interpolation -> fit and update view.
 
 ## Entry Points
 
-**SvelteKit app shell:**
+**App shell:**
 - Location: `src/routes/+layout.svelte`, `src/routes/+layout.ts`
-- Triggers: App load.
-- Responsibilities: Global CSS, favicon, child route rendering.
+- Triggers: Initial app load.
+- Responsibilities: Global styles/head and route composition.
 
-**Shape editor page:**
+**Editor route:**
 - Location: `src/routes/+page.svelte`
 - Triggers: Navigation to `/`.
-- Responsibilities: Sidebar + inset layout; hosts `PreviewCanvas` in main.
+- Responsibilities: Mount sidebar controls and preview canvas.
 
 ## Error Handling
 
-**Strategy:** Validation at state boundaries (path variant updates); soft degradation in render (skip ring, collect warnings); user-visible strings in `RingEditor` for import/path errors.
+**Strategy:** Reject invalid morph path updates at state boundaries; stop/cleanup animation when composition changes invalidate targets; degrade gracefully during render with warnings.
 
 **Patterns:**
-- `updateRingPathVariant` returns `{ ok, reason }` without mutating on failure (`src/lib/state/composition.ts`).
-- Render loop catches per-ring errors and increments `skippedCount` with warning messages (`src/lib/geometry/render-pipeline.ts`).
-- `interpolatePath` throws `PathMorphError` if compatibility pre-check fails (used after `validatePathCompatibility` in pipeline—normally guarded).
+- `updateRingPathVariant` returns explicit failure reasons without mutating invalid input (`src/lib/state/composition.ts`).
+- `handleCompositionChanged` halts running animations if ring count or morph-capable indices drift (`src/lib/state/animation.svelte.ts`).
+- Render loop catches ring-level failures and records them in `warnings` while continuing other rings (`src/lib/geometry/render-pipeline.ts`).
 
 ## Cross-Cutting Concerns
 
-**Logging:** Warnings accumulated in `RenderResult.warnings` from the render pipeline; UI does not centralize a logger.
+**Logging:** Render-time issues accumulate in `RenderResult.warnings` (`src/lib/geometry/render-pipeline.ts`).
 
-**Validation:** Path compatibility for morph (`validatePathCompatibility`); composition shape assertions in `render` before drawing.
+**Validation:** Path compatibility is enforced in both mutation (`src/lib/state/composition.ts`) and interpolation (`src/lib/geometry/render-pipeline.ts`).
 
-**Authentication:** Not applicable (static client app).
+**Authentication:** Not applicable.
 
 ---
 
-*Architecture analysis: 2026-04-26*
+*Architecture analysis: 2026-04-27*

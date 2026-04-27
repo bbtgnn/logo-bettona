@@ -1,12 +1,13 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-04-26
+**Analysis Date:** 2026-04-27
 
 ## Test Framework
 
 **Runner:**
 
-- Vitest `^4.1.0` with **two projects** defined in `vite.config.ts` (Vitest’s `defineConfig` from `vitest/config`).
+- Vitest `^4.1.0` with multi-project configuration in `vite.config.ts`.
+- Global enforcement: `expect: { requireAssertions: true }` (each test must assert).
 
 **Assertion Library:**
 
@@ -14,51 +15,49 @@
 
 **Browser component testing:**
 
-- `@vitest/browser-playwright` with `playwright()` provider, Chromium headless.
-- `vitest-browser-svelte` for `render()` / `unmount()` of Svelte components in browser tests.
+- `@vitest/browser-playwright` with Chromium headless provider.
+- `vitest-browser-svelte` for rendering Svelte components in browser tests.
 
 **Run Commands:**
 
 ```bash
-npm run test:unit              # vitest (default: watch; CI often uses flags below)
-npm run test:unit -- --run    # single run (all Vitest projects)
-npm run test                  # unit --run plus Playwright e2e
-npm run test:e2e              # playwright test
+npm run test:unit              # Vitest (watch mode by default)
+npm run test:unit -- --run     # Single run of all Vitest projects
+npm run test                   # Unit tests (--run) + Playwright e2e
+npm run test:e2e               # Playwright suite
 ```
-
-Vitest global option in `vite.config.ts`: `expect: { requireAssertions: true }` — every `it` must contain at least one assertion.
 
 ## Test File Organization
 
 **Location:**
 
-- Co-located with source: `src/lib/geometry/path-morph.svelte.spec.ts` next to `path-morph.ts`; `src/lib/state/composition.svelte.spec.ts` next to `composition.ts`; `src/lib/components/PreviewCanvas.svelte.spec.ts` next to `PreviewCanvas.svelte`.
+- Tests are co-located with source files under `src/lib/**`.
+- Examples: `src/lib/components/AnimationSection.svelte.spec.ts`, `src/lib/state/animation.svelte.spec.ts`, `src/lib/geometry/render-pipeline.svelte.spec.ts`.
 
-**Naming — critical split:**
+**Naming:**
 
-| Pattern | Vitest project | Environment |
-|--------|----------------|---------------|
-| `src/**/*.svelte.spec.ts` (or `.test.ts`) | `client` | Browser (Playwright Chromium) |
-| `src/**/*.{spec,test}.ts` **excluding** `*.svelte.spec.ts` | `server` | Node |
-
-Configured in `vite.config.ts`: `client` `include` is `src/**/*.svelte.{test,spec}.{js,ts}`; `server` `include` is `src/**/*.{test,spec}.{js,ts}` with `exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']`.
-
-**Prescriptive rule:** Pure Node unit tests (e.g. `src/lib/color/apply.spec.ts`) must **not** use the `*.svelte.spec.ts` suffix. Tests that need the browser project (Svelte `render`, `vitest/browser`, DOM) **must** use `*.svelte.spec.ts` (e.g. `src/lib/vitest-examples/Welcome.svelte.spec.ts`, `PreviewCanvas.svelte.spec.ts`).
-
-**Note:** Several geometry/state specs use the `*.svelte.spec.ts` suffix while testing non-Svelte TS modules (`path-morph`, `render-pipeline`, `bend`, `compose`) so they execute in the **browser** project, not Node. Prefer **`*.spec.ts`** for true Node-only tests unless you intentionally need browser APIs or alignment with the component project.
+- `*.svelte.spec.ts` targets the browser project by default.
+- `*.spec.ts`/`*.test.ts` (non-`.svelte`) target the Node project.
+- `src/lib/state/animation.svelte.spec.ts` is a deliberate exception: explicitly included in Node project and excluded from browser project in `vite.config.ts`.
 
 **Structure:**
 
 ```
 src/lib/
-├── color/apply.spec.ts              # Node project
+├── color/apply.spec.ts
+├── components/
+│   ├── AnimationSection.svelte.spec.ts
+│   ├── PreviewCanvas.svelte.spec.ts
+│   └── Sidebar.svelte.spec.ts
 ├── geometry/
-│   ├── path-morph.ts
-│   ├── path-morph.svelte.spec.ts    # Browser project
+│   ├── bend.svelte.spec.ts
+│   ├── compose.svelte.spec.ts
+│   ├── path-morph.svelte.spec.ts
 │   ├── render-pipeline.svelte.spec.ts
-│   └── compose.svelte.spec.ts
-├── state/composition.svelte.spec.ts
-└── components/PreviewCanvas.svelte.spec.ts
+│   └── svg-import.svelte.spec.ts
+└── state/
+    ├── animation.svelte.spec.ts
+    └── composition.svelte.spec.ts
 ```
 
 ## Test Structure
@@ -66,140 +65,146 @@ src/lib/
 **Suite Organization:**
 
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('feature name', () => {
 	beforeEach(() => {
-		// reset shared fixtures
+		vi.resetModules();
 	});
 
-	it('does one observable thing', () => {
-		expect(actual).toEqual(expected);
+	it('does one observable thing', async () => {
+		const mod = await import('./feature');
+		expect(mod.value).toBeDefined();
 	});
 });
 ```
 
 **Patterns:**
 
-- **Paper.js:** Fresh `paper.PaperScope` per test in `beforeEach`, `scope.setup(new paper.Size(600, 600))` — see `src/lib/geometry/render-pipeline.svelte.spec.ts`, `bend.svelte.spec.ts`, `compose.svelte.spec.ts`.
-- **Module reset + mocks:** `composition.svelte.spec.ts` calls `vi.resetModules()` in `beforeEach` and uses `vi.mock('rune-sync/localstorage', ...)` so each `await import('./composition')` sees a clean module with mocked `lsSync`.
-- **Async composition tests:** Use `async` `it` blocks when dynamically importing the module under test after mocks are installed.
+- Reset module state with `vi.resetModules()` when module-level runes/state are under test (`src/lib/state/animation.svelte.spec.ts`, `src/lib/state/composition.svelte.spec.ts`).
+- Use dynamic `await import(...)` after mocks to ensure tests consume mocked dependencies.
+- Browser tests use `render(...)`, `page`, and `userEvent` for UI interaction (`src/lib/components/AnimationSection.svelte.spec.ts`).
+- Rendering tests that rely on Paper.js use `vi.waitFor(...)` to observe async draws.
 
-## Morph and path pipeline — conventions
+## Animation and Morph Coverage
 
-### `src/lib/geometry/path-morph.svelte.spec.ts`
+### `src/lib/state/animation.svelte.spec.ts`
 
-- Tests **`path-morph.ts`** exports: `validatePathCompatibility`, `interpolatePath`, `PathMorphError`.
-- Uses plain `Path` fixtures (`cmds` / `crds`) from `$lib/types`.
-- Covers: matching shapes, command mismatch reasons, endpoints at `t=0` / `t=1`, midpoint interpolation, clamping `t` outside `[0,1]`, and `toThrow(PathMorphError)` for incompatible paths.
-- **Naming:** File is `*.svelte.spec.ts` → runs in **browser** Vitest project even though no Svelte is imported; keep this in mind for CI time and environment.
+- Tests animation controller behavior from `src/lib/state/animation.svelte.ts`.
+- Mocks `animejs` and `./composition` with `vi.mock(...)` and hoisted fakes.
+- Covers:
+  - idle to playing transition (`togglePlay`)
+  - pause/resume transitions
+  - no-op when no morph targets exist
+  - progress updates via mocked `onUpdate`
+  - reset when composition ring set changes
+  - robustness when play resumes after loop/alternate pause edge case
+  - Svelte rune reactivity visibility via `$derived`
 
-### `src/lib/state/composition.svelte.spec.ts`
+### `src/lib/components/AnimationSection.svelte.spec.ts`
 
-- Targets **`composition.ts`** ring morph API: `createRingMorphTarget`, `removeRingMorphTarget`, `setRingMorphT`, `updateRingPathVariant`.
-- Mocks **`rune-sync/localstorage`** `lsSync` to return deterministic `composition`, `color-mode`, and `composition-ui` payloads via `structuredClone`.
-- Asserts: secondary path equals primary clone after `createRingMorphTarget`; `removeRingMorphTarget` clears `secondaryTemplatePath`; `setRingMorphT` clamps to `[0,1]`; `updateRingPathVariant` success and failure (`ok: false`, unchanged ring via `structuredClone` snapshot) when secondary is incompatible with primary.
+- Component-level wiring tests for `src/lib/components/AnimationSection.svelte`.
+- Mocks `$lib/state/animation` and `$lib/state/composition`.
+- Covers:
+  - control rendering (Play/Pause, Duration, Loop, Alternate, progress text)
+  - handler wiring (`togglePlay`, `setAnimationDurationSec`, `setAnimationLoop`, `setAnimationAlternate`)
+  - composition safety hook invocation (`handleCompositionChanged`) after render
 
-### `src/lib/geometry/render-pipeline.svelte.spec.ts`
+### Related morph coverage
 
-- Targets **`render-pipeline.ts`** `createRenderPipeline().render` with real `paper` scope and `Composition` fixtures including `secondaryTemplatePath` and `morphT`.
-- Covers: deterministic child count per ring, z-order (ring 0 top-most fill), skip + warning when `templatePath` is null, interpolation path when secondary exists, **fallback** to primary when morph paths are incompatible (warning contains `morph fallback`), per-ring try/catch behavior, re-render clears scene, `RenderPipelineError` for invalid viewport/scope/composition, and layout bounds vs padded viewport.
-
-### `src/lib/geometry/compose.svelte.spec.ts`
-
-- Thin integration check: `renderComposition` from `compose.ts` delegates to pipeline and leaves expected Paper layer child count for a two-ring composition (no morph-specific assertions yet).
-
-### Component patterns vs tests — `RingEditor.svelte`
-
-- UI behavior for morph is wired through the same APIs the tests hit: `createRingMorphTarget`, `removeRingMorphTarget`, `setRingMorphT`, `updateRingPathVariant`. There is **no** dedicated `RingEditor.svelte.spec.ts` in the repo; morph coverage is primarily **state** + **render-pipeline** + **path-morph**. Adding a browser spec would follow `PreviewCanvas.svelte.spec.ts` patterns (`vitest-browser-svelte` + optional pipeline mocks).
+- `src/lib/state/composition.svelte.spec.ts`: morph target lifecycle and path-compatibility enforcement.
+- `src/lib/geometry/path-morph.svelte.spec.ts`: interpolation and compatibility invariants.
+- `src/lib/geometry/render-pipeline.svelte.spec.ts`: interpolation render path and fallback when morph paths diverge.
 
 ## Mocking
 
-**Framework:** Vitest `vi.mock`, `vi.importActual`, `vi.fn`, `vi.waitFor`.
+**Framework:** Vitest `vi.mock`, `vi.hoisted`, `vi.fn`, `vi.importActual`, `vi.waitFor`.
 
 **Patterns:**
 
 ```typescript
-vi.mock('$lib/geometry/render-pipeline', async () => {
-	const actual = await vi.importActual<typeof import('$lib/geometry/render-pipeline')>(
-		'$lib/geometry/render-pipeline'
-	);
-	return {
-		...actual,
-		createRenderPipeline: () => {
-			const pipeline = actual.createRenderPipeline();
-			return {
-				render: (input: RenderInput) => {
-					/* spy + delegate */
-					return pipeline.render(input);
-				},
-				dispose: () => pipeline.dispose()
-			};
-		}
-	};
-});
+const animationApi = vi.hoisted(() => ({
+	togglePlay: vi.fn(),
+	setAnimationDurationSec: vi.fn(),
+	setAnimationLoop: vi.fn(),
+	setAnimationAlternate: vi.fn(),
+	handleCompositionChanged: vi.fn()
+}));
+
+vi.mock('$lib/state/animation', () => animationApi);
 ```
 
-From `src/lib/components/PreviewCanvas.svelte.spec.ts` — partial mock wrapping real pipeline to assert call counts and last `RenderInput`.
+```typescript
+vi.mock('animejs', () => ({
+	animate: animeAnimate
+}));
+```
 
 **What to Mock:**
 
-- Persistence: `rune-sync/localstorage` in composition tests.
-- Heavy or non-deterministic boundaries when asserting call contract — render pipeline factory when testing `PreviewCanvas.svelte`.
+- External animation engine boundaries (`animejs`) in state-controller tests.
+- Persistence (`rune-sync/localstorage`) for deterministic composition tests.
+- Cross-module wiring boundaries in component tests.
 
 **What NOT to Mock:**
 
-- Paper scope internals when testing `render-pipeline` or `bend` — use real `paper` and assert on `scope.project.activeLayer.children`.
+- Paper.js internals in render-pipeline tests; use real scope objects and assert layer output.
 
 ## Fixtures and Factories
 
 **Test Data:**
 
 ```typescript
-const rectPath: Path = {
-	cmds: ['M', 'L', 'L', 'L', 'Z'],
-	crds: [0, 0, 100, 0, 100, 50, 0, 50]
+const mockComposition = {
+	rings: [
+		{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+		{ secondaryTemplatePath: null, morphT: 0 }
+	]
 };
-
-const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
-	copies: 4,
-	color: '#000000',
-	ringHeight: 0.5,
-	templatePath: rectPath,
-	secondaryTemplatePath: null,
-	morphT: 0,
-	...overrides
-});
 ```
 
-**Location:** Inline at top of spec files or inside `describe` blocks; no central `fixtures/` directory.
+```typescript
+const initialComposition: Composition = {
+	baseRadius: 100,
+	ringIncrement: 50,
+	rings: [],
+	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+	fullPalettes: [{ colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'] }]
+};
+```
+
+**Location:**
+
+- Fixtures are defined inline in each spec file; no shared fixture directory.
 
 ## Coverage
 
-**Requirements:** No enforced coverage threshold in repo config detected.
+**Requirements:** No minimum coverage threshold is configured in `package.json`, `vite.config.ts`, or dedicated coverage config.
 
-**View Coverage:** Add Vitest coverage flags locally if needed (`vitest --coverage` with provider installed); not pre-wired in `package.json`.
+**View Coverage:**
+
+```bash
+npm run test:unit -- --run --coverage
+```
 
 ## Test Types
 
 **Unit Tests:**
 
-- Pure functions — `src/lib/color/apply.spec.ts` in **Node** project.
-- Path morph — `path-morph.svelte.spec.ts` (browser project despite pure TS).
+- Pure logic in Node (`src/lib/color/apply.spec.ts`, `src/lib/state/animation.svelte.spec.ts` via explicit Node inclusion).
 
-**Integration-style:**
+**Integration Tests:**
 
-- Paper + pipeline — `render-pipeline.svelte.spec.ts`, `compose.svelte.spec.ts`, `bend.svelte.spec.ts`.
-- State + mocked storage — `composition.svelte.spec.ts`.
+- State and storage interactions (`src/lib/state/composition.svelte.spec.ts`).
+- Geometry + Paper render flow (`src/lib/geometry/render-pipeline.svelte.spec.ts`, `src/lib/geometry/compose.svelte.spec.ts`).
 
-**Component / browser tests:**
+**Component / Browser Tests:**
 
-- `Welcome.svelte.spec.ts` — `render` from `vitest-browser-svelte`, `page` from `vitest/browser`, `expect.element(...).toHaveTextContent` / `toBeInTheDocument`.
-- `PreviewCanvas.svelte.spec.ts` — mutates real `composition` from `$lib/state/composition` with `beforeEach` / `afterEach` snapshot restore; uses `vi.waitFor` for async paint.
+- UI behavior and wiring (`src/lib/components/AnimationSection.svelte.spec.ts`, `src/lib/components/PreviewCanvas.svelte.spec.ts`, `src/lib/components/Sidebar.svelte.spec.ts`).
 
 **E2E Tests:**
 
-- Playwright: `playwright.config.ts` runs `npm run build && npm run preview` on port `4173`, `testMatch: '**/*.e2e.{ts,js}'`.
+- Playwright is configured in `playwright.config.ts` with `testMatch: '**/*.e2e.{ts,js}'`.
 
 ## Common Patterns
 
@@ -207,24 +212,18 @@ const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
 
 ```typescript
 await vi.waitFor(() => {
-	expect(renderCallCount).toBeGreaterThan(initialCount);
+	expect(animationApi.handleCompositionChanged).toHaveBeenCalledOnce();
 });
 ```
 
-**Error Testing:**
+**Error/edge-case Testing:**
 
 ```typescript
-expect(() => interpolatePath(primaryPath, incompatiblePath, 0.5)).toThrow(PathMorphError);
-
-expect(() =>
-	pipeline.render({ composition, scope, viewport: { width: 0, height: 600, padding: 32 } })
-).toThrow(RenderPipelineError);
+expect(() => animation.togglePlay()).not.toThrow();
+expect(animation.animationState.isPlaying).toBe(true);
 ```
 
-**Narrowing after failure result:**
-
 ```typescript
-const result = compositionModule.updateRingPathVariant(0, 'secondary', incompatible);
 expect(result.ok).toBe(false);
 if (result.ok) throw new Error('expected failure');
 expect(result.reason).toBe('Path commands must match exactly to interpolate');
@@ -232,4 +231,4 @@ expect(result.reason).toBe('Path commands must match exactly to interpolate');
 
 ---
 
-*Testing analysis: 2026-04-26*
+*Testing analysis: 2026-04-27*
