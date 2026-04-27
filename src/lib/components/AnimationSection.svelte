@@ -6,9 +6,8 @@
 	import {
 		animationState,
 		handleCompositionChanged,
-		setAnimationAlternate,
+		setAnimationMode,
 		setAnimationDurationSec,
-		setAnimationLoop,
 		togglePlay
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
@@ -42,6 +41,32 @@ const hasMorphRings = $derived(
 				</p>
 			{/if}
 
+			<div class="flex flex-col gap-1">
+				<Label for="animation-mode" class="text-xs">Animation mode</Label>
+				<select
+					id="animation-mode"
+					class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+					value={animationState.mode ?? ''}
+					onchange={(e) => {
+						const mode = (e.target as HTMLSelectElement).value;
+						setAnimationMode(mode === '' ? null : (mode as 'audioBars' | 'dataSeries'));
+					}}
+				>
+					<option value="">None</option>
+					<option value="audioBars">Audio Bars</option>
+					<option value="dataSeries">Data Series</option>
+				</select>
+				{#if animationState.mode === 'dataSeries'}
+					<p class="text-[11px] text-muted-foreground">
+						Data Series mode maps each ring to your configured series values.
+					</p>
+				{:else if animationState.mode === 'audioBars'}
+					<p class="text-[11px] text-muted-foreground">
+						Audio Bars mode reacts to live frequency bands for each ring.
+					</p>
+				{/if}
+			</div>
+
 			<div class="flex items-end gap-2">
 				<div class="flex flex-1 flex-col gap-1">
 					<Label for="animation-duration" class="text-xs">Duration (s)</Label>
@@ -57,27 +82,6 @@ const hasMorphRings = $derived(
 				<Button onclick={togglePlay} aria-pressed={animationState.isPlaying} disabled={!hasMorphRings}
 					>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
 				>
-			</div>
-
-			<div class="flex items-center gap-4">
-				<label class="flex items-center gap-2 text-xs" for="animation-loop">
-					<input
-						id="animation-loop"
-						type="checkbox"
-						checked={animationState.loop}
-						onchange={(e) => setAnimationLoop((e.target as HTMLInputElement).checked)}
-					/>
-					Loop
-				</label>
-				<label class="flex items-center gap-2 text-xs" for="animation-alternate">
-					<input
-						id="animation-alternate"
-						type="checkbox"
-						checked={animationState.alternate}
-						onchange={(e) => setAnimationAlternate((e.target as HTMLInputElement).checked)}
-					/>
-					Alternate
-				</label>
 			</div>
 
 			<div class="space-y-1">
