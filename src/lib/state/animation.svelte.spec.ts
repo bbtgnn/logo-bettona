@@ -95,6 +95,7 @@ describe('animation controller', () => {
 
 	it('resets when composition ring count changes during legacy playback', async () => {
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 		animation.togglePlay();
 		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
 		animation.handleCompositionChanged();
@@ -104,6 +105,7 @@ describe('animation controller', () => {
 
 	it('resets when animated ring targets become stale during legacy playback', async () => {
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 		animation.togglePlay();
 		mockComposition.rings = [
 			{ secondaryTemplatePath: null, morphT: 0 },
@@ -142,6 +144,7 @@ describe('animation controller', () => {
 	it('keeps idle state when no ring has a morph target', async () => {
 		mockComposition.rings = [{ secondaryTemplatePath: null, morphT: 0 }];
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 
 		animation.togglePlay();
 
@@ -244,7 +247,7 @@ describe('animation runtime integration', () => {
 		flushNextAnimationFrame(600);
 
 		expect(animation.animationState.mode).toBe('simple');
-		expect(setRingMorphT).toHaveBeenCalledWith(0, expect.any(Number));
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.2);
 
 		void requestAnimationFrameMock;
 		void cancelAnimationFrameMock;
