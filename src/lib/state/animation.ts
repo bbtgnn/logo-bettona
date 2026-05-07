@@ -1,1 +1,1 @@
-export * from './animation.svelte';
+export * from './animation.svelte.ts';
