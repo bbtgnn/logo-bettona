@@ -71,6 +71,11 @@ describe('animation controller', () => {
 		expect(requestAnimationFrameMock).toHaveBeenCalled();
 	});
 
+	it('defaults to simple mode at startup', async () => {
+		const animation = await import('./animation');
+		expect(animation.animationState.mode).toBe('simple');
+	});
+
 	it('pauses when togglePlay is invoked while playing', async () => {
 		const animation = await import('./animation');
 		animation.togglePlay();
