@@ -7,6 +7,7 @@ type AnimationDriver = {
 type CreateSimpleDriverDeps = {
 	getRingCount: () => number;
 	getDurationSec: () => number;
+	getLoop: () => boolean;
 };
 
 function clamp01(value: number): number {
@@ -42,7 +43,8 @@ export function createSimpleDriver(deps: CreateSimpleDriverDeps): AnimationDrive
 
 			const elapsedMs = Math.max(0, nowMs - startedAtMs);
 			const durationMs = normalizeDurationMs(deps.getDurationSec());
-			const progress = clamp01((elapsedMs / durationMs) % 1);
+			const rawProgress = elapsedMs / durationMs;
+			const progress = deps.getLoop() ? clamp01(rawProgress % 1) : clamp01(rawProgress);
 			const ringCount = normalizeRingCount(deps.getRingCount());
 			const frame: Record<number, number> = {};
 

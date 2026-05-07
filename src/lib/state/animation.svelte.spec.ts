@@ -254,6 +254,26 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
+	it('simple non-loop reaches 1 at completion without wraparound reset', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		const { setRingMorphT } = await import('./composition');
+
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(3000);
+
+		expect(animation.animationState.mode).toBe('simple');
+		expect(animation.animationState.isPlaying).toBe(false);
+		expect(animation.animationState.progress).toBe(1);
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 1);
+		expect(setRingMorphT.mock.calls.at(-1)?.[1]).toBe(1);
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
 	it('setDataSeriesConfig updates are consumed dynamically by dataSeries driver', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const { setRingMorphT } = await import('./composition');

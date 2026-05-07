@@ -61,7 +61,8 @@ runtime.registerDriver(
 	'simple',
 	createSimpleDriver({
 		getRingCount: () => composition.rings.length,
-		getDurationSec: () => animationState.durationSec
+		getDurationSec: () => animationState.durationSec,
+		getLoop: () => animationState.loop
 	})
 );
 
