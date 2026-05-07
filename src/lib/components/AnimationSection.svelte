@@ -49,12 +49,13 @@ const hasMorphRings = $derived(
 					value={animationState.mode ?? ''}
 					onchange={(e) => {
 						const mode = (e.target as HTMLSelectElement).value;
-						setAnimationMode(mode === '' ? null : (mode as 'audioBars' | 'dataSeries'));
+						setAnimationMode(mode === '' ? null : (mode as 'simple' | 'audioBars' | 'dataSeries'));
 					}}
 				>
-					<option value="">None</option>
+					<option value="simple">Simple</option>
 					<option value="audioBars">Audio Bars</option>
 					<option value="dataSeries">Data Series</option>
+					<option value="">None</option>
 				</select>
 				{#if animationState.mode === 'dataSeries'}
 					<p class="text-[11px] text-muted-foreground">

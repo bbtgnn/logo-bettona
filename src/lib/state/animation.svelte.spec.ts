@@ -71,6 +71,11 @@ describe('animation controller', () => {
 		expect(requestAnimationFrameMock).toHaveBeenCalled();
 	});
 
+	it('defaults to simple mode at startup', async () => {
+		const animation = await import('./animation');
+		expect(animation.animationState.mode).toBe('simple');
+	});
+
 	it('pauses when togglePlay is invoked while playing', async () => {
 		const animation = await import('./animation');
 		animation.togglePlay();
@@ -90,6 +95,7 @@ describe('animation controller', () => {
 
 	it('resets when composition ring count changes during legacy playback', async () => {
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 		animation.togglePlay();
 		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
 		animation.handleCompositionChanged();
@@ -99,6 +105,7 @@ describe('animation controller', () => {
 
 	it('resets when animated ring targets become stale during legacy playback', async () => {
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 		animation.togglePlay();
 		mockComposition.rings = [
 			{ secondaryTemplatePath: null, morphT: 0 },
@@ -137,6 +144,7 @@ describe('animation controller', () => {
 	it('keeps idle state when no ring has a morph target', async () => {
 		mockComposition.rings = [{ secondaryTemplatePath: null, morphT: 0 }];
 		const animation = await import('./animation');
+		animation.setAnimationMode(null);
 
 		animation.togglePlay();
 
@@ -223,6 +231,43 @@ describe('animation runtime integration', () => {
 
 		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
 		expect(animation.animationState.mode).toBe('dataSeries');
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('applies simple driver values when playing in default mode', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		const { setRingMorphT } = await import('./composition');
+
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(600);
+
+		expect(animation.animationState.mode).toBe('simple');
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.2);
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('simple non-loop reaches 1 at completion without wraparound reset', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		const { setRingMorphT } = await import('./composition');
+
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(3000);
+
+		expect(animation.animationState.mode).toBe('simple');
+		expect(animation.animationState.isPlaying).toBe(false);
+		expect(animation.animationState.progress).toBe(1);
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 1);
+		expect(setRingMorphT.mock.calls.at(-1)?.[1]).toBe(1);
 
 		void requestAnimationFrameMock;
 		void cancelAnimationFrameMock;

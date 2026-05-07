@@ -1,4 +1,4 @@
-export type AnimationDriverType = 'audioBars' | 'dataSeries';
+export type AnimationDriverType = 'simple' | 'audioBars' | 'dataSeries';
 
 export type DataSeriesConfig = {
 	seriesByRingIndex: Record<number, number[]>;

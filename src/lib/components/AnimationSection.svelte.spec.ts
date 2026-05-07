@@ -10,7 +10,7 @@ type RingMock = {
 
 const animationApi = vi.hoisted(() => ({
 	animationState: {
-		mode: null as 'audioBars' | 'dataSeries' | null,
+		mode: null as 'simple' | 'audioBars' | 'dataSeries' | null,
 		isPlaying: false,
 		isPaused: false,
 		progress: 0.25,
@@ -77,6 +77,14 @@ describe('AnimationSection', () => {
 		await userEvent.selectOptions(page.getByLabelText('Animation mode'), 'dataSeries');
 
 		expect(animationApi.setAnimationMode).toHaveBeenLastCalledWith('dataSeries');
+	});
+
+	it('shows Simple mode option and selects it when mode is simple', async () => {
+		animationApi.animationState.mode = 'simple';
+		render(AnimationSection);
+		await expect.element(page.getByRole('option', { name: 'Simple' })).toBeInTheDocument();
+		const select = page.getByLabelText('Animation mode');
+		await expect.element(select).toHaveValue('simple');
 	});
 
 	it('shows contextual copy for selected mode', async () => {

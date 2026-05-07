@@ -1,19 +1,15 @@
 import { lsSync } from 'rune-sync/localstorage';
-import type { ColorModeState, ColorMode, Composition, FullPalette, MonochromePalette, Ring } from '$lib/types';
+import type {
+	ColorModeState,
+	ColorMode,
+	Composition,
+	FullPalette,
+	MonochromePalette,
+	Ring
+} from '$lib/types';
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
-
-const DEFAULT_COMPOSITION: Composition = {
-	baseRadius: 100,
-	ringIncrement: 50,
-	rings: [],
-	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
-	fullPalettes: [
-		{ colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'] },
-		{ colors: ['#2d6a4f', '#40916c', '#74c69d', '#d8f3dc'] },
-		{ colors: ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'] }
-	]
-};
+import { DEFAULT_COMPOSITION } from './default';
 
 export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
@@ -51,7 +47,13 @@ function applyColorMode() {
 	const monoPalette = composition.monochromePalettes[palette];
 	const fullPalette = composition.fullPalettes[palette];
 	const currentColors = composition.rings.map((r) => r.color);
-	const newColors = applyColors(mode, monoPalette, fullPalette, currentColors, composition.rings.length);
+	const newColors = applyColors(
+		mode,
+		monoPalette,
+		fullPalette,
+		currentColors,
+		composition.rings.length
+	);
 	composition.rings = composition.rings.map((ring, i) => ({ ...ring, color: newColors[i] }));
 }
 
@@ -76,7 +78,9 @@ export function setActivePalette(index: number) {
 	applyColorMode();
 }
 
-export function addMonochromePalette(palette: MonochromePalette = { main: '#000000', bg: '#ffffff' }) {
+export function addMonochromePalette(
+	palette: MonochromePalette = { main: '#000000', bg: '#ffffff' }
+) {
 	composition.monochromePalettes = [...composition.monochromePalettes, palette];
 	colorMode.palette = composition.monochromePalettes.length - 1;
 	applyColorMode();
@@ -188,7 +192,9 @@ export function updateRingPathVariant(
 				return compatibility;
 			}
 		}
-		composition.rings = composition.rings.map((r, i) => (i === index ? { ...r, templatePath: path } : r));
+		composition.rings = composition.rings.map((r, i) =>
+			i === index ? { ...r, templatePath: path } : r
+		);
 		return { ok: true };
 	}
 
