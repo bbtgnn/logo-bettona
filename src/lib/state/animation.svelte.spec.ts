@@ -234,6 +234,23 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
+	it('applies simple driver values when playing in default mode', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		const { setRingMorphT } = await import('./composition');
+
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(600);
+
+		expect(animation.animationState.mode).toBe('simple');
+		expect(setRingMorphT).toHaveBeenCalledWith(0, expect.any(Number));
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
 	it('setDataSeriesConfig updates are consumed dynamically by dataSeries driver', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const { setRingMorphT } = await import('./composition');

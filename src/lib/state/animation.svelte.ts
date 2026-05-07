@@ -1,6 +1,7 @@
 import { composition, setRingMorphT } from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
+import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
 import type {
 	AnimationDriverType,
@@ -35,7 +36,7 @@ const defaultDataSeriesConfig: DataSeriesConfig = {
 };
 
 export const animationState = $state<AnimationState>({
-	mode: null,
+	mode: 'simple',
 	isPlaying: false,
 	isPaused: false,
 	progress: 0,
@@ -55,6 +56,14 @@ let logicalElapsedMs = 0;
 const runtime = createAnimationRuntime({
 	applyRingT: (index, t) => setRingMorphT(index, t)
 });
+
+runtime.registerDriver(
+	'simple',
+	createSimpleDriver({
+		getRingCount: () => composition.rings.length,
+		getDurationSec: () => animationState.durationSec
+	})
+);
 
 runtime.registerDriver(
 	'audioBars',
