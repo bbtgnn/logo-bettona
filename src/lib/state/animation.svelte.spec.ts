@@ -314,4 +314,27 @@ describe('animation runtime integration', () => {
 		void cancelAnimationFrameMock;
 		vi.unstubAllGlobals();
 	});
+
+	it('dataSeries mode keeps untouched ring t when series is missing', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const { setRingMorphT } = await import('./composition');
+		const animation = await import('./animation');
+
+		animation.setDataSeriesConfig({
+			seriesByRingIndex: { 0: [0, 10] },
+			speed: 1,
+			loop: false
+		});
+		animation.setAnimationMode('dataSeries');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(500);
+
+		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
+		expect(setRingMorphT).not.toHaveBeenCalledWith(1, expect.any(Number));
+
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
 });
