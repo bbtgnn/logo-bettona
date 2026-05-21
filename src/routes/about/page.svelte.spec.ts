@@ -8,10 +8,18 @@ describe('About page', () => {
 		render(AboutPage);
 
 		await expect.element(page.getByTestId('about-back-link')).toBeInTheDocument();
-		await expect.element(page.getByRole('heading', { level: 1, name: 'logo-bettona' })).toBeInTheDocument();
-		await expect.element(page.getByText('Strumento per generare loghi a forma di anello.')).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('heading', { level: 1, name: 'logo-bettona' }))
+			.toBeInTheDocument();
+		await expect
+			.element(page.getByText('Strumento per generare loghi a forma di anello.'))
+			.toBeInTheDocument();
 		await expect.element(page.getByTestId('about-hero-ring')).toBeInTheDocument();
-		await expect.element(page.getByRole('heading', { level: 2, name: "Cos'è" })).toBeInTheDocument();
-		await expect.element(page.getByRole('heading', { level: 2, name: 'Come si usa' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('heading', { level: 2, name: "Cos'è" }))
+			.toBeInTheDocument();
+		await expect
+			.element(page.getByRole('heading', { level: 2, name: 'Come si usa' }))
+			.toBeInTheDocument();
 	});
 });
