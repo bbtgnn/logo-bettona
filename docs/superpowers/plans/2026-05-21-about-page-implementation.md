@@ -20,7 +20,7 @@ Create:
 - `src/lib/components/AboutHeroRing.svelte` — Self-contained animated ring. Owns its Paper.js scope, defines a hardcoded `Composition` constant, runs an internal animation loop. No props.
 - `src/lib/components/AboutHeroRing.svelte.spec.ts` — Component test: mounts without throwing, contains a `<canvas>`.
 - `src/routes/about/page.svelte.spec.ts` — Component test: renders Back link, hero title, tagline, both card headings, and an `AboutHeroRing` (canvas).
-- `e2e/about-nav.spec.ts` — Playwright: from `/` click `About` header link, assert hero title visible on `/about`, click `← Back`, assert main editor shell is visible.
+- `src/routes/about/about-nav.e2e.ts` — Playwright: from `/` click `About` header link, assert hero title visible on `/about`, click `← Back`, assert main editor shell is visible.
 
 Modify:
 
@@ -116,11 +116,11 @@ git commit -m "feat(about): add About link to main app header"
 
 **Files:**
 
-- Create: `e2e/about-nav.spec.ts`
+- Create: `src/routes/about/about-nav.e2e.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-Create `e2e/about-nav.spec.ts`:
+Create `src/routes/about/about-nav.e2e.ts`:
 
 ```ts
 import { expect, test } from '@playwright/test';
@@ -140,13 +140,13 @@ test('navigates between editor and About via header links', async ({ page }) => 
 
 - [ ] **Step 2: Run the test to verify it passes**
 
-Run: `bun run test:e2e -- e2e/about-nav.spec.ts`
+Run: `bun run test:e2e -- src/routes/about/about-nav.e2e.ts`
 Expected: PASS — placeholder About page already exposes both required testids and the editor shell shows `Shape Editor` text.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add e2e/about-nav.spec.ts
+git add src/routes/about/about-nav.e2e.ts
 git commit -m "test(about): add e2e nav smoke between editor and /about"
 ```
 
@@ -538,7 +538,7 @@ Expected: All tests pass, including the new `AboutHeroRing` and About page tests
 - [ ] **Step 2: Run the Playwright e2e suite**
 
 Run: `bun run test:e2e`
-Expected: All e2e tests pass, including the new `about-nav.spec.ts`.
+Expected: All e2e tests pass, including the new `about-nav.e2e.ts`.
 
 - [ ] **Step 3: Run lint and type checks**
 
