@@ -89,11 +89,11 @@ Tone: technical and dry (no jokes, no warmth, no marketing voice).
 New files:
 
 - `src/routes/about/+page.svelte` — the About page itself: minimal header + hero + 2-col grid + copy.
-- `src/lib/components/AboutHeroRing.svelte` — wrapper around `RingCanvas` with a hardcoded preset (palette, geometry, animation driver, driver parameters).
+- `src/lib/components/AboutHeroRing.svelte` — self-contained animated hero ring. Owns its own Paper.js scope, defines a hardcoded local `Composition` constant, drives it through `createRenderPipeline()`, and animates `morphT` via an internal `requestAnimationFrame` loop. No props, no coupling to global stores.
 
 Reused:
 
-- `src/lib/components/RingCanvas.svelte` — existing Paper.js-based ring renderer.
+- `src/lib/geometry/render-pipeline.ts` — existing Paper.js-based composition renderer (`createRenderPipeline()`), the same pipeline used by `PreviewCanvas.svelte`. (Note: `RingCanvas.svelte` is a path editor with handles, not a ring renderer; it is not used here.)
 - Existing Tailwind / shadcn tokens for typography and spacing.
 
 Modified:
@@ -108,16 +108,15 @@ No changes to:
 
 ## Hero Ring Preset
 
-The preset values live as constants inside `AboutHeroRing.svelte` (or a small adjacent module if cleaner). They are picked at implementation time and may be tuned later in code; they are not user-configurable from the About page.
+The preset values live as constants inside `AboutHeroRing.svelte`. They are picked at implementation time and may be tuned later in code; they are not user-configurable from the About page.
 
 Preset must cover:
 
-- Palette (mode + colors).
-- Ring geometry (radius, thickness, segments).
-- Animation driver selection and its parameters.
-- Autoplay enabled (animation starts on page load).
+- A local `Composition` constant: `baseRadius`, `ringIncrement`, `rings[]` (each ring with `templatePath`, `secondaryTemplatePath`, `color`, `copies`, `ringHeight`, initial `morphT`), and at least one `monochromePalettes` / `fullPalettes` entry to satisfy the `Composition` type.
+- An internal animation loop (`requestAnimationFrame`) that drives `morphT` (e.g. triangle wave over a fixed duration) on the local composition and re-renders via the existing pipeline.
+- Autoplay enabled (animation starts on mount; loop on cleanup).
 
-The wrapper renders the ring sized appropriately for the hero (visually balanced with the title block above it).
+The component renders the ring sized appropriately for the hero (visually balanced with the title block above it).
 
 ## Accessibility
 
@@ -128,7 +127,7 @@ The wrapper renders the ring sized appropriately for the hero (visually balanced
 
 ## Testing
 
-- Unit/component test for `AboutHeroRing.svelte`: mounts without error and renders a `RingCanvas` child.
+- Unit/component test for `AboutHeroRing.svelte`: mounts without error and renders a `<canvas>` inside the `about-hero-ring` wrapper.
 - Component test for `src/routes/about/+page.svelte`: renders header, hero title/tagline, both cards with expected headings.
 - Playwright smoke test: navigate from `/` to `/about` via the header link, assert About hero title is visible, click `← Back`, assert main editor shell is visible again.
 
