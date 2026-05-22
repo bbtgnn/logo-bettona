@@ -121,10 +121,10 @@ Modifications to `src/lib/components/RingEditor.svelte`:
 1. "Salva in libreria" button
    - Placed alongside existing path controls.
    - Disabled when `ring.templatePath == null`.
-   - On click: `saveEntry(ring.templatePath, ring.secondaryTemplatePath)`; brief toast/feedback "Salvato come 'Path N'".
+   - On click: `saveEntry(ring.templatePath, ring.secondaryTemplatePath)`; inline status text next to the button (no toast system in the project) showing "Salvato come 'Path N'" for ~2s, then clears.
 
 2. "Carica da libreria" button
-   - Opens a modal (uses shadcn `Dialog` if already wired in the project; otherwise a minimal modal styled to match).
+   - Opens a modal using the shadcn `sheet` component (already available under `src/lib/shadcn/ui/sheet/`). Sheet slides in from the side and contains the picker UI.
    - Step 1: grid of `PathThumbnail`s from `pathLibrary.entries`. Empty state copy: "Libreria vuota. Salva prima dal Ring Editor."
    - Step 2 (after selecting an entry): slot picker with three options — `Template`, `Secondary`, `Entrambi`. `Entrambi` is disabled if the selected entry has no `secondaryPath`. Confirm button calls `applyEntryToRing(ring, entry, slot)` and closes the modal.
 
@@ -132,7 +132,7 @@ Modifications to `src/lib/components/RingEditor.svelte`:
 
 - `templatePath == null` → save button disabled (no path to capture).
 - Empty library → empty states in both the page and the modal.
-- localStorage quota exceeded → wrap `saveEntry` write in `try/catch`; on failure surface a toast "Libreria piena" and leave the library unchanged.
+- localStorage quota exceeded → wrap `saveEntry` write in `try/catch`; on failure surface the message "Libreria piena" via the same inline status text used by the save button, and leave the library unchanged.
 - Malformed path during render → `PathThumbnail` shows a placeholder instead of crashing.
 - No migration: the new `path-library` key defaults to `{ entries: [] }` for existing users.
 
