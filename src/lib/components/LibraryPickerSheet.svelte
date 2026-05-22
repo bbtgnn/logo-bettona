@@ -5,6 +5,8 @@
 	import { pathLibrary } from '$lib/state/path-library';
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+	import { composition } from '$lib/state/composition';
+	import RingPreview from './RingPreview.svelte';
 
 	let {
 		open = $bindable(false),
@@ -16,6 +18,7 @@
 
 	let selected = $state<PathLibraryEntry | null>(null);
 	let slotRaw = $state<ApplySlot>('template');
+	let hoveredId = $state<string | null>(null);
 
 	// Auto-correct: if selected entry has no secondaryPath, 'both' is invalid
 	const slot = $derived<ApplySlot>(
@@ -53,16 +56,38 @@
 			{:else if !selected}
 				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="library-picker-grid">
 					{#each pathLibrary.entries as entry (entry.id)}
-						<li>
+						<li
+							class="relative"
+							onmouseenter={() => (hoveredId = entry.id)}
+							onmouseleave={() => (hoveredId = null)}
+						>
 							<button
 								type="button"
 								class="flex w-full flex-col items-center gap-1 rounded border p-2 hover:bg-muted"
 								onclick={() => (selected = entry)}
 								data-testid="library-picker-entry-{entry.id}"
 							>
-								<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={80} />
+								<PathThumbnail
+									path={entry.path}
+									secondaryPath={entry.secondaryPath}
+									size={80}
+								/>
 								<span class="text-xs">{entry.name}</span>
 							</button>
+							{#if hoveredId === entry.id}
+								<div
+									class="absolute left-full top-0 z-20 ml-2 rounded border bg-popover p-2 shadow-lg"
+									data-testid="path-preview-popover"
+								>
+									<RingPreview
+										path={entry.path}
+										secondaryPath={entry.secondaryPath}
+										baseRadius={composition.baseRadius}
+										ringIncrement={composition.ringIncrement}
+										size={220}
+									/>
+								</div>
+							{/if}
 						</li>
 					{/each}
 				</ul>
