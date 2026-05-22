@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Path, PathLibrary } from '$lib/types';
+import type { Path, PathLibrary, Ring } from '$lib/types';
 
 const initialLibrary: PathLibrary = { entries: [] };
 
@@ -9,6 +9,17 @@ vi.mock('rune-sync/localstorage', () => ({
 		return {};
 	})
 }));
+
+function makeRing(): Ring {
+	return {
+		copies: 1,
+		color: '#000',
+		templatePath: { cmds: ['M', 'L'], crds: [0, 0, 1, 1] },
+		secondaryTemplatePath: null,
+		morphT: 0,
+		ringHeight: 0.1
+	};
+}
 
 describe('saveEntry', () => {
 	beforeEach(() => {
@@ -40,5 +51,55 @@ describe('saveEntry', () => {
 
 		expect(entry.path.crds[0]).toBe(0);
 		expect(entry.secondaryPath?.crds[0]).toBe(1);
+	});
+});
+
+describe('applyEntryToRing', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('slot "template" overwrites templatePath only (deep clone)', async () => {
+		const mod = await import('./path-library');
+		const entry = mod.saveEntry(
+			{ cmds: ['M', 'L'], crds: [5, 5, 6, 6] },
+			{ cmds: ['M', 'L'], crds: [7, 7, 8, 8] }
+		);
+		const ring = makeRing();
+
+		mod.applyEntryToRing(ring, entry, 'template');
+
+		expect(ring.templatePath).toEqual({ cmds: ['M', 'L'], crds: [5, 5, 6, 6] });
+		expect(ring.templatePath).not.toBe(entry.path);
+		expect(ring.secondaryTemplatePath).toBeNull();
+	});
+
+	it('slot "secondary" writes entry.path (not entry.secondaryPath) into secondary slot', async () => {
+		const mod = await import('./path-library');
+		const entry = mod.saveEntry(
+			{ cmds: ['M', 'L'], crds: [5, 5, 6, 6] },
+			{ cmds: ['M', 'L'], crds: [7, 7, 8, 8] }
+		);
+		const ring = makeRing();
+
+		mod.applyEntryToRing(ring, entry, 'secondary');
+
+		expect(ring.secondaryTemplatePath).toEqual({ cmds: ['M', 'L'], crds: [5, 5, 6, 6] });
+		expect(ring.secondaryTemplatePath).not.toBe(entry.path);
+		expect(ring.templatePath).toEqual({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] });
+	});
+
+	it('slot "both" writes path → template and secondaryPath → secondary', async () => {
+		const mod = await import('./path-library');
+		const entry = mod.saveEntry(
+			{ cmds: ['M', 'L'], crds: [5, 5, 6, 6] },
+			{ cmds: ['M', 'L'], crds: [7, 7, 8, 8] }
+		);
+		const ring = makeRing();
+
+		mod.applyEntryToRing(ring, entry, 'both');
+
+		expect(ring.templatePath).toEqual({ cmds: ['M', 'L'], crds: [5, 5, 6, 6] });
+		expect(ring.secondaryTemplatePath).toEqual({ cmds: ['M', 'L'], crds: [7, 7, 8, 8] });
 	});
 });
