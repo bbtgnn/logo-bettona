@@ -19,8 +19,11 @@
 	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
 	import { saveEntry } from '$lib/state/path-library';
+	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
+	import type { PathLibraryEntry } from '$lib/types';
+	import type { ApplySlot } from '$lib/state/path-library';
 
 	let {
 		ring,
@@ -42,6 +45,39 @@
 	let editVariant = $state<'primary' | 'secondary'>('primary');
 	let saveStatus = $state<string | null>(null);
 	let saveStatusTimer: ReturnType<typeof setTimeout> | null = null;
+	let libraryOpen = $state(false);
+	let libraryApplyError = $state<string | null>(null);
+
+	function clonePath(p: { cmds: string[]; crds: number[] }) {
+		return { cmds: [...p.cmds], crds: [...p.crds] } as NonNullable<Ring['templatePath']>;
+	}
+
+	function handleApplyFromLibrary(entry: PathLibraryEntry, slot: ApplySlot) {
+		libraryApplyError = null;
+
+		if (slot === 'template' || slot === 'both') {
+			const r1 = updateRingPathVariant(index, 'primary', clonePath(entry.path));
+			if (!r1.ok) {
+				libraryApplyError = r1.reason;
+				return;
+			}
+		}
+
+		if (slot === 'secondary') {
+			const r2 = updateRingPathVariant(index, 'secondary', clonePath(entry.path));
+			if (!r2.ok) libraryApplyError = r2.reason;
+			return;
+		}
+
+		if (slot === 'both') {
+			if (entry.secondaryPath) {
+				const r3 = updateRingPathVariant(index, 'secondary', clonePath(entry.secondaryPath));
+				if (!r3.ok) libraryApplyError = r3.reason;
+			} else if (ring.secondaryTemplatePath) {
+				removeRingMorphTarget(index);
+			}
+		}
+	}
 
 	function showSaveStatus(msg: string) {
 		saveStatus = msg;
@@ -207,7 +243,7 @@
 				</div>
 			{/if}
 
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				<Button
 					variant="outline"
 					size="sm"
@@ -217,12 +253,28 @@
 				>
 					Salva in libreria
 				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => (libraryOpen = true)}
+					data-testid="ring-load-from-library-{index}"
+				>
+					Carica da libreria
+				</Button>
 				{#if saveStatus}
 					<span class="text-xs text-muted-foreground" data-testid="ring-save-status-{index}">
 						{saveStatus}
 					</span>
 				{/if}
 			</div>
+
+			{#if libraryApplyError}
+				<p class="text-xs text-destructive" data-testid="ring-library-apply-error-{index}">
+					{libraryApplyError}
+				</p>
+			{/if}
+
+			<LibraryPickerSheet bind:open={libraryOpen} onapply={handleApplyFromLibrary} />
 
 			<div class="flex flex-col gap-1">
 				<Label for="svg-upload-{index}" class="text-xs">Import SVG</Label>
