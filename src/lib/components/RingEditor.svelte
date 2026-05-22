@@ -18,6 +18,7 @@
 		updateRingPathVariant
 	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
+	import { saveEntry } from '$lib/state/path-library';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
 
@@ -39,6 +40,26 @@
 	let importError = $state<string | null>(null);
 	let ringPathError = $state<string | null>(null);
 	let editVariant = $state<'primary' | 'secondary'>('primary');
+	let saveStatus = $state<string | null>(null);
+	let saveStatusTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function showSaveStatus(msg: string) {
+		saveStatus = msg;
+		if (saveStatusTimer) clearTimeout(saveStatusTimer);
+		saveStatusTimer = setTimeout(() => {
+			saveStatus = null;
+		}, 2000);
+	}
+
+	function handleSaveToLibrary() {
+		if (!ring.templatePath) return;
+		try {
+			const entry = saveEntry(ring.templatePath, ring.secondaryTemplatePath);
+			showSaveStatus(`Salvato come '${entry.name}'`);
+		} catch {
+			showSaveStatus('Libreria piena');
+		}
+	}
 
 	$effect(() => {
 		open = isRingExpanded(index);
@@ -185,6 +206,23 @@
 					/>
 				</div>
 			{/if}
+
+			<div class="flex items-center gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={handleSaveToLibrary}
+					disabled={!ring.templatePath}
+					data-testid="ring-save-to-library-{index}"
+				>
+					Salva in libreria
+				</Button>
+				{#if saveStatus}
+					<span class="text-xs text-muted-foreground" data-testid="ring-save-status-{index}">
+						{saveStatus}
+					</span>
+				{/if}
+			</div>
 
 			<div class="flex flex-col gap-1">
 				<Label for="svg-upload-{index}" class="text-xs">Import SVG</Label>
