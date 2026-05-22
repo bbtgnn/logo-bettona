@@ -140,7 +140,7 @@
 </script>
 
 <div
-	class="border rounded mb-2 bg-background"
+	class="mb-2 rounded border bg-background"
 	draggable="true"
 	role="listitem"
 	{ondragstart}
@@ -149,11 +149,14 @@
 >
 	<Collapsible.Collapsible bind:open onOpenChange={(v) => setRingExpanded(index, v)}>
 		<div class="flex items-center gap-1 px-2 py-1.5">
-			<button class="cursor-grab text-muted-foreground hover:text-foreground" aria-label="Drag to reorder">
+			<button
+				class="cursor-grab text-muted-foreground hover:text-foreground"
+				aria-label="Drag to reorder"
+			>
 				<DotsSixVertical size={16} />
 			</button>
 			<Collapsible.CollapsibleTrigger
-				class="flex flex-1 items-center gap-1 text-sm font-medium hover:text-foreground text-left"
+				class="flex flex-1 items-center gap-1 text-left text-sm font-medium hover:text-foreground"
 			>
 				{#if open}
 					<CaretDown size={14} />
@@ -173,7 +176,7 @@
 			</Button>
 		</div>
 
-		<Collapsible.CollapsibleContent class="px-3 pb-3 space-y-3">
+		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
 			{#if ring.secondaryTemplatePath}
 				<div class="flex items-center gap-2">
 					<Button
@@ -195,7 +198,9 @@
 
 			{#key editVariant}
 				<RingCanvas
-					templatePath={editVariant === 'secondary' ? ring.secondaryTemplatePath : ring.templatePath}
+					templatePath={editVariant === 'secondary'
+						? ring.secondaryTemplatePath
+						: ring.templatePath}
 					onchange={applyPathFromEditor}
 					label={`Path editor (${editVariant})`}
 				/>
@@ -230,7 +235,9 @@
 						>
 							Remove morph target
 						</Button>
-						<span class="text-xs text-muted-foreground">Morph t: {(ring.morphT ?? 0).toFixed(2)}</span>
+						<span class="text-xs text-muted-foreground"
+							>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
+						>
 					</div>
 					<Slider
 						type="single"
@@ -283,7 +290,7 @@
 					type="file"
 					accept=".svg,image/svg+xml"
 					onchange={handleFileChange}
-					class="text-xs file:mr-2 file:text-xs file:border-0 file:bg-muted file:rounded file:px-2 file:py-1 file:cursor-pointer cursor-pointer"
+					class="cursor-pointer text-xs file:mr-2 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs"
 				/>
 				{#if importError}
 					<p class="text-xs text-destructive">{importError}</p>
@@ -298,12 +305,17 @@
 					min="1"
 					value={ring.copies}
 					oninput={(e) =>
-						updateRing(index, { copies: Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1) })}
+						updateRing(index, {
+							copies: Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1)
+						})}
 				/>
 			</div>
 
 			<div class="flex flex-col gap-2">
-				<Label class="text-xs">Ring height <span class="text-muted-foreground">{ring.ringHeight.toFixed(2)}</span></Label>
+				<Label class="text-xs"
+					>Ring height <span class="text-muted-foreground">{ring.ringHeight.toFixed(2)}</span
+					></Label
+				>
 				<Slider
 					type="single"
 					min={0}
@@ -315,20 +327,20 @@
 			</div>
 
 			{#if colorMode.mode === 'manual'}
-			<div class="flex flex-col gap-1">
-				<Label for="color-{index}" class="text-xs">Color</Label>
-				<div class="flex items-center gap-2">
-					<input
-						id="color-{index}"
-						type="color"
-						value={ring.color}
-						oninput={(e) => updateRing(index, { color: (e.target as HTMLInputElement).value })}
-						class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
-					/>
-					<span class="text-xs text-muted-foreground font-mono">{ring.color}</span>
+				<div class="flex flex-col gap-1">
+					<Label for="color-{index}" class="text-xs">Color</Label>
+					<div class="flex items-center gap-2">
+						<input
+							id="color-{index}"
+							type="color"
+							value={ring.color}
+							oninput={(e) => updateRing(index, { color: (e.target as HTMLInputElement).value })}
+							class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
+						/>
+						<span class="font-mono text-xs text-muted-foreground">{ring.color}</span>
+					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
 		</Collapsible.CollapsibleContent>
 	</Collapsible.Collapsible>
 </div>

@@ -32,7 +32,13 @@
 		class="text-foreground"
 		aria-hidden="true"
 	>
-		<path d={rendered.d} fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke" />
+		<path
+			d={rendered.d}
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			vector-effect="non-scaling-stroke"
+		/>
 		{#if rendered.secondaryD}
 			<path
 				d={rendered.secondaryD}
@@ -48,7 +54,7 @@
 	<div
 		style:width="{size}px"
 		style:height="{size}px"
-		class="flex items-center justify-center border border-dashed text-muted-foreground text-sm"
+		class="flex items-center justify-center border border-dashed text-sm text-muted-foreground"
 	>
 		?
 	</div>

@@ -11,9 +11,12 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 	// We try to reach Ring 1 first; if not visible, open the sidebar.
 	const ringTrigger = page.getByRole('button', { name: /Ring 1/ });
 	if (!(await ringTrigger.isVisible())) {
-		await page.getByTestId('sidebar-content').waitFor({ state: 'visible', timeout: 3000 }).catch(() => {
-			// sidebar may be closed — open it
-		});
+		await page
+			.getByTestId('sidebar-content')
+			.waitFor({ state: 'visible', timeout: 3000 })
+			.catch(() => {
+				// sidebar may be closed — open it
+			});
 		const sidebarVisible = await page.getByTestId('sidebar-content').isVisible();
 		if (!sidebarVisible) {
 			// Click the SidebarTrigger (first button in the header area)

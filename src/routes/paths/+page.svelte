@@ -24,10 +24,7 @@
 
 	<main class="mx-auto max-w-[1100px] px-6 py-8">
 		{#if pathLibrary.entries.length === 0}
-			<p
-				class="text-sm text-muted-foreground"
-				data-testid="paths-empty-state"
-			>
+			<p class="text-sm text-muted-foreground" data-testid="paths-empty-state">
 				Nessun path salvato. Salva dal Ring Editor.
 			</p>
 		{:else}
@@ -37,11 +34,7 @@
 			>
 				{#each pathLibrary.entries as entry (entry.id)}
 					<li class="flex flex-col items-center gap-2 rounded border p-3">
-						<PathThumbnail
-							path={entry.path}
-							secondaryPath={entry.secondaryPath}
-							size={120}
-						/>
+						<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={120} />
 						<div class="flex w-full items-center justify-between text-xs">
 							<span class="font-medium">{entry.name}</span>
 							{#if entry.secondaryPath}

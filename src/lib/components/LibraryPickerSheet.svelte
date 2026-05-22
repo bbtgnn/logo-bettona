@@ -42,9 +42,7 @@
 	<Sheet.Content side="right" class="w-[420px] sm:w-[480px]">
 		<Sheet.Header>
 			<Sheet.Title>Carica da libreria</Sheet.Title>
-			<Sheet.Description>
-				Scegli un path salvato e lo slot da sovrascrivere.
-			</Sheet.Description>
+			<Sheet.Description>Scegli un path salvato e lo slot da sovrascrivere.</Sheet.Description>
 		</Sheet.Header>
 
 		<div class="mt-4 space-y-4">
@@ -53,10 +51,7 @@
 					Libreria vuota. Salva prima dal Ring Editor.
 				</p>
 			{:else if !selected}
-				<ul
-					class="grid grid-cols-2 gap-3 sm:grid-cols-3"
-					data-testid="library-picker-grid"
-				>
+				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="library-picker-grid">
 					{#each pathLibrary.entries as entry (entry.id)}
 						<li>
 							<button
@@ -65,11 +60,7 @@
 								onclick={() => (selected = entry)}
 								data-testid="library-picker-entry-{entry.id}"
 							>
-								<PathThumbnail
-									path={entry.path}
-									secondaryPath={entry.secondaryPath}
-									size={80}
-								/>
+								<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={80} />
 								<span class="text-xs">{entry.name}</span>
 							</button>
 						</li>
@@ -78,11 +69,7 @@
 			{:else}
 				<div class="space-y-3">
 					<div class="flex items-center gap-3 rounded border p-2">
-						<PathThumbnail
-							path={selected.path}
-							secondaryPath={selected.secondaryPath}
-							size={64}
-						/>
+						<PathThumbnail path={selected.path} secondaryPath={selected.secondaryPath} size={64} />
 						<div class="text-sm font-medium">{selected.name}</div>
 					</div>
 
@@ -108,7 +95,10 @@
 							/>
 							Secondary
 						</label>
-						<label class="flex items-center gap-2 text-sm" class:opacity-50={!selected.secondaryPath}>
+						<label
+							class="flex items-center gap-2 text-sm"
+							class:opacity-50={!selected.secondaryPath}
+						>
 							<input
 								type="radio"
 								name="apply-slot"
@@ -122,14 +112,8 @@
 					</fieldset>
 
 					<div class="flex justify-end gap-2">
-						<Button variant="outline" size="sm" onclick={() => (selected = null)}>
-							Indietro
-						</Button>
-						<Button
-							size="sm"
-							onclick={confirm}
-							data-testid="library-picker-confirm"
-						>
+						<Button variant="outline" size="sm" onclick={() => (selected = null)}>Indietro</Button>
+						<Button size="sm" onclick={confirm} data-testid="library-picker-confirm">
 							Applica
 						</Button>
 					</div>
