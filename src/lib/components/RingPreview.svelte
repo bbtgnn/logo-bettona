@@ -75,7 +75,7 @@
 	<div
 		style:width="{size}px"
 		style:height="{size}px"
-		class="flex items-center justify-center border border-dashed text-muted-foreground text-sm"
+		class="flex items-center justify-center border border-dashed text-sm text-muted-foreground"
 		data-testid="ring-preview-placeholder"
 	>
 		?

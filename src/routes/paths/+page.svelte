@@ -42,11 +42,7 @@
 						onmouseenter={() => (hoveredId = entry.id)}
 						onmouseleave={() => (hoveredId = null)}
 					>
-						<PathThumbnail
-							path={entry.path}
-							secondaryPath={entry.secondaryPath}
-							size={120}
-						/>
+						<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={120} />
 						<div class="flex w-full items-center justify-between text-xs">
 							<span class="font-medium">{entry.name}</span>
 							{#if entry.secondaryPath}
@@ -60,7 +56,7 @@
 						</span>
 						{#if hoveredId === entry.id}
 							<div
-								class="absolute left-full top-0 z-10 ml-2 rounded border bg-popover p-2 shadow-lg"
+								class="absolute top-0 left-full z-10 ml-2 rounded border bg-popover p-2 shadow-lg"
 								data-testid="path-preview-popover"
 							>
 								<RingPreview
