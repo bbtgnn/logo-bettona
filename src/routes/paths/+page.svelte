@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { pathLibrary } from '$lib/state/path-library';
+	import { composition } from '$lib/state/composition';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
+	import RingPreview from '$lib/components/RingPreview.svelte';
+
+	let hoveredId = $state<string | null>(null);
 </script>
 
 <svelte:head><title>Path Library — logo-bettona</title></svelte:head>
@@ -33,8 +37,16 @@
 				data-testid="paths-grid"
 			>
 				{#each pathLibrary.entries as entry (entry.id)}
-					<li class="flex flex-col items-center gap-2 rounded border p-3">
-						<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={120} />
+					<li
+						class="relative flex flex-col items-center gap-2 rounded border p-3"
+						onmouseenter={() => (hoveredId = entry.id)}
+						onmouseleave={() => (hoveredId = null)}
+					>
+						<PathThumbnail
+							path={entry.path}
+							secondaryPath={entry.secondaryPath}
+							size={120}
+						/>
 						<div class="flex w-full items-center justify-between text-xs">
 							<span class="font-medium">{entry.name}</span>
 							{#if entry.secondaryPath}
@@ -46,6 +58,20 @@
 						<span class="self-start text-[10px] text-muted-foreground">
 							{new Date(entry.createdAt).toLocaleDateString()}
 						</span>
+						{#if hoveredId === entry.id}
+							<div
+								class="absolute left-full top-0 z-10 ml-2 rounded border bg-popover p-2 shadow-lg"
+								data-testid="path-preview-popover"
+							>
+								<RingPreview
+									path={entry.path}
+									secondaryPath={entry.secondaryPath}
+									baseRadius={composition.baseRadius}
+									ringIncrement={composition.ringIncrement}
+									size={280}
+								/>
+							</div>
+						{/if}
 					</li>
 				{/each}
 			</ul>
