@@ -10,6 +10,9 @@ export type AudioBarsConfig = {
 	smoothing: number;
 	minHz: number;
 	maxHz: number;
+	waveCrests: number; // integer >= 1, periods along the petal
+	waveAmplitudeGain: number; // band energy (0..1) → wave amplitude
+	wavePhaseSpeed: number; // rad/sec, travel speed of the wave
 };
 
 export type DriverConfigByType = {

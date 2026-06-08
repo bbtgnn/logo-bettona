@@ -26,7 +26,10 @@ export type AnimationState = {
 const defaultAudioBarsConfig: AudioBarsConfig = {
 	smoothing: 0.5,
 	minHz: 20,
-	maxHz: 20000
+	maxHz: 20000,
+	waveCrests: 3,
+	waveAmplitudeGain: 0.3,
+	wavePhaseSpeed: 2.2
 };
 
 const defaultDataSeriesConfig: DataSeriesConfig = {
