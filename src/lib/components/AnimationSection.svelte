@@ -8,7 +8,10 @@
 		handleCompositionChanged,
 		setAnimationMode,
 		setAnimationDurationSec,
-		togglePlay
+		togglePlay,
+		setAudioBarsConfig,
+		setAudioSource,
+		audioSource
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
@@ -16,9 +19,11 @@
 	const progressPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, animationState.progress)) * 100)
 	);
-const hasMorphRings = $derived(
-	composition.rings.some((ring) => ring.secondaryTemplatePath !== null)
-);
+	const hasMorphRings = $derived(
+		composition.rings.some((ring) => ring.secondaryTemplatePath !== null)
+	);
+	const requiresMorphRings = $derived(animationState.mode !== 'audioBars');
+	const blockPlayback = $derived(requiresMorphRings && !hasMorphRings);
 
 	$effect(() => {
 		composition.rings.length;
@@ -33,7 +38,7 @@ const hasMorphRings = $derived(
 
 	{#snippet content()}
 		<div class="space-y-3">
-			{#if !hasMorphRings}
+			{#if blockPlayback}
 				<p
 					class="rounded border border-yellow-300 bg-yellow-100 px-2 py-1 text-[11px] text-yellow-900"
 				>
@@ -68,6 +73,121 @@ const hasMorphRings = $derived(
 				{/if}
 			</div>
 
+			{#if animationState.mode === 'audioBars'}
+				<div class="flex flex-col gap-2 rounded border border-border p-2">
+					<div class="flex flex-col gap-1">
+						<Label for="audio-source" class="text-xs">Audio source</Label>
+						<select
+							id="audio-source"
+							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+							value={animationState.audioSource}
+							onchange={(e) =>
+								setAudioSource(
+									(e.target as HTMLSelectElement).value as 'demo' | 'mic' | 'file' | 'off'
+								)}
+						>
+							<option value="demo">Demo</option>
+							<option value="mic">Microphone</option>
+							<option value="file">File</option>
+						</select>
+					</div>
+
+					{#if animationState.audioSource === 'file'}
+						<div class="flex flex-col gap-1">
+							<Label for="audio-file" class="text-xs">Audio file</Label>
+							<input
+								id="audio-file"
+								type="file"
+								accept="audio/*"
+								class="text-xs"
+								onchange={(e) => {
+									const file = (e.target as HTMLInputElement).files?.[0];
+									if (file) audioSource.loadFile(file);
+								}}
+							/>
+							<div class="flex gap-2">
+								<Button onclick={() => audioSource.play()}>Play file</Button>
+								<Button onclick={() => audioSource.pause()}>Pause file</Button>
+							</div>
+						</div>
+					{/if}
+
+					<div class="flex flex-col gap-1">
+						<Label for="wave-crests" class="text-xs">Wave crests</Label>
+						<input
+							id="wave-crests"
+							type="range"
+							min="1"
+							max="8"
+							step="1"
+							value={animationState.audioBars.waveCrests}
+							oninput={(e) =>
+								setAudioBarsConfig({ waveCrests: Number((e.target as HTMLInputElement).value) })}
+						/>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<Label for="amplitude-gain" class="text-xs">Amplitude gain</Label>
+						<input
+							id="amplitude-gain"
+							type="range"
+							min="0"
+							max="1"
+							step="0.01"
+							value={animationState.audioBars.waveAmplitudeGain}
+							oninput={(e) =>
+								setAudioBarsConfig({
+									waveAmplitudeGain: Number((e.target as HTMLInputElement).value)
+								})}
+						/>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<Label for="phase-speed" class="text-xs">Phase speed</Label>
+						<input
+							id="phase-speed"
+							type="range"
+							min="0"
+							max="6"
+							step="0.1"
+							value={animationState.audioBars.wavePhaseSpeed}
+							oninput={(e) =>
+								setAudioBarsConfig({
+									wavePhaseSpeed: Number((e.target as HTMLInputElement).value)
+								})}
+						/>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<Label for="smoothing" class="text-xs">Smoothing</Label>
+						<input
+							id="smoothing"
+							type="range"
+							min="0"
+							max="0.95"
+							step="0.05"
+							value={animationState.audioBars.smoothing}
+							oninput={(e) =>
+								setAudioBarsConfig({ smoothing: Number((e.target as HTMLInputElement).value) })}
+						/>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<Label for="input-gain" class="text-xs">Input gain</Label>
+						<input
+							id="input-gain"
+							type="range"
+							min="0.5"
+							max="4"
+							step="0.1"
+							value={animationState.audioBars.inputGain}
+							oninput={(e) =>
+								setAudioBarsConfig({ inputGain: Number((e.target as HTMLInputElement).value) })}
+						/>
+					</div>
+				</div>
+			{/if}
+
 			<div class="flex items-end gap-2">
 				<div class="flex flex-1 flex-col gap-1">
 					<Label for="animation-duration" class="text-xs">Duration (s)</Label>
@@ -80,8 +200,10 @@ const hasMorphRings = $derived(
 						oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
 					/>
 				</div>
-				<Button onclick={togglePlay} aria-pressed={animationState.isPlaying} disabled={!hasMorphRings}
-					>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
+				<Button
+					onclick={togglePlay}
+					aria-pressed={animationState.isPlaying}
+					disabled={blockPlayback}>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
 				>
 			</div>
 

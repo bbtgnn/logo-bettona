@@ -16,14 +16,27 @@ const animationApi = vi.hoisted(() => ({
 		progress: 0.25,
 		durationSec: 3,
 		loop: false,
-		alternate: false
+		alternate: false,
+		audioSource: 'demo' as 'demo' | 'mic' | 'file' | 'off',
+		audioBars: {
+			smoothing: 0.5,
+			minHz: 20,
+			maxHz: 20000,
+			waveCrests: 3,
+			waveAmplitudeGain: 0.3,
+			wavePhaseSpeed: 2.2,
+			inputGain: 1
+		}
 	},
 	togglePlay: vi.fn(),
 	setAnimationMode: vi.fn(),
 	setAnimationDurationSec: vi.fn(),
 	setAnimationLoop: vi.fn(),
 	setAnimationAlternate: vi.fn(),
-	handleCompositionChanged: vi.fn()
+	handleCompositionChanged: vi.fn(),
+	setAudioBarsConfig: vi.fn(),
+	setAudioSource: vi.fn(),
+	audioSource: { loadFile: vi.fn(), play: vi.fn(), pause: vi.fn() }
 }));
 
 const compositionApi = vi.hoisted(() => ({
@@ -45,7 +58,13 @@ describe('AnimationSection', () => {
 		animationApi.setAnimationLoop.mockClear();
 		animationApi.setAnimationAlternate.mockClear();
 		animationApi.handleCompositionChanged.mockClear();
+		animationApi.setAudioBarsConfig.mockClear();
+		animationApi.setAudioSource.mockClear();
+		animationApi.audioSource.loadFile.mockClear();
+		animationApi.audioSource.play.mockClear();
+		animationApi.audioSource.pause.mockClear();
 		animationApi.animationState.mode = null;
+		animationApi.animationState.audioSource = 'demo';
 		compositionApi.composition.rings = [
 			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 }
 		];
@@ -141,5 +160,51 @@ describe('AnimationSection', () => {
 		await tick();
 
 		expect(animationApi.handleCompositionChanged).toHaveBeenCalledOnce();
+	});
+
+	it('shows the audio source selector and five sliders in audioBars mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		render(AnimationSection);
+
+		await expect.element(page.getByLabelText('Audio source')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Wave crests')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Amplitude gain')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Phase speed')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Smoothing')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Input gain')).toBeInTheDocument();
+	});
+
+	it('does not show the audio controls outside audioBars mode', async () => {
+		animationApi.animationState.mode = 'simple';
+		render(AnimationSection);
+		await expect.element(page.getByLabelText('Audio source')).not.toBeInTheDocument();
+	});
+
+	it('wires the source selector and a slider to their actions', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		render(AnimationSection);
+
+		await userEvent.selectOptions(page.getByLabelText('Audio source'), 'mic');
+		expect(animationApi.setAudioSource).toHaveBeenLastCalledWith('mic');
+
+		const slider = page.getByLabelText('Phase speed');
+		const el = slider.element() as HTMLInputElement;
+		el.value = '4';
+		el.dispatchEvent(new Event('input', { bubbles: true }));
+		expect(animationApi.setAudioBarsConfig).toHaveBeenLastCalledWith({ wavePhaseSpeed: 4 });
+	});
+
+	it('enables Play in audioBars mode even with no secondary paths', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		compositionApi.composition.rings = [
+			{ secondaryTemplatePath: null, morphT: 0 },
+			{ secondaryTemplatePath: null, morphT: 0.2 }
+		];
+		render(AnimationSection);
+
+		await expect
+			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
+			.not.toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Play' })).toBeEnabled();
 	});
 });
