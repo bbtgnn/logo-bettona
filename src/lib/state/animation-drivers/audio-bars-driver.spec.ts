@@ -9,7 +9,8 @@ const config: AudioBarsConfig = {
 	maxHz: 16000,
 	waveCrests: 3,
 	waveAmplitudeGain: 0.3,
-	wavePhaseSpeed: 2.2
+	wavePhaseSpeed: 2.2,
+	inputGain: 1
 };
 
 type WaveCall = { index: number; wave: WaveState | null };

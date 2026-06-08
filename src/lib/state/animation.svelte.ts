@@ -4,6 +4,7 @@ import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
 import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
 import { createFallbackBars } from './animation-drivers/fallback-bars';
+import { createAudioSource } from './animation-drivers/audio-source';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
@@ -18,6 +19,7 @@ export type AnimationState = {
 	isPaused: boolean;
 	progress: number;
 	audioBars: AudioBarsConfig;
+	audioSource: 'demo' | 'mic' | 'file' | 'off';
 	dataSeries: DataSeriesConfig;
 	durationSec: number;
 	loop: boolean;
@@ -46,6 +48,7 @@ export const animationState = $state<AnimationState>({
 	isPaused: false,
 	progress: 0,
 	audioBars: defaultAudioBarsConfig,
+	audioSource: 'demo',
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
 	loop: false,
@@ -66,6 +69,11 @@ const fallbackBars = createFallbackBars({
 	getRingCount: () => composition.rings.length
 });
 
+const audioSource = createAudioSource({
+	getRingCount: () => composition.rings.length,
+	getConfig: () => animationState.audioBars
+});
+
 runtime.registerDriver(
 	'simple',
 	createSimpleDriver({
@@ -80,7 +88,17 @@ runtime.registerDriver(
 	createAudioBarsDriver({
 		getConfig: () => animationState.audioBars,
 		getRingCount: () => composition.rings.length,
-		readBars: () => fallbackBars.readBars(),
+		readBars: () => {
+			switch (animationState.audioSource) {
+				case 'demo':
+					return fallbackBars.readBars();
+				case 'mic':
+				case 'file':
+					return audioSource.readBars();
+				default:
+					return []; // 'off' → logo at rest
+			}
+		},
 		applyRingWave: (index, wave) => setRingWave(index, wave)
 	})
 );
@@ -120,6 +138,7 @@ function cleanupCurrentAnimation() {
 }
 
 function stopInternal(resetProgress = true) {
+	audioSource.stop();
 	cleanupCurrentAnimation();
 	runtime.setMode(null);
 	if (resetProgress) {
@@ -243,6 +262,9 @@ export function setAnimationAlternate(value: boolean) {
 }
 
 export function setAnimationMode(mode: AnimationMode): void {
+	if (animationState.mode === 'audioBars' && mode !== 'audioBars') {
+		audioSource.stop();
+	}
 	animationState.mode = mode;
 	if (animationState.isPlaying) {
 		runtime.setMode(mode);
@@ -252,6 +274,27 @@ export function setAnimationMode(mode: AnimationMode): void {
 export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>): void {
 	animationState.dataSeries = { ...animationState.dataSeries, ...next };
 }
+
+export function setAudioBarsConfig(next: Partial<AudioBarsConfig>): void {
+	animationState.audioBars = { ...animationState.audioBars, ...next };
+}
+
+export async function setAudioSource(mode: AnimationState['audioSource']): Promise<void> {
+	animationState.audioSource = mode;
+	try {
+		if (mode === 'mic' || mode === 'file') {
+			await audioSource.setMode(mode);
+		} else {
+			audioSource.setMode('off');
+		}
+	} catch {
+		// Permission denied / unsupported: fall back to the demo source so the logo keeps moving.
+		animationState.audioSource = 'demo';
+		audioSource.setMode('off');
+	}
+}
+
+export { audioSource };
 
 export function togglePlay() {
 	if (!animationState.isPlaying && !animationState.isPaused) {
