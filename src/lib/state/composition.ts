@@ -143,9 +143,7 @@ export function setRingMorphT(index: number, t: number) {
 }
 
 export function setRingWave(index: number, wave: WaveState | null) {
-	composition.rings = composition.rings.map((ring, i) =>
-		i === index ? { ...ring, wave } : ring
-	);
+	composition.rings = composition.rings.map((ring, i) => (i === index ? { ...ring, wave } : ring));
 }
 
 export function createRingMorphTarget(index: number) {
