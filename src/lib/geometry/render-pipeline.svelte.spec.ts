@@ -291,4 +291,55 @@ describe('createRenderPipeline().render', () => {
 		expect(bounds.width).toBeLessThanOrEqual(available + epsilon);
 		expect(bounds.height).toBeLessThanOrEqual(available + epsilon);
 	});
+
+	it('applies wave deformation to ring geometry when ring.wave is set', () => {
+		const pipeline = createRenderPipeline();
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const oneRing = { ...composition, rings: [composition.rings[0]] };
+
+		pipeline.render({ composition: oneRing, scope, viewport });
+		const withoutWave = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		pipeline.render({
+			composition: {
+				...oneRing,
+				// phase 0.5 (rather than 0) avoids a coincidental zero-crossing of
+				// sin(crests * PI * ny + phase) at both ny=0 and ny=1 for this
+				// rectangular fixture, which would otherwise produce dx ≈ 0
+				// everywhere and make the assertion vacuously pass/fail.
+				rings: [{ ...composition.rings[0], wave: { amplitude: 0.3, crests: 3, phase: 0.5 } }]
+			},
+			scope,
+			viewport
+		});
+		const withWave = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		expect(withWave).not.toBe(withoutWave);
+	});
+
+	it('renders identically when ring.wave is null or amplitude 0', () => {
+		const pipeline = createRenderPipeline();
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const oneRing = { ...composition, rings: [composition.rings[0]] };
+
+		pipeline.render({ composition: oneRing, scope, viewport });
+		const baseline = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		pipeline.render({
+			composition: { ...oneRing, rings: [{ ...composition.rings[0], wave: null }] },
+			scope,
+			viewport
+		});
+		expect((scope.project.activeLayer.children[0] as paper.Path).pathData).toBe(baseline);
+
+		pipeline.render({
+			composition: {
+				...oneRing,
+				rings: [{ ...composition.rings[0], wave: { amplitude: 0, crests: 3, phase: 1 } }]
+			},
+			scope,
+			viewport
+		});
+		expect((scope.project.activeLayer.children[0] as paper.Path).pathData).toBe(baseline);
+	});
 });

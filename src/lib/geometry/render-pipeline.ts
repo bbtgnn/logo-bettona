@@ -2,6 +2,7 @@ import paper from 'paper';
 import type { Composition } from '$lib/types';
 import { buildRingPath } from './bend';
 import { interpolatePath, validatePathCompatibility } from './path-morph';
+import { applyWaveToPath } from './wave';
 
 type RenderViewport = {
 	width: number;
@@ -137,6 +138,15 @@ export function createRenderPipeline(): {
 					} else {
 						warnings.push(`Ring ${i} morph fallback: ${compatibility.reason}`);
 					}
+				}
+
+				// Apply the cymatic wave to the (already morph-interpolated) template
+				// BEFORE bend mirrors/tiles it, so the ripple is coherent on every copy.
+				if (effectiveRing.wave && effectiveRing.wave.amplitude > 0 && effectiveRing.templatePath) {
+					effectiveRing = {
+						...effectiveRing,
+						templatePath: applyWaveToPath(effectiveRing.templatePath, effectiveRing.wave)
+					};
 				}
 
 				const radius = composition.baseRadius + composition.ringIncrement * i;
