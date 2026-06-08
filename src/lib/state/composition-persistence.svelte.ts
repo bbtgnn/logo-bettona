@@ -42,6 +42,9 @@ export function createPersistedComposition(key: string, initial: Composition): C
 			lastSavedStripped = JSON.stringify(stripWave($state.snapshot(state) as Composition));
 		});
 
+		// The unsubscribe handle is intentionally discarded: `composition` is a
+		// module-level singleton living inside a never-disposed effect root, so the
+		// cross-tab listener is meant to last the whole app lifetime.
 		if (localStorageSync.subscribe) {
 			localStorageSync.subscribe<Composition>(key, (remote) => {
 				untrack(() => {

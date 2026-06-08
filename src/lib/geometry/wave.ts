@@ -15,7 +15,7 @@ const EPSILON = 1e-6;
  * ring without a wave (or at rest) renders identical to before.
  */
 export function applyWaveToPath(path: Path, wave: WaveState): Path {
-	if (!path || wave.amplitude <= 0) {
+	if (wave.amplitude <= 0) {
 		return { cmds: [...path.cmds], crds: [...path.crds] };
 	}
 
