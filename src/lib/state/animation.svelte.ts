@@ -30,7 +30,8 @@ const defaultAudioBarsConfig: AudioBarsConfig = {
 	maxHz: 20000,
 	waveCrests: 3,
 	waveAmplitudeGain: 0.3,
-	wavePhaseSpeed: 2.2
+	wavePhaseSpeed: 2.2,
+	inputGain: 1
 };
 
 const defaultDataSeriesConfig: DataSeriesConfig = {

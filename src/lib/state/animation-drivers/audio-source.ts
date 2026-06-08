@@ -162,7 +162,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 
 	function readBars(): number[] {
 		if (mode === 'off' || !analyser || !buffer || !audioContext) return [];
-		const cfg = deps.getConfig() as AudioBarsConfig & { inputGain?: number };
+		const cfg = deps.getConfig();
 		analyser.smoothingTimeConstant = cfg.smoothing;
 		analyser.getByteFrequencyData(buffer);
 		return reduceToBands(
@@ -172,7 +172,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 			cfg.maxHz,
 			audioContext.sampleRate,
 			analyser.fftSize,
-			cfg.inputGain ?? 1
+			cfg.inputGain
 		);
 	}
 
