@@ -3,6 +3,12 @@ export type Path = {
 	crds: number[];
 };
 
+export type WaveState = {
+	amplitude: number; // 0..1, fraction of the template width
+	crests: number; // integer >= 1, number of periods along the petal
+	phase: number; // radians
+};
+
 export type Ring = {
 	copies: number;
 	color: string;
@@ -10,6 +16,7 @@ export type Ring = {
 	secondaryTemplatePath: Path | null;
 	morphT: number;
 	ringHeight: number;
+	wave?: WaveState | null; // absent/null → no wave → renders identical to today
 };
 
 export type MonochromePalette = {
