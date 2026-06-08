@@ -29,7 +29,10 @@ vi.mock('$lib/state/animation', () => ({
 	setAnimationDurationSec: vi.fn(),
 	setAnimationLoop: vi.fn(),
 	setAnimationAlternate: vi.fn(),
-	handleCompositionChanged: vi.fn()
+	handleCompositionChanged: vi.fn(),
+	setAudioBarsConfig: vi.fn(),
+	setAudioSource: vi.fn(),
+	audioSource: { loadFile: vi.fn(), play: vi.fn(), pause: vi.fn() }
 }));
 
 vi.mock('$lib/state/composition', () => ({
