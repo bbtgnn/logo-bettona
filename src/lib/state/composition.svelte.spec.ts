@@ -20,7 +20,15 @@ vi.mock('rune-sync/localstorage', () => ({
 		if (key === 'color-mode') return structuredClone(initialColorMode);
 		if (key === 'composition-ui') return structuredClone({ expandedRings: {} });
 		return {};
-	})
+	}),
+	localStorageSync: {
+		read: vi.fn((key: string) => {
+			if (key === 'composition') return structuredClone(initialComposition);
+			return null;
+		}),
+		write: vi.fn(),
+		subscribe: vi.fn(() => () => {})
+	}
 }));
 
 describe('composition ring morph actions', () => {
@@ -83,7 +91,7 @@ describe('composition ring morph actions', () => {
 		const compositionModule = await import('./composition');
 		compositionModule.addRing();
 		compositionModule.createRingMorphTarget(0);
-		const before = structuredClone(compositionModule.composition.rings[0]);
+		const before = structuredClone($state.snapshot(compositionModule.composition.rings[0]));
 		const incompatible: Path = { cmds: ['M', 'C', 'Z'], crds: [0, 0, 1, 1, 2, 2, 3, 3] };
 		const result = compositionModule.updateRingPathVariant(0, 'secondary', incompatible);
 		expect(result.ok).toBe(false);

@@ -2,14 +2,14 @@ import { lsSync } from 'rune-sync/localstorage';
 import type {
 	ColorModeState,
 	ColorMode,
-	Composition,
 	FullPalette,
 	MonochromePalette,
-	Ring
+	Ring,
+	WaveState
 } from '$lib/types';
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
-import { DEFAULT_COMPOSITION } from './default';
+import { composition } from './composition-persistence.svelte';
 
 export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
@@ -36,7 +36,7 @@ function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
-export const composition = lsSync<Composition>('composition', DEFAULT_COMPOSITION);
+export { composition };
 
 export const uiState = lsSync<{ expandedRings: Record<number, boolean> }>('composition-ui', {
 	expandedRings: {}
@@ -139,6 +139,12 @@ export function updateRing(index: number, patch: Partial<Ring>) {
 export function setRingMorphT(index: number, t: number) {
 	composition.rings = composition.rings.map((ring, i) =>
 		i === index ? { ...ring, morphT: clamp01(t) } : ring
+	);
+}
+
+export function setRingWave(index: number, wave: WaveState | null) {
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, wave } : ring
 	);
 }
 
