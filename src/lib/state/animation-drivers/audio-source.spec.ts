@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { reduceToBands } from './audio-source';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createAudioSource, reduceToBands } from './audio-source';
 
 describe('reduceToBands', () => {
 	it('returns an empty array for a non-positive ring count', () => {
@@ -32,5 +32,84 @@ describe('reduceToBands', () => {
 		const bands = reduceToBands(freq, 4, 20, 20000, 48000, 2048, 1);
 		expect(bands[3]).toBeGreaterThan(bands[0]);
 		expect(bands[0]).toBe(0);
+	});
+});
+
+const config = {
+	smoothing: 0.5,
+	minHz: 20,
+	maxHz: 20000,
+	waveCrests: 3,
+	waveAmplitudeGain: 0.3,
+	wavePhaseSpeed: 2.2,
+	inputGain: 1
+};
+
+class MockAnalyser {
+	fftSize = 2048;
+	smoothingTimeConstant = 0;
+	frequencyBinCount = 1024;
+	connect = vi.fn();
+	disconnect = vi.fn();
+	getByteFrequencyData(arr: Uint8Array) {
+		arr.fill(100);
+	}
+}
+
+class MockSourceNode {
+	connect = vi.fn();
+	disconnect = vi.fn();
+}
+
+class MockAudioContext {
+	sampleRate = 48000;
+	destination = {};
+	state = 'suspended';
+	analyser = new MockAnalyser();
+	resume = vi.fn(async () => {
+		this.state = 'running';
+	});
+	createAnalyser = vi.fn(() => this.analyser);
+	createMediaStreamSource = vi.fn(() => new MockSourceNode());
+	createMediaElementSource = vi.fn(() => new MockSourceNode());
+}
+
+describe('createAudioSource', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('returns [] before any source is started', () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.readBars()).toEqual([]);
+	});
+
+	it('reads ringCount values in 0..1 once the mic source is active', async () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('navigator', {
+			mediaDevices: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) }
+		});
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('mic');
+
+		const bars = source.readBars();
+		expect(bars).toHaveLength(4);
+		for (const value of bars) {
+			expect(value).toBeGreaterThanOrEqual(0);
+			expect(value).toBeLessThanOrEqual(1);
+		}
+	});
+
+	it('does not crash when microphone permission is denied', async () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('navigator', {
+			mediaDevices: { getUserMedia: vi.fn(async () => Promise.reject(new Error('denied'))) }
+		});
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await expect(source.setMode('mic')).rejects.toThrow();
+		expect(source.readBars()).toEqual([]); // soft degradation
 	});
 });

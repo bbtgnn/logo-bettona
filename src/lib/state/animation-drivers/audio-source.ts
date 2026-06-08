@@ -47,3 +47,134 @@ export function reduceToBands(
 	}
 	return bands;
 }
+
+export type AudioSourceMode = 'mic' | 'file' | 'off';
+
+export type AudioSource = {
+	setMode(mode: AudioSourceMode): Promise<void>;
+	loadFile(file: File): Promise<void>;
+	play(): Promise<void>;
+	pause(): void;
+	stop(): void;
+	readBars(): number[];
+};
+
+type CreateAudioSourceDeps = {
+	getRingCount: () => number;
+	getConfig: () => AudioBarsConfig;
+};
+
+/**
+ * Owns one AudioContext + one AnalyserNode and feeds the same `readBars(): number[]`
+ * contract as the dev fallback. The mic is never routed to `destination` (feedback);
+ * the file IS routed to `destination` so it stays audible while tuning. The context is
+ * created lazily and `resume()`d from a user gesture by the caller. All Web Audio access
+ * is guarded so a missing API / denied permission degrades to `readBars() === []`.
+ */
+export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
+	let audioContext: AudioContext | null = null;
+	let analyser: AnalyserNode | null = null;
+	let buffer: Uint8Array<ArrayBuffer> | null = null;
+
+	let mode: AudioSourceMode = 'off';
+	let micStream: MediaStream | null = null;
+	let micNode: MediaStreamAudioSourceNode | null = null;
+
+	let audioEl: HTMLAudioElement | null = null;
+	let fileNode: MediaElementAudioSourceNode | null = null;
+	let objectUrl: string | null = null;
+
+	function ensureContext(): AudioContext {
+		if (!audioContext) {
+			const Ctor = globalThis.AudioContext;
+			if (!Ctor) throw new Error('Web Audio API is not available');
+			audioContext = new Ctor();
+			analyser = audioContext.createAnalyser();
+			analyser.fftSize = 2048;
+			buffer = new Uint8Array(analyser.frequencyBinCount);
+		}
+		return audioContext;
+	}
+
+	function detachSources(): void {
+		if (micNode) {
+			micNode.disconnect();
+			micNode = null;
+		}
+		if (micStream) {
+			for (const track of micStream.getTracks()) track.stop();
+			micStream = null;
+		}
+		if (fileNode) {
+			fileNode.disconnect();
+			fileNode = null;
+		}
+	}
+
+	async function setMode(next: AudioSourceMode): Promise<void> {
+		if (next === 'off') {
+			detachSources();
+			mode = 'off';
+			return;
+		}
+
+		const ctx = ensureContext();
+		await ctx.resume();
+		detachSources();
+
+		if (next === 'mic') {
+			const mediaDevices = globalThis.navigator?.mediaDevices;
+			if (!mediaDevices?.getUserMedia) throw new Error('getUserMedia is not available');
+			micStream = await mediaDevices.getUserMedia({ audio: true });
+			micNode = ctx.createMediaStreamSource(micStream);
+			micNode.connect(analyser as AnalyserNode); // NOT connected to destination
+		} else {
+			// file
+			if (!audioEl) audioEl = new Audio();
+			if (!fileNode) fileNode = ctx.createMediaElementSource(audioEl);
+			fileNode.connect(analyser as AnalyserNode);
+			(analyser as AnalyserNode).connect(ctx.destination); // audible while tuning
+		}
+		mode = next;
+	}
+
+	async function loadFile(file: File): Promise<void> {
+		if (!audioEl) audioEl = new Audio();
+		if (objectUrl) URL.revokeObjectURL(objectUrl);
+		objectUrl = URL.createObjectURL(file);
+		audioEl.src = objectUrl;
+	}
+
+	async function play(): Promise<void> {
+		if (audioContext) await audioContext.resume();
+		if (audioEl) await audioEl.play();
+	}
+
+	function pause(): void {
+		audioEl?.pause();
+	}
+
+	function stop(): void {
+		detachSources();
+		audioEl?.pause();
+		mode = 'off';
+	}
+
+	function readBars(): number[] {
+		if (mode === 'off' || !analyser || !buffer || !audioContext) return [];
+		const cfg = deps.getConfig() as AudioBarsConfig & { inputGain?: number };
+		analyser.smoothingTimeConstant = cfg.smoothing;
+		analyser.getByteFrequencyData(buffer);
+		return reduceToBands(
+			buffer,
+			deps.getRingCount(),
+			cfg.minHz,
+			cfg.maxHz,
+			audioContext.sampleRate,
+			analyser.fftSize,
+			cfg.inputGain ?? 1
+		);
+	}
+
+	return { setMode, loadFile, play, pause, stop, readBars };
+}
