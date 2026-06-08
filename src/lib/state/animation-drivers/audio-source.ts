@@ -109,6 +109,10 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 			fileNode.disconnect();
 			fileNode = null;
 		}
+		// Tear down the analyser→destination link too. File mode connects it for
+		// audibility; without this, a later mic source would be routed to the
+		// speakers (feedback). The analyser still analyses its input with no output.
+		analyser?.disconnect();
 	}
 
 	async function setMode(next: AudioSourceMode): Promise<void> {

@@ -285,12 +285,12 @@ export async function setAudioSource(mode: AnimationState['audioSource']): Promi
 		if (mode === 'mic' || mode === 'file') {
 			await audioSource.setMode(mode);
 		} else {
-			audioSource.setMode('off');
+			void audioSource.setMode('off');
 		}
 	} catch {
 		// Permission denied / unsupported: fall back to the demo source so the logo keeps moving.
 		animationState.audioSource = 'demo';
-		audioSource.setMode('off');
+		void audioSource.setMode('off');
 	}
 }
 

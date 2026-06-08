@@ -112,4 +112,41 @@ describe('createAudioSource', () => {
 		await expect(source.setMode('mic')).rejects.toThrow();
 		expect(source.readBars()).toEqual([]); // soft degradation
 	});
+
+	it('does not leave the analyser routed to destination after File → Mic (no feedback)', async () => {
+		const contexts: MockAudioContext[] = [];
+		// A function constructor that records each instance. Returning an object from
+		// a constructor makes `new` yield that object — avoids aliasing `this`.
+		function RecordingContext() {
+			const ctx = new MockAudioContext();
+			contexts.push(ctx);
+			return ctx;
+		}
+		vi.stubGlobal('AudioContext', RecordingContext);
+		vi.stubGlobal('navigator', {
+			mediaDevices: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) }
+		});
+		vi.stubGlobal(
+			'Audio',
+			class {
+				src = '';
+				play = vi.fn();
+				pause = vi.fn();
+			}
+		);
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+
+		await source.setMode('file');
+		const ctx = contexts[0];
+		const analyser = ctx.analyser;
+		// File mode connects the analyser to destination so the file is audible.
+		expect(analyser.connect).toHaveBeenCalledWith(ctx.destination);
+
+		await source.setMode('mic');
+		// Switching to mic must tear that link down and must NOT reconnect the
+		// analyser to destination — otherwise the live mic feeds back to the speakers.
+		expect(analyser.disconnect).toHaveBeenCalled();
+		expect(analyser.connect).toHaveBeenCalledTimes(1); // only the earlier file connection
+	});
 });
