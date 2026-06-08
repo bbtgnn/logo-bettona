@@ -1,8 +1,9 @@
-import { composition, setRingMorphT } from './composition';
+import { composition, setRingMorphT, setRingWave } from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
 import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
+import { createFallbackBars } from './animation-drivers/fallback-bars';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
@@ -60,6 +61,10 @@ const runtime = createAnimationRuntime({
 	applyRingT: (index, t) => setRingMorphT(index, t)
 });
 
+const fallbackBars = createFallbackBars({
+	getRingCount: () => composition.rings.length
+});
+
 runtime.registerDriver(
 	'simple',
 	createSimpleDriver({
@@ -74,7 +79,8 @@ runtime.registerDriver(
 	createAudioBarsDriver({
 		getConfig: () => animationState.audioBars,
 		getRingCount: () => composition.rings.length,
-		readBars: () => []
+		readBars: () => fallbackBars.readBars(),
+		applyRingWave: (index, wave) => setRingWave(index, wave)
 	})
 );
 
