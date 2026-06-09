@@ -42,7 +42,8 @@ const animationApi = vi.hoisted(() => ({
 const compositionApi = vi.hoisted(() => ({
 	composition: {
 		rings: [{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 }] as RingMock[]
-	}
+	},
+	updateRing: vi.fn()
 }));
 
 vi.mock('$lib/state/animation', () => animationApi);

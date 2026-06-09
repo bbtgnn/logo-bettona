@@ -15,12 +15,14 @@
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
-	import WavePreview from './WavePreview.svelte';
+	import RingWaveConfigItem from './RingWaveConfigItem.svelte';
+	import type { WaveConfig } from '$lib/types';
 
-	// First ring with a primary path stands in for the wave preview. The wave config
-	// (crests/amplitude/speed) is global, but ringHeight/copies are per-ring and shape
-	// how the wave bends, so the preview takes them from this representative ring.
-	const sampleRing = $derived(composition.rings.find((r) => r.templatePath) ?? null);
+	const globalWaveDefault = $derived<WaveConfig>({
+		crests: animationState.audioBars.waveCrests,
+		amplitudeGain: animationState.audioBars.waveAmplitudeGain,
+		phaseSpeed: animationState.audioBars.wavePhaseSpeed
+	});
 
 	const progressPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, animationState.progress)) * 100)
@@ -236,14 +238,12 @@
 						/>
 					</div>
 
-					<WavePreview
-						template={sampleRing?.templatePath ?? null}
-						copies={sampleRing?.copies ?? 1}
-						ringHeight={sampleRing?.ringHeight ?? 0.4}
-						crests={animationState.audioBars.waveCrests}
-						amplitude={animationState.audioBars.waveAmplitudeGain}
-						phaseSpeed={animationState.audioBars.wavePhaseSpeed}
-					/>
+					<div class="flex flex-col gap-1">
+						<p class="text-[11px] font-medium text-muted-foreground">Wave per ring</p>
+						{#each composition.rings as ring, i (i)}
+							<RingWaveConfigItem {ring} index={i} globalDefault={globalWaveDefault} />
+						{/each}
+					</div>
 				</div>
 			{/if}
 
