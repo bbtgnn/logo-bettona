@@ -35,8 +35,7 @@
 	const blockPlayback = $derived(requiresMorphRings && !hasMorphRings);
 
 	const showInputLevel = $derived(
-		animationState.mode === 'audioBars' &&
-			(animationState.audioSource === 'mic' || animationState.audioSource === 'file')
+		animationState.mode === 'audioBars' && animationState.audioSource === 'mic'
 	);
 
 	const hideGlobalTransport = $derived(

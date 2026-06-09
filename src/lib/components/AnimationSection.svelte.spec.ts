@@ -248,4 +248,14 @@ describe('AnimationSection', () => {
 		render(AnimationSection);
 		await expect.element(page.getByText(/listening/i)).toBeInTheDocument();
 	});
+
+	it('shows only one level meter when source is file in audioBars mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'file';
+		render(AnimationSection);
+		const meters = page.getByRole('meter');
+		// AudioFilePanel has its own meter; AnimationSection must not add a second one
+		const els = await meters.elements();
+		expect(els.length).toBeLessThanOrEqual(1);
+	});
 });
