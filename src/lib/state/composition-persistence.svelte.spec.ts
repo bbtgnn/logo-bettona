@@ -87,4 +87,35 @@ describe('createPersistedComposition', () => {
 		const state = createPersistedComposition(key, makeComposition());
 		expect(state.baseRadius).toBe(321);
 	});
+
+	it('persists ring.waveConfig to localStorage', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				waveConfig: { crests: 5, amplitudeGain: 0.8, phaseSpeed: 1.0 }
+			}));
+		});
+
+		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
+		expect(stored.rings[0].waveConfig).toEqual({ crests: 5, amplitudeGain: 0.8, phaseSpeed: 1.0 });
+	});
+
+	it('strips ring.wave but preserves ring.waveConfig in the same write', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				wave: { amplitude: 0.4, crests: 3, phase: 1.2 },
+				waveConfig: { crests: 4, amplitudeGain: 0.5, phaseSpeed: 2.0 }
+			}));
+			state.baseRadius = 175; // force a write (wave-only change wouldn't trigger)
+		});
+
+		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
+		expect(stored.rings[0].wave).toBeUndefined();
+		expect(stored.rings[0].waveConfig).toEqual({ crests: 4, amplitudeGain: 0.5, phaseSpeed: 2.0 });
+	});
 });
