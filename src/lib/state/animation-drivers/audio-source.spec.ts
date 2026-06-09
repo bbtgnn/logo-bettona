@@ -237,6 +237,7 @@ describe('loadFile — waveform decoding', () => {
 
 		expect(source.getPeaks()).toEqual([]);
 		expect(source.getDuration()).toBe(0);
+		expect(source.getFileName()).toBeNull();
 	});
 
 	it('clearFile resets all waveform state', async () => {
@@ -250,5 +251,27 @@ describe('loadFile — waveform decoding', () => {
 		expect(source.getPeaks()).toEqual([]);
 		expect(source.getDuration()).toBe(0);
 		expect(source.getFileName()).toBeNull();
+	});
+});
+
+describe('setRegion edge cases', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('setRegion swaps start and end when start > end', async () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class { src = ''; play = vi.fn(); pause = vi.fn(); });
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 't.mp3'));
+
+		source.setRegion(4.0, 1.0); // inverted
+		const r = source.getRegion();
+		expect(r.start).toBeLessThanOrEqual(r.end);
+		expect(r.start).toBeCloseTo(1.0);
+		expect(r.end).toBeCloseTo(4.0);
 	});
 });

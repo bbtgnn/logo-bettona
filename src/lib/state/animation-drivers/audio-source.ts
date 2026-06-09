@@ -127,6 +127,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 	let peaks: WaveformPeak[] = [];
 	let fileDuration = 0;
 	let fileName: string | null = null;
+	// Retained so future tasks can re-bucket at different resolutions (e.g., canvas resize).
 	let decodedBuffer: AudioBuffer | null = null;
 	let region = { start: 0, end: 0 };
 	let loopRegion = false;
@@ -207,6 +208,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 			decodedBuffer = null;
 			peaks = [];
 			fileDuration = 0;
+			fileName = null;
 		}
 	}
 
@@ -251,9 +253,11 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 
 	function setRegion(start: number, end: number): void {
 		const max = fileDuration;
+		const clampedStart = Math.max(0, Math.min(start, max));
+		const clampedEnd = Math.max(0, Math.min(end, max));
 		region = {
-			start: Math.max(0, Math.min(start, max)),
-			end: Math.max(0, Math.min(end, max))
+			start: Math.min(clampedStart, clampedEnd),
+			end: Math.max(clampedStart, clampedEnd)
 		};
 	}
 
