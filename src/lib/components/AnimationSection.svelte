@@ -25,6 +25,28 @@
 	const requiresMorphRings = $derived(animationState.mode !== 'audioBars');
 	const blockPlayback = $derived(requiresMorphRings && !hasMorphRings);
 
+	const showInputLevel = $derived(
+		animationState.mode === 'audioBars' &&
+			(animationState.audioSource === 'mic' || animationState.audioSource === 'file')
+	);
+
+	// Live input meter: polls the analyser's raw peak each frame while a real source
+	// is selected. Separate from playback so it reads even when paused — it answers
+	// "is the source heard?" independently of whether the wave is being driven.
+	let inputLevel = $state(0);
+	$effect(() => {
+		if (!showInputLevel) {
+			inputLevel = 0;
+			return;
+		}
+		let raf = requestAnimationFrame(function loop() {
+			inputLevel = audioSource.readLevel();
+			raf = requestAnimationFrame(loop);
+		});
+		return () => cancelAnimationFrame(raf);
+	});
+	const inputLevelPercent = $derived(Math.round(Math.max(0, Math.min(1, inputLevel)) * 100));
+
 	$effect(() => {
 		composition.rings.length;
 		untrack(handleCompositionChanged);
@@ -91,6 +113,28 @@
 							<option value="file">File</option>
 						</select>
 					</div>
+
+					{#if showInputLevel}
+						<div class="flex flex-col gap-1">
+							<Label class="text-xs">Input level</Label>
+							<div
+								class="h-1.5 rounded bg-muted"
+								role="meter"
+								aria-label="Audio input level"
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={inputLevelPercent}
+							>
+								<div
+									class="h-full rounded bg-green-500"
+									style:width={`${inputLevelPercent}%`}
+								></div>
+							</div>
+							<p class="text-[10px] text-muted-foreground">
+								Source is being heard when this moves. Still flower + moving meter → raise gain.
+							</p>
+						</div>
+					{/if}
 
 					{#if animationState.audioSource === 'file'}
 						<div class="flex flex-col gap-1">

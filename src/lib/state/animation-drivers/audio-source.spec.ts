@@ -54,6 +54,9 @@ class MockAnalyser {
 	getByteFrequencyData(arr: Uint8Array) {
 		arr.fill(100);
 	}
+	getByteTimeDomainData(arr: Uint8Array) {
+		arr.fill(192); // deviation 64 from the 128 silence centre → level 0.5
+	}
 }
 
 class MockSourceNode {
@@ -100,6 +103,20 @@ describe('createAudioSource', () => {
 			expect(value).toBeGreaterThanOrEqual(0);
 			expect(value).toBeLessThanOrEqual(1);
 		}
+	});
+
+	it('returns 0 input level before any source is started, peak once active', async () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('navigator', {
+			mediaDevices: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) }
+		});
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.readLevel()).toBe(0); // off → dead meter
+
+		await source.setMode('mic');
+		// Mock waveform sits at 192: |192-128|/128 = 0.5.
+		expect(source.readLevel()).toBeCloseTo(0.5, 6);
 	});
 
 	it('does not crash when microphone permission is denied', async () => {

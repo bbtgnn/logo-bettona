@@ -57,6 +57,13 @@ export type AudioSource = {
 	pause(): void;
 	stop(): void;
 	readBars(): number[];
+	/**
+	 * Raw input level 0..1 (peak amplitude of the time-domain waveform). Independent
+	 * of the band reduction, smoothing and inputGain that feed `readBars`, so a moving
+	 * meter while the flower is still pinpoints the fault as mapping/gain, and a dead
+	 * meter pinpoints the source/graph.
+	 */
+	readLevel(): number;
 };
 
 type CreateAudioSourceDeps = {
@@ -75,6 +82,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 	let audioContext: AudioContext | null = null;
 	let analyser: AnalyserNode | null = null;
 	let buffer: Uint8Array<ArrayBuffer> | null = null;
+	let timeBuffer: Uint8Array<ArrayBuffer> | null = null;
 
 	let mode: AudioSourceMode = 'off';
 	let micStream: MediaStream | null = null;
@@ -92,6 +100,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 			analyser = audioContext.createAnalyser();
 			analyser.fftSize = 2048;
 			buffer = new Uint8Array(analyser.frequencyBinCount);
+			timeBuffer = new Uint8Array(analyser.fftSize);
 		}
 		return audioContext;
 	}
@@ -180,5 +189,17 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		);
 	}
 
-	return { setMode, loadFile, play, pause, stop, readBars };
+	function readLevel(): number {
+		if (mode === 'off' || !analyser || !timeBuffer) return 0;
+		analyser.getByteTimeDomainData(timeBuffer);
+		// Time-domain bytes centre on 128 (silence); peak deviation / 128 → 0..1.
+		let peak = 0;
+		for (let i = 0; i < timeBuffer.length; i += 1) {
+			const dev = Math.abs(timeBuffer[i] - 128);
+			if (dev > peak) peak = dev;
+		}
+		return clamp01(peak / 128);
+	}
+
+	return { setMode, loadFile, play, pause, stop, readBars, readLevel };
 }
