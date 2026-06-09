@@ -16,6 +16,7 @@
 	import { composition } from '$lib/state/composition';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import RingWaveConfigItem from './RingWaveConfigItem.svelte';
+	import AudioFilePanel from './AudioFilePanel.svelte';
 	import type { WaveConfig } from '$lib/types';
 
 	const globalWaveDefault = $derived<WaveConfig>({
@@ -36,6 +37,10 @@
 	const showInputLevel = $derived(
 		animationState.mode === 'audioBars' &&
 			(animationState.audioSource === 'mic' || animationState.audioSource === 'file')
+	);
+
+	const hideGlobalTransport = $derived(
+		animationState.mode === 'audioBars' && animationState.audioSource === 'file'
 	);
 
 	// Live input meter: polls the analyser's raw peak each frame while a real source
@@ -144,24 +149,14 @@
 						</div>
 					{/if}
 
+					{#if animationState.audioSource === 'mic'}
+						<p class="text-[10px] text-muted-foreground">
+							Listening — speak or play near the microphone.
+						</p>
+					{/if}
+
 					{#if animationState.audioSource === 'file'}
-						<div class="flex flex-col gap-1">
-							<Label for="audio-file" class="text-xs">Audio file</Label>
-							<input
-								id="audio-file"
-								type="file"
-								accept="audio/*"
-								class="text-xs"
-								onchange={(e) => {
-									const file = (e.target as HTMLInputElement).files?.[0];
-									if (file) audioSource.loadFile(file);
-								}}
-							/>
-							<div class="flex gap-2">
-								<Button onclick={() => audioSource.play()}>Play file</Button>
-								<Button onclick={() => audioSource.pause()}>Pause file</Button>
-							</div>
-						</div>
+						<AudioFilePanel />
 					{/if}
 
 					<div class="flex flex-col gap-1">
@@ -247,41 +242,43 @@
 				</div>
 			{/if}
 
-			<div class="flex items-end gap-2">
-				<div class="flex flex-1 flex-col gap-1">
-					<Label for="animation-duration" class="text-xs">Duration (s)</Label>
-					<Input
-						id="animation-duration"
-						type="number"
-						min="0.1"
-						step="0.1"
-						value={animationState.durationSec}
-						oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
-					/>
+			{#if !hideGlobalTransport}
+				<div class="flex items-end gap-2">
+					<div class="flex flex-1 flex-col gap-1">
+						<Label for="animation-duration" class="text-xs">Duration (s)</Label>
+						<Input
+							id="animation-duration"
+							type="number"
+							min="0.1"
+							step="0.1"
+							value={animationState.durationSec}
+							oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
+						/>
+					</div>
+					<Button
+						onclick={togglePlay}
+						aria-pressed={animationState.isPlaying}
+						disabled={blockPlayback}>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
+					>
 				</div>
-				<Button
-					onclick={togglePlay}
-					aria-pressed={animationState.isPlaying}
-					disabled={blockPlayback}>{animationState.isPlaying ? 'Pause' : 'Play'}</Button
-				>
-			</div>
 
-			<div class="space-y-1">
-				<div
-					class="h-1.5 rounded bg-muted"
-					role="progressbar"
-					aria-label="Animation progress"
-					aria-valuemin="0"
-					aria-valuemax="100"
-					aria-valuenow={progressPercent}
-				>
+				<div class="space-y-1">
 					<div
-						class="h-full rounded bg-foreground transition-all"
-						style:width={`${progressPercent}%`}
-					></div>
+						class="h-1.5 rounded bg-muted"
+						role="progressbar"
+						aria-label="Animation progress"
+						aria-valuemin="0"
+						aria-valuemax="100"
+						aria-valuenow={progressPercent}
+					>
+						<div
+							class="h-full rounded bg-foreground transition-all"
+							style:width={`${progressPercent}%`}
+						></div>
+					</div>
+					<p class="text-[10px] text-muted-foreground">{progressPercent}%</p>
 				</div>
-				<p class="text-[10px] text-muted-foreground">{progressPercent}%</p>
-			</div>
+			{/if}
 		</div>
 	{/snippet}
 </SidebarCollapsible>

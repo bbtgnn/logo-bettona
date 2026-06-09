@@ -36,7 +36,25 @@ const animationApi = vi.hoisted(() => ({
 	handleCompositionChanged: vi.fn(),
 	setAudioBarsConfig: vi.fn(),
 	setAudioSource: vi.fn(),
-	audioSource: { loadFile: vi.fn(), play: vi.fn(), pause: vi.fn() }
+	audioSource: {
+		loadFile: vi.fn(async () => {}),
+		clearFile: vi.fn(),
+		play: vi.fn(async () => {}),
+		pause: vi.fn(),
+		stop: vi.fn(),
+		setMode: vi.fn(async () => {}),
+		readBars: vi.fn(() => [] as number[]),
+		readLevel: vi.fn(() => 0),
+		getPeaks: vi.fn(() => [] as { min: number; max: number }[]),
+		getDuration: vi.fn(() => 0),
+		getFileName: vi.fn(() => null as string | null),
+		getCurrentTime: vi.fn(() => 0),
+		seek: vi.fn(),
+		setRegion: vi.fn(),
+		getRegion: vi.fn(() => ({ start: 0, end: 0 })),
+		setLoopRegion: vi.fn(),
+		isLoopRegion: vi.fn(() => false)
+	}
 }));
 
 const compositionApi = vi.hoisted(() => ({
@@ -53,17 +71,7 @@ import AnimationSection from './AnimationSection.svelte';
 
 describe('AnimationSection', () => {
 	beforeEach(() => {
-		animationApi.togglePlay.mockClear();
-		animationApi.setAnimationMode.mockClear();
-		animationApi.setAnimationDurationSec.mockClear();
-		animationApi.setAnimationLoop.mockClear();
-		animationApi.setAnimationAlternate.mockClear();
-		animationApi.handleCompositionChanged.mockClear();
-		animationApi.setAudioBarsConfig.mockClear();
-		animationApi.setAudioSource.mockClear();
-		animationApi.audioSource.loadFile.mockClear();
-		animationApi.audioSource.play.mockClear();
-		animationApi.audioSource.pause.mockClear();
+		vi.clearAllMocks();
 		animationApi.animationState.mode = null;
 		animationApi.animationState.audioSource = 'demo';
 		compositionApi.composition.rings = [
@@ -207,5 +215,37 @@ describe('AnimationSection', () => {
 			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
 			.not.toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Play' })).toBeEnabled();
+	});
+
+	it('renders AudioFilePanel (not the old file controls) when source is file in audioBars mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'file';
+		render(AnimationSection);
+		// Old controls are gone
+		await expect.element(page.getByText('Play file')).not.toBeInTheDocument();
+		await expect.element(page.getByText('Pause file')).not.toBeInTheDocument();
+		// AudioFilePanel renders its drop zone (no file loaded in mock)
+		await expect.element(page.getByText(/drop audio file|browse/i)).toBeInTheDocument();
+	});
+
+	it('hides the global progress bar in audioBars + file mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'file';
+		render(AnimationSection);
+		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
+	});
+
+	it('shows the global progress bar in audioBars + mic mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'mic';
+		render(AnimationSection);
+		await expect.element(page.getByRole('progressbar')).toBeInTheDocument();
+	});
+
+	it('shows "Listening" indicator in mic mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'mic';
+		render(AnimationSection);
+		await expect.element(page.getByText(/listening/i)).toBeInTheDocument();
 	});
 });
