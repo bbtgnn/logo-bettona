@@ -39,8 +39,14 @@ export function applyWaveToPath(path: Path, wave: WaveState): Path {
 	for (let i = 0; i + 1 < crds.length; i += 2) {
 		const x = crds[i];
 		const y = crds[i + 1];
+		const nx = (x - minX) / width;
 		const ny = (y - minY) / height;
-		const dx = wave.amplitude * width * Math.sin(wave.crests * Math.PI * ny + wave.phase);
+		// Taper W(nx)=sin(pi*nx): W(0)=W(1)=0. bend.ts maps x→angle, so nx=0 is the
+		// petal axis (mirror seam) and nx=1 the junction with the next copy. Zeroing
+		// the displacement there lets the mirror and tiling rejoin without a step,
+		// while full amplitude survives at mid-petal (nx=0.5).
+		const taper = Math.sin(Math.PI * nx);
+		const dx = wave.amplitude * width * Math.sin(wave.crests * Math.PI * ny + wave.phase) * taper;
 		crds[i] = x + dx;
 		// y unchanged
 	}
