@@ -88,6 +88,7 @@ runtime.registerDriver(
 	createAudioBarsDriver({
 		getConfig: () => animationState.audioBars,
 		getRingCount: () => composition.rings.length,
+		getRing: (index) => composition.rings[index],
 		readBars: () => {
 			switch (animationState.audioSource) {
 				case 'demo':
