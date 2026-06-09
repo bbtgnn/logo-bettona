@@ -1,4 +1,4 @@
-import type { Path, WaveState } from '$lib/types';
+import type { Path, WaveConfig, WaveState } from '$lib/types';
 
 const EPSILON = 1e-6;
 
@@ -52,4 +52,12 @@ export function applyWaveToPath(path: Path, wave: WaveState): Path {
 	}
 
 	return { cmds: [...path.cmds], crds };
+}
+
+// All fields override or none — no partial field merging by design.
+export function resolveWaveConfig(
+	ring: { waveConfig?: WaveConfig | null },
+	globalDefault: WaveConfig
+): WaveConfig {
+	return ring.waveConfig ?? globalDefault;
 }

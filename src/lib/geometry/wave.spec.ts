@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Path, WaveState } from '$lib/types';
-import { applyWaveToPath } from './wave';
+import type { Path, WaveConfig, WaveState } from '$lib/types';
+import { applyWaveToPath, resolveWaveConfig } from './wave';
 
 const square: Path = {
 	cmds: ['M', 'L', 'L', 'L', 'Z'],
@@ -59,5 +59,22 @@ describe('applyWaveToPath', () => {
 	it('is deterministic for the same input', () => {
 		const wave: WaveState = { amplitude: 0.3, crests: 4, phase: 1 };
 		expect(applyWaveToPath(square, wave).crds).toEqual(applyWaveToPath(square, wave).crds);
+	});
+});
+
+describe('resolveWaveConfig', () => {
+	const globalDefault: WaveConfig = { crests: 3, amplitudeGain: 0.3, phaseSpeed: 2.2 };
+
+	it('returns globalDefault when ring has no waveConfig', () => {
+		expect(resolveWaveConfig({}, globalDefault)).toEqual(globalDefault);
+	});
+
+	it('returns globalDefault when ring.waveConfig is null', () => {
+		expect(resolveWaveConfig({ waveConfig: null }, globalDefault)).toEqual(globalDefault);
+	});
+
+	it('returns ring.waveConfig when set, ignoring globalDefault', () => {
+		const override: WaveConfig = { crests: 6, amplitudeGain: 0.8, phaseSpeed: 0.5 };
+		expect(resolveWaveConfig({ waveConfig: override }, globalDefault)).toEqual(override);
 	});
 });
