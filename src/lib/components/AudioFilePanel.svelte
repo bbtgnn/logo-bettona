@@ -7,7 +7,6 @@
 	let canvasEl: HTMLCanvasElement | undefined = $state();
 	let currentTime = $state(0);
 	let regionStart = $state(0);
-	let regionEnd = $state(0);
 	let durationDisplay = $state('0.0');
 	let durationFocused = $state(false);
 	let isLooping = $state(false);
@@ -33,7 +32,6 @@
 			const r = audioSource.getRegion();
 			if (!durationFocused) {
 				regionStart = r.start;
-				regionEnd = r.end;
 				durationDisplay = (r.end - r.start).toFixed(1);
 			}
 			drawCanvas();
@@ -168,8 +166,11 @@
 	// ── file load ────────────────────────────────────────────────────────────
 	async function handleFileSelected(file: File) {
 		isLoading = true;
-		await audioSource.loadFile(file);
-		isLoading = false;
+		try {
+			await audioSource.loadFile(file);
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function handleFileInputChange(e: Event) {
