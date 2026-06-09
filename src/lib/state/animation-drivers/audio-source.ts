@@ -4,6 +4,28 @@ function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
+export type WaveformPeak = { min: number; max: number };
+
+const PEAK_BUCKETS = 800;
+
+function calculatePeaks(audioBuffer: AudioBuffer, bucketCount: number): WaveformPeak[] {
+	const data = audioBuffer.getChannelData(0);
+	const total = data.length;
+	const peaks: WaveformPeak[] = [];
+	for (let b = 0; b < bucketCount; b++) {
+		const start = Math.floor((b / bucketCount) * total);
+		const end = Math.floor(((b + 1) / bucketCount) * total);
+		let min = Infinity;
+		let max = -Infinity;
+		for (let i = start; i < end; i++) {
+			if (data[i] < min) min = data[i];
+			if (data[i] > max) max = data[i];
+		}
+		peaks.push({ min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max });
+	}
+	return peaks;
+}
+
 /**
  * Reduces a frequency-magnitude spectrum (analyser.getByteFrequencyData output) to
  * `ringCount` log-spaced bands between minHz and maxHz, each normalized to 0..1 and
@@ -53,6 +75,7 @@ export type AudioSourceMode = 'mic' | 'file' | 'off';
 export type AudioSource = {
 	setMode(mode: AudioSourceMode): Promise<void>;
 	loadFile(file: File): Promise<void>;
+	clearFile(): void;
 	play(): Promise<void>;
 	pause(): void;
 	stop(): void;
@@ -64,6 +87,15 @@ export type AudioSource = {
 	 * meter pinpoints the source/graph.
 	 */
 	readLevel(): number;
+	getPeaks(): WaveformPeak[];
+	getDuration(): number;
+	getFileName(): string | null;
+	getCurrentTime(): number;
+	seek(t: number): void;
+	setRegion(start: number, end: number): void;
+	getRegion(): { start: number; end: number };
+	setLoopRegion(enabled: boolean): void;
+	isLoopRegion(): boolean;
 };
 
 type CreateAudioSourceDeps = {
@@ -91,6 +123,13 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 	let audioEl: HTMLAudioElement | null = null;
 	let fileNode: MediaElementAudioSourceNode | null = null;
 	let objectUrl: string | null = null;
+
+	let peaks: WaveformPeak[] = [];
+	let fileDuration = 0;
+	let fileName: string | null = null;
+	let decodedBuffer: AudioBuffer | null = null;
+	let region = { start: 0, end: 0 };
+	let loopRegion = false;
 
 	function ensureContext(): AudioContext {
 		if (!audioContext) {
@@ -152,10 +191,82 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 	}
 
 	async function loadFile(file: File): Promise<void> {
+		fileName = file.name;
 		if (!audioEl) audioEl = new Audio();
 		if (objectUrl) URL.revokeObjectURL(objectUrl);
 		objectUrl = URL.createObjectURL(file);
 		audioEl.src = objectUrl;
+
+		const ctx = ensureContext();
+		const arrayBuffer = await file.arrayBuffer();
+		try {
+			decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+			peaks = calculatePeaks(decodedBuffer, PEAK_BUCKETS);
+			fileDuration = decodedBuffer.duration;
+		} catch {
+			decodedBuffer = null;
+			peaks = [];
+			fileDuration = 0;
+		}
+	}
+
+	function clearFile(): void {
+		if (objectUrl) {
+			URL.revokeObjectURL(objectUrl);
+			objectUrl = null;
+		}
+		if (audioEl) {
+			audioEl.pause();
+			audioEl.src = '';
+		}
+		peaks = [];
+		fileDuration = 0;
+		fileName = null;
+		decodedBuffer = null;
+		region = { start: 0, end: 0 };
+		loopRegion = false;
+	}
+
+	function getPeaks(): WaveformPeak[] {
+		return peaks;
+	}
+
+	function getDuration(): number {
+		return fileDuration;
+	}
+
+	function getFileName(): string | null {
+		return fileName;
+	}
+
+	function getCurrentTime(): number {
+		return audioEl?.currentTime ?? 0;
+	}
+
+	function seek(t: number): void {
+		if (!audioEl) return;
+		const max = fileDuration > 0 ? fileDuration : (audioEl.duration || 0);
+		audioEl.currentTime = Math.max(0, Math.min(t, max));
+	}
+
+	function setRegion(start: number, end: number): void {
+		const max = fileDuration;
+		region = {
+			start: Math.max(0, Math.min(start, max)),
+			end: Math.max(0, Math.min(end, max))
+		};
+	}
+
+	function getRegion(): { start: number; end: number } {
+		return { ...region };
+	}
+
+	function setLoopRegion(enabled: boolean): void {
+		loopRegion = enabled;
+	}
+
+	function isLoopRegion(): boolean {
+		return loopRegion;
 	}
 
 	async function play(): Promise<void> {
@@ -201,5 +312,23 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		return clamp01(peak / 128);
 	}
 
-	return { setMode, loadFile, play, pause, stop, readBars, readLevel };
+	return {
+		setMode,
+		loadFile,
+		clearFile,
+		play,
+		pause,
+		stop,
+		readBars,
+		readLevel,
+		getPeaks,
+		getDuration,
+		getFileName,
+		getCurrentTime,
+		seek,
+		setRegion,
+		getRegion,
+		setLoopRegion,
+		isLoopRegion
+	};
 }

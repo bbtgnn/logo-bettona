@@ -75,6 +75,17 @@ class MockAudioContext {
 	createAnalyser = vi.fn(() => this.analyser);
 	createMediaStreamSource = vi.fn(() => new MockSourceNode());
 	createMediaElementSource = vi.fn(() => new MockSourceNode());
+	decodeAudioData = vi.fn(async (_buf: ArrayBuffer) => {
+		const fakeData = new Float32Array(2400);
+		for (let i = 0; i < fakeData.length; i++) fakeData[i] = i % 2 === 0 ? 0.5 : -0.3;
+		return {
+			duration: 5.0,
+			length: 2400,
+			numberOfChannels: 1,
+			sampleRate: 48000,
+			getChannelData: () => fakeData
+		} as unknown as AudioBuffer;
+	});
 }
 
 describe('createAudioSource', () => {
@@ -165,5 +176,79 @@ describe('createAudioSource', () => {
 		// analyser to destination — otherwise the live mic feeds back to the speakers.
 		expect(analyser.disconnect).toHaveBeenCalled();
 		expect(analyser.connect).toHaveBeenCalledTimes(1); // only the earlier file connection
+	});
+});
+
+describe('loadFile — waveform decoding', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	function stubFileMode() {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class {
+			src = '';
+			currentTime = 0;
+			duration = 10;
+			play = vi.fn();
+			pause = vi.fn();
+		});
+		vi.stubGlobal('URL', {
+			createObjectURL: vi.fn(() => 'blob:fake'),
+			revokeObjectURL: vi.fn()
+		});
+	}
+
+	it('returns empty state before any file is loaded', () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.getPeaks()).toEqual([]);
+		expect(source.getDuration()).toBe(0);
+		expect(source.getFileName()).toBeNull();
+	});
+
+	it('decodes file and returns 800 peaks after loadFile', async () => {
+		stubFileMode();
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 'bettona.mp3', { type: 'audio/mpeg' }));
+
+		const peaks = source.getPeaks();
+		expect(peaks).toHaveLength(800);
+		for (const p of peaks) {
+			expect(p.min).toBeLessThanOrEqual(p.max);
+			expect(p.min).toBeGreaterThanOrEqual(-1);
+			expect(p.max).toBeLessThanOrEqual(1);
+		}
+		expect(source.getDuration()).toBe(5.0);
+		expect(source.getFileName()).toBe('bettona.mp3');
+	});
+
+	it('handles decodeAudioData failure gracefully — clears peaks', async () => {
+		vi.stubGlobal('AudioContext', class extends MockAudioContext {
+			override decodeAudioData = vi.fn(async () => Promise.reject(new Error('decode error')));
+		});
+		vi.stubGlobal('Audio', class { src = ''; play = vi.fn(); pause = vi.fn(); });
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 'bad.mp3'));
+
+		expect(source.getPeaks()).toEqual([]);
+		expect(source.getDuration()).toBe(0);
+	});
+
+	it('clearFile resets all waveform state', async () => {
+		stubFileMode();
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 'test.mp3'));
+		expect(source.getPeaks()).toHaveLength(800);
+
+		source.clearFile();
+		expect(source.getPeaks()).toEqual([]);
+		expect(source.getDuration()).toBe(0);
+		expect(source.getFileName()).toBeNull();
 	});
 });
