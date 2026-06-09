@@ -2,6 +2,7 @@
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { composition } from '$lib/state/composition';
+	import { animationState } from '$lib/state/animation';
 	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
 
 	let scope: paper.PaperScope;
@@ -14,9 +15,12 @@
 		// redraw() only writes to paper.js canvas — no $state reassignment
 		$effect(() => {
 			const comp = composition;
+			// audioBars rides the primary petal; bypass morph in the render only.
+			const ignoreMorph = animationState.mode === 'audioBars';
 			renderPipeline.render({
 				composition: comp,
 				scope,
+				ignoreMorph,
 				viewport: {
 					width: scope.view.size.width,
 					height: scope.view.size.height,
@@ -50,7 +54,8 @@
 	}
 </script>
 
-<div class="flex flex-col items-center gap-3 shrink-0">
-	<canvas {@attach setupCanvas} width="600" height="600" class="rounded-lg border bg-white"></canvas>
+<div class="flex shrink-0 flex-col items-center gap-3">
+	<canvas {@attach setupCanvas} width="600" height="600" class="rounded-lg border bg-white"
+	></canvas>
 	<Button variant="outline" onclick={exportSvg} class="w-full max-w-[600px]">Export SVG</Button>
 </div>

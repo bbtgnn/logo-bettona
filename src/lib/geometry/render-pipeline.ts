@@ -14,6 +14,13 @@ export type RenderInput = {
 	composition: Composition;
 	scope: paper.PaperScope;
 	viewport: RenderViewport;
+	/**
+	 * When true, the cymatic wave rides each ring's PRIMARY template (path A) and the
+	 * stored `morphT` is bypassed for this render — without mutating it, so the other
+	 * modes that depend on morphT are untouched. Used by audioBars mode so the rest
+	 * shape is the petal the user actually authored, not a residual morph blend.
+	 */
+	ignoreMorph?: boolean;
 };
 
 export type RenderResult = {
@@ -124,8 +131,11 @@ export function createRenderPipeline(): {
 				}
 
 				let effectiveRing = ring;
-				if (ring.templatePath && ring.secondaryTemplatePath) {
-					const compatibility = validatePathCompatibility(ring.templatePath, ring.secondaryTemplatePath);
+				if (!input.ignoreMorph && ring.templatePath && ring.secondaryTemplatePath) {
+					const compatibility = validatePathCompatibility(
+						ring.templatePath,
+						ring.secondaryTemplatePath
+					);
 					if (compatibility.ok) {
 						effectiveRing = {
 							...ring,
@@ -175,7 +185,12 @@ export function createRenderPipeline(): {
 			throw toPipelineError(error, 'Render pipeline failed during finalize phase');
 		}
 
-		return { renderedCount, skippedCount, warnings, renderDurationMs: performance.now() - startedAt };
+		return {
+			renderedCount,
+			skippedCount,
+			warnings,
+			renderDurationMs: performance.now() - startedAt
+		};
 	}
 
 	function dispose(): void {

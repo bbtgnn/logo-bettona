@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import paper from 'paper';
 import type { Composition, Path } from '$lib/types';
 import { createRenderPipeline, RenderPipelineError } from './render-pipeline';
@@ -117,6 +117,47 @@ describe('createRenderPipeline().render', () => {
 
 		expect(result.renderedCount).toBe(1);
 		expect(result.warnings).toEqual([]);
+	});
+
+	it('ignoreMorph renders the primary path, bypassing morphT', () => {
+		const pipeline = createRenderPipeline();
+		const viewport = { width: 600, height: 600, padding: 32 };
+		// Secondary moves a vertex's bbox-relative position (not a pure translation,
+		// which bend would normalize away), so the morph blend bends differently.
+		const morphTarget: Path = {
+			cmds: ['M', 'L', 'L', 'L', 'Z'],
+			crds: [0, 0, 50, 0, 100, 50, 0, 50]
+		};
+		const morphedRing = {
+			...composition.rings[0],
+			templatePath: rectPath,
+			secondaryTemplatePath: morphTarget,
+			morphT: 1
+		};
+
+		// Primary-only reference: no secondary, so no morph blend at all.
+		pipeline.render({
+			composition: { ...composition, rings: [{ ...morphedRing, secondaryTemplatePath: null }] },
+			scope,
+			viewport
+		});
+		const primaryOnly = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		// Same ring WITH a secondary at morphT=1, but ignoreMorph → must equal primary-only.
+		pipeline.render({
+			composition: { ...composition, rings: [morphedRing] },
+			scope,
+			viewport,
+			ignoreMorph: true
+		});
+		const withIgnore = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		// And WITHOUT ignoreMorph the blend differs, proving the flag is what bypasses it.
+		pipeline.render({ composition: { ...composition, rings: [morphedRing] }, scope, viewport });
+		const withMorph = (scope.project.activeLayer.children[0] as paper.Path).pathData;
+
+		expect(withIgnore).toBe(primaryOnly);
+		expect(withMorph).not.toBe(primaryOnly);
 	});
 
 	it('falls back to primary path when morph paths incompatible', () => {
