@@ -275,3 +275,125 @@ describe('setRegion edge cases', () => {
 		expect(r.end).toBeCloseTo(4.0);
 	});
 });
+
+describe('seek and getCurrentTime', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('getCurrentTime returns 0 when no audio element exists', () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.getCurrentTime()).toBe(0);
+	});
+
+	it('seek clamps to [0, duration] and writes audioEl.currentTime', async () => {
+		let ct = 0;
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class {
+			src = '';
+			get currentTime() { return ct; }
+			set currentTime(v: number) { ct = v; }
+			duration = 10;
+			play = vi.fn();
+			pause = vi.fn();
+		});
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 't.mp3'));
+
+		source.seek(2.5);
+		expect(source.getCurrentTime()).toBeCloseTo(2.5);
+
+		source.seek(-1);
+		expect(source.getCurrentTime()).toBe(0);
+
+		source.seek(999); // past decoded duration of 5.0
+		expect(source.getCurrentTime()).toBe(5.0);
+	});
+});
+
+describe('region and loop', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('getRegion returns {start:0,end:0} by default', () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.getRegion()).toEqual({ start: 0, end: 0 });
+	});
+
+	it('isLoopRegion defaults false and toggles', () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.isLoopRegion()).toBe(false);
+		source.setLoopRegion(true);
+		expect(source.isLoopRegion()).toBe(true);
+		source.setLoopRegion(false);
+		expect(source.isLoopRegion()).toBe(false);
+	});
+
+	it('setRegion clamps to [0, duration]', async () => {
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class { src = ''; play = vi.fn(); pause = vi.fn(); });
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 't.mp3')); // duration 5.0
+
+		source.setRegion(1.0, 3.0);
+		expect(source.getRegion()).toEqual({ start: 1.0, end: 3.0 });
+
+		source.setRegion(-5, 999); // both clamped
+		expect(source.getRegion()).toEqual({ start: 0, end: 5.0 });
+	});
+
+	it('readBars resets currentTime to regionStart when past regionEnd with loop on', async () => {
+		let ct = 3.5;
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class {
+			src = '';
+			get currentTime() { return ct; }
+			set currentTime(v: number) { ct = v; }
+			play = vi.fn();
+			pause = vi.fn();
+		});
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 't.mp3'));
+
+		source.setRegion(1.0, 3.0);
+		source.setLoopRegion(true);
+		// ct = 3.5 >= regionEnd = 3.0 → should reset to regionStart = 1.0
+		source.readBars();
+		expect(ct).toBe(1.0);
+	});
+
+	it('readBars does NOT reset currentTime when loop is off', async () => {
+		let ct = 3.5;
+		vi.stubGlobal('AudioContext', MockAudioContext);
+		vi.stubGlobal('Audio', class {
+			src = '';
+			get currentTime() { return ct; }
+			set currentTime(v: number) { ct = v; }
+			play = vi.fn();
+			pause = vi.fn();
+		});
+		vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:fake'), revokeObjectURL: vi.fn() });
+
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		await source.setMode('file');
+		await source.loadFile(new File([new Uint8Array(100)], 't.mp3'));
+
+		source.setRegion(1.0, 3.0);
+		source.setLoopRegion(false);
+		source.readBars();
+		expect(ct).toBe(3.5); // unchanged
+	});
+});

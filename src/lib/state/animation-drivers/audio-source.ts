@@ -290,6 +290,14 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 
 	function readBars(): number[] {
 		if (mode === 'off' || !analyser || !buffer || !audioContext) return [];
+
+		// Region loop: if loop is on and playback has passed regionEnd, jump back.
+		if (loopRegion && audioEl && region.end > region.start) {
+			if (audioEl.currentTime >= region.end || audioEl.currentTime < region.start) {
+				audioEl.currentTime = region.start;
+			}
+		}
+
 		const cfg = deps.getConfig();
 		analyser.smoothingTimeConstant = cfg.smoothing;
 		analyser.getByteFrequencyData(buffer);
