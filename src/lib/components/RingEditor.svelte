@@ -22,8 +22,6 @@
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
 
-	// In audioBars mode the wave rides the primary petal and morphT is bypassed in
-	// the render, so the morph control would mislead — grey it out and say why.
 	const morphInactive = $derived(animationState.mode === 'audioBars');
 
 	let {
@@ -125,7 +123,7 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			{#if ring.secondaryTemplatePath}
+			{#if ring.secondaryTemplatePath && !morphInactive}
 				<div class="flex items-center gap-2">
 					<Button
 						variant={editVariant === 'primary' ? 'default' : 'outline'}
@@ -146,11 +144,11 @@
 
 			{#key editVariant}
 				<RingCanvas
-					templatePath={editVariant === 'secondary'
+					templatePath={!morphInactive && editVariant === 'secondary'
 						? ring.secondaryTemplatePath
 						: ring.templatePath}
 					onchange={applyPathFromEditor}
-					label={`Path editor (${editVariant})`}
+					label={`Path editor${!morphInactive && editVariant === 'secondary' ? ' (secondary)' : ''}`}
 				/>
 			{/key}
 
@@ -158,50 +156,46 @@
 				<p class="text-xs text-destructive">{ringPathError}</p>
 			{/if}
 
-			{#if !ring.secondaryTemplatePath}
-				<Button
-					variant="outline"
-					size="sm"
-					onclick={() => {
-						ringPathError = null;
-						createRingMorphTarget(index);
-					}}
-				>
-					Create morph target
-				</Button>
-			{:else}
-				<div class="space-y-2">
-					<div class="flex items-center justify-between gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onclick={() => {
-								ringPathError = null;
-								removeRingMorphTarget(index);
-								editVariant = 'primary';
-							}}
-						>
-							Remove morph target
-						</Button>
-						<span class="text-xs text-muted-foreground"
-							>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
-						>
-					</div>
-					<div class:opacity-50={morphInactive}>
+			{#if !morphInactive}
+				{#if !ring.secondaryTemplatePath}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							ringPathError = null;
+							createRingMorphTarget(index);
+						}}
+					>
+						Create morph target
+					</Button>
+				{:else}
+					<div class="space-y-2">
+						<div class="flex items-center justify-between gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onclick={() => {
+									ringPathError = null;
+									removeRingMorphTarget(index);
+									editVariant = 'primary';
+								}}
+							>
+								Remove morph target
+							</Button>
+							<span class="text-xs text-muted-foreground"
+								>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
+							>
+						</div>
 						<Slider
 							type="single"
 							min={0}
 							max={1}
 							step={0.01}
 							value={ring.morphT ?? 0}
-							disabled={morphInactive}
 							onValueChange={(v) => setRingMorphT(index, v)}
 						/>
 					</div>
-					{#if morphInactive}
-						<p class="text-[11px] text-muted-foreground">Morph not active in audio mode.</p>
-					{/if}
-				</div>
+				{/if}
 			{/if}
 
 			<div class="flex flex-col gap-1">
