@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createAudioSource, reduceToBands } from './audio-source';
+import { createAudioSource, reduceToBands, reduceToZones } from './audio-source';
 
 describe('reduceToBands', () => {
 	it('returns an empty array for a non-positive ring count', () => {
@@ -397,5 +397,43 @@ describe('region and loop', () => {
 		source.setLoopRegion(false);
 		source.readBars();
 		expect(ct).toBe(3.5); // unchanged
+	});
+});
+
+describe('reduceToZones', () => {
+	it('returns zero bass/mid/treble when all bins are 0', () => {
+		const freq = new Uint8Array(1024).fill(0);
+		const zones = reduceToZones(freq, 48000, 2048, 1);
+		expect(zones.bass).toBe(0);
+		expect(zones.mid).toBe(0);
+		expect(zones.treble).toBe(0);
+	});
+
+	it('returns values in 0..1 for uniform signal', () => {
+		const freq = new Uint8Array(1024).fill(128);
+		const zones = reduceToZones(freq, 48000, 2048, 1);
+		expect(zones.bass).toBeGreaterThanOrEqual(0);
+		expect(zones.bass).toBeLessThanOrEqual(1);
+		expect(zones.mid).toBeGreaterThanOrEqual(0);
+		expect(zones.mid).toBeLessThanOrEqual(1);
+		expect(zones.treble).toBeGreaterThanOrEqual(0);
+		expect(zones.treble).toBeLessThanOrEqual(1);
+	});
+
+	it('clamps to 1 when inputGain pushes over', () => {
+		const freq = new Uint8Array(1024).fill(255);
+		const zones = reduceToZones(freq, 48000, 2048, 4);
+		expect(zones.bass).toBe(1);
+		expect(zones.mid).toBe(1);
+		expect(zones.treble).toBe(1);
+	});
+
+	it('puts energy in bass when only low bins are lit', () => {
+		// Bass: ~20-300 Hz. At 48000/2048 ≈ 23.4 Hz/bin, bass spans bins 1..12.
+		const freq = new Uint8Array(1024).fill(0);
+		for (let i = 0; i < 13; i++) freq[i] = 200;
+		const zones = reduceToZones(freq, 48000, 2048, 1);
+		expect(zones.bass).toBeGreaterThan(0);
+		expect(zones.treble).toBe(0);
 	});
 });

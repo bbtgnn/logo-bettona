@@ -70,6 +70,35 @@ export function reduceToBands(
 	return bands;
 }
 
+/**
+ * Reduces a frequency-magnitude spectrum to three perceptual bands (bass/mid/treble),
+ * each normalized to 0..1 and scaled by inputGain. Fixed Hz splits: bass 20-300,
+ * mid 300-2000, treble 2000-20000. Pure — no Web Audio references — unit-testable.
+ */
+export function reduceToZones(
+	freq: Uint8Array,
+	sampleRate: number,
+	fftSize: number,
+	inputGain: number
+): { bass: number; mid: number; treble: number } {
+	const binHz = sampleRate / fftSize;
+
+	function bandAvg(loHz: number, hiHz: number): number {
+		const loBin = Math.max(0, Math.floor(loHz / binHz));
+		const hiBin = Math.min(freq.length, Math.ceil(hiHz / binHz));
+		if (loBin >= hiBin) return 0;
+		let sum = 0;
+		for (let i = loBin; i < hiBin; i++) sum += freq[i];
+		return clamp01(((sum / (hiBin - loBin)) / 255) * inputGain);
+	}
+
+	return {
+		bass: bandAvg(20, 300),
+		mid: bandAvg(300, 2000),
+		treble: bandAvg(2000, 20000)
+	};
+}
+
 export type AudioSourceMode = 'mic' | 'file' | 'off';
 
 export type AudioSource = {
@@ -87,6 +116,7 @@ export type AudioSource = {
 	 * meter pinpoints the source/graph.
 	 */
 	readLevel(): number;
+	readZones(): { bass: number; mid: number; treble: number };
 	getPeaks(): WaveformPeak[];
 	getDuration(): number;
 	getFileName(): string | null;
@@ -325,6 +355,16 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		return clamp01(peak / 128);
 	}
 
+	function readZones(): { bass: number; mid: number; treble: number } {
+		if (mode === 'off' || !analyser || !buffer || !audioContext) {
+			return { bass: 0, mid: 0, treble: 0 };
+		}
+		const cfg = deps.getConfig();
+		analyser.smoothingTimeConstant = cfg.smoothing;
+		analyser.getByteFrequencyData(buffer);
+		return reduceToZones(buffer, audioContext.sampleRate, analyser.fftSize, cfg.inputGain);
+	}
+
 	return {
 		setMode,
 		loadFile,
@@ -334,6 +374,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		stop,
 		readBars,
 		readLevel,
+		readZones,
 		getPeaks,
 		getDuration,
 		getFileName,
