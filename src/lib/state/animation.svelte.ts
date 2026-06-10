@@ -229,6 +229,7 @@ function startNewAnimation() {
 	animationState.progress = 0;
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	if (animationState.mode) {
 		runtime.setMode(animationState.mode);
 	}
@@ -269,9 +270,12 @@ export function setAnimationAlternate(value: boolean) {
 }
 
 export function setAnimationMode(mode: AnimationMode): void {
-	if (animationState.mode === 'audioBars' && mode !== 'audioBars') {
+	if (animationState.mode === mode) return;
+	if (animationState.mode === 'audioBars') {
 		audioSource.stop();
 	}
+	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	animationState.mode = mode;
 	if (animationState.isPlaying) {
 		runtime.setMode(mode);
