@@ -24,6 +24,7 @@ export type AnimationState = {
 	durationSec: number;
 	loop: boolean;
 	alternate: boolean;
+	elapsedMs: number;
 };
 
 const defaultAudioBarsConfig: AudioBarsConfig = {
@@ -52,7 +53,8 @@ export const animationState = $state<AnimationState>({
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
 	loop: false,
-	alternate: false
+	alternate: false,
+	elapsedMs: 0
 });
 
 let lastRingCount = 0;
@@ -148,6 +150,7 @@ function stopInternal(resetProgress = true) {
 	}
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	animationState.isPlaying = false;
 	animationState.isPaused = false;
 }
@@ -176,6 +179,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
+	if (animationState.mode === 'audioBars') return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -193,6 +197,7 @@ function tick(nowMs: number) {
 		logicalElapsedMs += Math.max(0, nowMs - lastTickNowMs);
 	}
 	lastTickNowMs = nowMs;
+	animationState.elapsedMs = logicalElapsedMs;
 	const progress = getProgressFromElapsed(logicalElapsedMs);
 
 	if (hasRunnableMode()) {

@@ -10,7 +10,8 @@ const mockComposition = {
 
 vi.mock('./composition', () => ({
 	composition: mockComposition,
-	setRingMorphT: vi.fn()
+	setRingMorphT: vi.fn(),
+	setRingWave: vi.fn()
 }));
 
 const rafCallbacks: FrameRequestCallback[] = [];
@@ -378,6 +379,47 @@ describe('animation runtime integration', () => {
 		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
 		expect(setRingMorphT).not.toHaveBeenCalledWith(1, expect.any(Number));
 
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('audioBars mode does not stop after durationSec elapses', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		animation.setAnimationMode('audioBars');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(3000); // default durationSec = 3 s
+		expect(animation.animationState.isPlaying).toBe(true);
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('elapsedMs increments each frame in audioBars mode', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		animation.setAnimationMode('audioBars');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(1200);
+		expect(animation.animationState.elapsedMs).toBe(1200);
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
+
+	it('elapsedMs resets to 0 when stopAnimation is called', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		animation.setAnimationMode('audioBars');
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(1500);
+		expect(animation.animationState.elapsedMs).toBe(1500);
+		animation.stopAnimation();
+		expect(animation.animationState.elapsedMs).toBe(0);
 		void requestAnimationFrameMock;
 		void cancelAnimationFrameMock;
 		vi.unstubAllGlobals();
