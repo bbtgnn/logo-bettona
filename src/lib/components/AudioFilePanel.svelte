@@ -15,6 +15,7 @@
 	let fileInputEl: HTMLInputElement | undefined = $state();
 	let isLoading = $state(false);
 	let isDragOver = $state(false);
+	let loadError = $state<string | null>(null);
 
 	// ── derived ──────────────────────────────────────────────────────────────
 	const hasFile = $derived(audioSource.getFileName() !== null);
@@ -166,8 +167,11 @@
 	// ── file load ────────────────────────────────────────────────────────────
 	async function handleFileSelected(file: File) {
 		isLoading = true;
+		loadError = null;
 		try {
 			await audioSource.loadFile(file);
+		} catch {
+			loadError = 'Could not decode audio. Try a different file (MP3, WAV, AAC).';
 		} finally {
 			isLoading = false;
 		}
@@ -195,27 +199,27 @@
 <div class="flex flex-col gap-2">
 	<!-- Drop zone -->
 	{#if !hasFile}
-		<div
+		<label
+			for="audio-file-input"
 			class="flex cursor-pointer flex-col items-center justify-center gap-1 rounded border-2 border-dashed px-3 py-4 text-xs transition-colors {isDragOver
 				? 'border-primary bg-primary/5'
 				: 'border-border hover:border-muted-foreground'}"
-			role="button"
-			tabindex="0"
 			ondragover={(e) => {
 				e.preventDefault();
 				isDragOver = true;
 			}}
 			ondragleave={() => (isDragOver = false)}
 			ondrop={handleDrop}
-			onclick={() => fileInputEl?.click()}
-			onkeydown={(e) => e.key === 'Enter' && fileInputEl?.click()}
 		>
 			{#if isLoading}
 				<span class="text-muted-foreground">Loading…</span>
 			{:else}
 				<span class="text-muted-foreground">Drop audio file here or browse</span>
 			{/if}
-		</div>
+		</label>
+		{#if loadError}
+			<p class="text-[11px] text-destructive">{loadError}</p>
+		{/if}
 	{:else}
 		<!-- Loaded state -->
 		<div class="flex items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
@@ -301,6 +305,7 @@
 	{/if}
 
 	<input
+		id="audio-file-input"
 		bind:this={fileInputEl}
 		type="file"
 		accept="audio/*"

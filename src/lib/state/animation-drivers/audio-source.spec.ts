@@ -224,7 +224,7 @@ describe('loadFile — waveform decoding', () => {
 		expect(source.getFileName()).toBe('bettona.mp3');
 	});
 
-	it('handles decodeAudioData failure gracefully — clears peaks', async () => {
+	it('throws on decodeAudioData failure and clears waveform state', async () => {
 		vi.stubGlobal('AudioContext', class extends MockAudioContext {
 			override decodeAudioData = vi.fn(async () => Promise.reject(new Error('decode error')));
 		});
@@ -233,7 +233,9 @@ describe('loadFile — waveform decoding', () => {
 
 		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
 		await source.setMode('file');
-		await source.loadFile(new File([new Uint8Array(100)], 'bad.mp3'));
+		await expect(
+			source.loadFile(new File([new Uint8Array(100)], 'bad.mp3'))
+		).rejects.toThrow('decode error');
 
 		expect(source.getPeaks()).toEqual([]);
 		expect(source.getDuration()).toBe(0);

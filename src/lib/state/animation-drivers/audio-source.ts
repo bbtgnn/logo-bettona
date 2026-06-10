@@ -204,11 +204,12 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 			decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
 			peaks = calculatePeaks(decodedBuffer, PEAK_BUCKETS);
 			fileDuration = decodedBuffer.duration;
-		} catch {
+		} catch (e) {
 			decodedBuffer = null;
 			peaks = [];
 			fileDuration = 0;
 			fileName = null;
+			throw e;
 		}
 	}
 
