@@ -18,12 +18,15 @@
 		updateRingPathVariant
 	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
+	import { animationState } from '$lib/state/animation';
 	import { saveEntry } from '$lib/state/path-library';
 	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+
+	const morphInactive = $derived(animationState.mode === 'audioBars');
 
 	let {
 		ring,
@@ -177,7 +180,7 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			{#if ring.secondaryTemplatePath}
+			{#if ring.secondaryTemplatePath && !morphInactive}
 				<div class="flex items-center gap-2">
 					<Button
 						variant={editVariant === 'primary' ? 'default' : 'outline'}
@@ -198,11 +201,11 @@
 
 			{#key editVariant}
 				<RingCanvas
-					templatePath={editVariant === 'secondary'
+					templatePath={!morphInactive && editVariant === 'secondary'
 						? ring.secondaryTemplatePath
 						: ring.templatePath}
 					onchange={applyPathFromEditor}
-					label={`Path editor (${editVariant})`}
+					label={`Path editor${!morphInactive && editVariant === 'secondary' ? ' (secondary)' : ''}`}
 				/>
 			{/key}
 
@@ -210,44 +213,46 @@
 				<p class="text-xs text-destructive">{ringPathError}</p>
 			{/if}
 
-			{#if !ring.secondaryTemplatePath}
-				<Button
-					variant="outline"
-					size="sm"
-					onclick={() => {
-						ringPathError = null;
-						createRingMorphTarget(index);
-					}}
-				>
-					Create morph target
-				</Button>
-			{:else}
-				<div class="space-y-2">
-					<div class="flex items-center justify-between gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							onclick={() => {
-								ringPathError = null;
-								removeRingMorphTarget(index);
-								editVariant = 'primary';
-							}}
-						>
-							Remove morph target
-						</Button>
-						<span class="text-xs text-muted-foreground"
-							>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
-						>
+			{#if !morphInactive}
+				{#if !ring.secondaryTemplatePath}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							ringPathError = null;
+							createRingMorphTarget(index);
+						}}
+					>
+						Create morph target
+					</Button>
+				{:else}
+					<div class="space-y-2">
+						<div class="flex items-center justify-between gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onclick={() => {
+									ringPathError = null;
+									removeRingMorphTarget(index);
+									editVariant = 'primary';
+								}}
+							>
+								Remove morph target
+							</Button>
+							<span class="text-xs text-muted-foreground"
+								>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
+							>
+						</div>
+						<Slider
+							type="single"
+							min={0}
+							max={1}
+							step={0.01}
+							value={ring.morphT ?? 0}
+							onValueChange={(v) => setRingMorphT(index, v)}
+						/>
 					</div>
-					<Slider
-						type="single"
-						min={0}
-						max={1}
-						step={0.01}
-						value={ring.morphT ?? 0}
-						onValueChange={(v) => setRingMorphT(index, v)}
-					/>
-				</div>
+				{/if}
 			{/if}
 
 			<div class="flex flex-wrap items-center gap-2">

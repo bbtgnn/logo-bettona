@@ -1,8 +1,10 @@
-import { composition, setRingMorphT } from './composition';
+import { composition, setRingMorphT, setRingWave } from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
 import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
+import { createFallbackBars } from './animation-drivers/fallback-bars';
+import { createAudioSource } from './animation-drivers/audio-source';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
@@ -17,16 +19,22 @@ export type AnimationState = {
 	isPaused: boolean;
 	progress: number;
 	audioBars: AudioBarsConfig;
+	audioSource: 'demo' | 'mic' | 'file' | 'off';
 	dataSeries: DataSeriesConfig;
 	durationSec: number;
 	loop: boolean;
 	alternate: boolean;
+	elapsedMs: number;
 };
 
 const defaultAudioBarsConfig: AudioBarsConfig = {
 	smoothing: 0.5,
 	minHz: 20,
-	maxHz: 20000
+	maxHz: 20000,
+	waveCrests: 3,
+	waveAmplitudeGain: 0.3,
+	wavePhaseSpeed: 2.2,
+	inputGain: 1
 };
 
 const defaultDataSeriesConfig: DataSeriesConfig = {
@@ -41,10 +49,12 @@ export const animationState = $state<AnimationState>({
 	isPaused: false,
 	progress: 0,
 	audioBars: defaultAudioBarsConfig,
+	audioSource: 'demo',
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
 	loop: false,
-	alternate: false
+	alternate: false,
+	elapsedMs: 0
 });
 
 let lastRingCount = 0;
@@ -55,6 +65,15 @@ let logicalElapsedMs = 0;
 
 const runtime = createAnimationRuntime({
 	applyRingT: (index, t) => setRingMorphT(index, t)
+});
+
+const fallbackBars = createFallbackBars({
+	getRingCount: () => composition.rings.length
+});
+
+const audioSource = createAudioSource({
+	getRingCount: () => composition.rings.length,
+	getConfig: () => animationState.audioBars
 });
 
 runtime.registerDriver(
@@ -71,7 +90,19 @@ runtime.registerDriver(
 	createAudioBarsDriver({
 		getConfig: () => animationState.audioBars,
 		getRingCount: () => composition.rings.length,
-		readBars: () => []
+		getRing: (index) => composition.rings[index],
+		readBars: () => {
+			switch (animationState.audioSource) {
+				case 'demo':
+					return fallbackBars.readBars();
+				case 'mic':
+				case 'file':
+					return audioSource.readBars();
+				default:
+					return []; // 'off' → logo at rest
+			}
+		},
+		applyRingWave: (index, wave) => setRingWave(index, wave)
 	})
 );
 
@@ -110,6 +141,7 @@ function cleanupCurrentAnimation() {
 }
 
 function stopInternal(resetProgress = true) {
+	audioSource.stop();
 	cleanupCurrentAnimation();
 	runtime.setMode(null);
 	if (resetProgress) {
@@ -118,6 +150,7 @@ function stopInternal(resetProgress = true) {
 	}
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	animationState.isPlaying = false;
 	animationState.isPaused = false;
 }
@@ -146,6 +179,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
+	if (animationState.mode === 'audioBars') return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -163,6 +197,7 @@ function tick(nowMs: number) {
 		logicalElapsedMs += Math.max(0, nowMs - lastTickNowMs);
 	}
 	lastTickNowMs = nowMs;
+	animationState.elapsedMs = logicalElapsedMs;
 	const progress = getProgressFromElapsed(logicalElapsedMs);
 
 	if (hasRunnableMode()) {
@@ -178,6 +213,7 @@ function tick(nowMs: number) {
 		animationState.isPaused = false;
 		lastTickNowMs = null;
 		logicalElapsedMs = 0;
+		animationState.elapsedMs = 0;
 		frameRequestId = null;
 		return;
 	}
@@ -193,6 +229,7 @@ function startNewAnimation() {
 	animationState.progress = 0;
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	if (animationState.mode) {
 		runtime.setMode(animationState.mode);
 	}
@@ -233,6 +270,12 @@ export function setAnimationAlternate(value: boolean) {
 }
 
 export function setAnimationMode(mode: AnimationMode): void {
+	if (animationState.mode === mode) return;
+	if (animationState.mode === 'audioBars') {
+		audioSource.stop();
+	}
+	logicalElapsedMs = 0;
+	animationState.elapsedMs = 0;
 	animationState.mode = mode;
 	if (animationState.isPlaying) {
 		runtime.setMode(mode);
@@ -242,6 +285,27 @@ export function setAnimationMode(mode: AnimationMode): void {
 export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>): void {
 	animationState.dataSeries = { ...animationState.dataSeries, ...next };
 }
+
+export function setAudioBarsConfig(next: Partial<AudioBarsConfig>): void {
+	animationState.audioBars = { ...animationState.audioBars, ...next };
+}
+
+export async function setAudioSource(mode: AnimationState['audioSource']): Promise<void> {
+	animationState.audioSource = mode;
+	try {
+		if (mode === 'mic' || mode === 'file') {
+			await audioSource.setMode(mode);
+		} else {
+			void audioSource.setMode('off');
+		}
+	} catch {
+		// Permission denied / unsupported: fall back to the demo source so the logo keeps moving.
+		animationState.audioSource = 'demo';
+		void audioSource.setMode('off');
+	}
+}
+
+export { audioSource };
 
 export function togglePlay() {
 	if (!animationState.isPlaying && !animationState.isPaused) {

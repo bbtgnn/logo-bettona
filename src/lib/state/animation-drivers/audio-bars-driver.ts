@@ -1,4 +1,6 @@
+import type { Ring, WaveState } from '$lib/types';
 import type { AudioBarsConfig } from './types';
+import { resolveWaveConfig } from '$lib/geometry/wave';
 
 type AnimationDriver = {
 	init: () => void;
@@ -9,7 +11,9 @@ type AnimationDriver = {
 type CreateAudioBarsDriverDeps = {
 	getConfig: () => AudioBarsConfig;
 	getRingCount: () => number;
+	getRing: (index: number) => Ring;
 	readBars: () => number[];
+	applyRingWave: (index: number, wave: WaveState | null) => void;
 };
 
 function clamp01(value: number): number {
@@ -28,18 +32,34 @@ export function createAudioBarsDriver(deps: CreateAudioBarsDriverDeps): Animatio
 			deps.getConfig();
 		},
 		dispose() {
-			// no-op in v1
+			const ringCount = normalizeRingCount(deps.getRingCount());
+			for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
+				deps.applyRingWave(ringIndex, null);
+			}
 		},
-		frame(_nowMs) {
+		frame(nowMs) {
+			const cfg = deps.getConfig();
 			const ringCount = normalizeRingCount(deps.getRingCount());
 			const bars = deps.readBars();
-			const frame: Record<number, number> = {};
+			const nowSec = (Number.isFinite(nowMs) ? nowMs : 0) / 1000;
+
+			const globalDefault = {
+				crests: cfg.waveCrests,
+				amplitudeGain: cfg.waveAmplitudeGain,
+				phaseSpeed: cfg.wavePhaseSpeed
+			};
 
 			for (let ringIndex = 0; ringIndex < ringCount; ringIndex += 1) {
-				frame[ringIndex] = clamp01(bars[ringIndex] ?? 0);
+				const ring = deps.getRing(ringIndex);
+				const ringCfg = resolveWaveConfig(ring, globalDefault);
+				deps.applyRingWave(ringIndex, {
+					amplitude: clamp01(bars[ringIndex] ?? 0) * ringCfg.amplitudeGain,
+					crests: ringCfg.crests,
+					phase: nowSec * ringCfg.phaseSpeed + ringIndex * 0.4
+				});
 			}
 
-			return frame;
+			return {};
 		}
 	};
 }

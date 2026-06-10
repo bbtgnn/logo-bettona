@@ -29,7 +29,10 @@ vi.mock('$lib/state/animation', () => ({
 	setAnimationDurationSec: vi.fn(),
 	setAnimationLoop: vi.fn(),
 	setAnimationAlternate: vi.fn(),
-	handleCompositionChanged: vi.fn()
+	handleCompositionChanged: vi.fn(),
+	setAudioBarsConfig: vi.fn(),
+	setAudioSource: vi.fn(),
+	audioSource: { loadFile: vi.fn(), play: vi.fn(), pause: vi.fn() }
 }));
 
 vi.mock('$lib/state/composition', () => ({
@@ -67,7 +70,7 @@ vi.mock('$lib/state/composition', () => ({
 import Sidebar from './Sidebar.svelte';
 
 describe('Sidebar section order', () => {
-	it('renders Settings, Animation, Colors, Rings in order', async () => {
+	it('renders Settings, Rings, Colors, Animation in order', async () => {
 		render(Sidebar);
 
 		const content = page.getByTestId('sidebar-content');
@@ -77,29 +80,29 @@ describe('Sidebar section order', () => {
 		const text = contentElement.textContent ?? '';
 
 		const settingsIndex = text.indexOf('Settings');
-		const animationIndex = text.indexOf('Animation');
-		const colorsIndex = text.indexOf('Colors');
 		const ringsIndex = text.indexOf('Rings');
+		const colorsIndex = text.indexOf('Colors');
+		const animationIndex = text.indexOf('Animation');
 
 		expect(
 			settingsIndex,
 			'Expected "Settings" section to be present in sidebar content'
 		).toBeGreaterThanOrEqual(0);
 		expect(
-			animationIndex,
-			'Expected "Animation" section to be present in sidebar content'
+			ringsIndex,
+			'Expected "Rings" section to be present in sidebar content'
 		).toBeGreaterThanOrEqual(0);
 		expect(
 			colorsIndex,
 			'Expected "Colors" section to be present in sidebar content'
 		).toBeGreaterThanOrEqual(0);
 		expect(
-			ringsIndex,
-			'Expected "Rings" section to be present in sidebar content'
+			animationIndex,
+			'Expected "Animation" section to be present in sidebar content'
 		).toBeGreaterThanOrEqual(0);
 
-		expect(animationIndex).toBeGreaterThan(settingsIndex);
-		expect(colorsIndex).toBeGreaterThan(animationIndex);
-		expect(ringsIndex).toBeGreaterThan(colorsIndex);
+		expect(ringsIndex).toBeGreaterThan(settingsIndex);
+		expect(colorsIndex).toBeGreaterThan(ringsIndex);
+		expect(animationIndex).toBeGreaterThan(colorsIndex);
 	});
 });
