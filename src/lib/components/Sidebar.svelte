@@ -36,10 +36,6 @@
 	<SidebarUI.SidebarContent class="divide-y divide-border" data-testid="sidebar-content">
 		<SettingsSection />
 
-		<AnimationSection />
-
-		<ColorsSection />
-
 		<SidebarCollapsible>
 			{#snippet trigger()}
 				Rings
@@ -67,5 +63,9 @@
 				{/if}
 			{/snippet}
 		</SidebarCollapsible>
+
+		<ColorsSection />
+
+		<AnimationSection />
 	</SidebarUI.SidebarContent>
 </SidebarUI.Sidebar>
