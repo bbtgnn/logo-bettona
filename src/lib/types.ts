@@ -35,3 +35,15 @@ export type Composition = {
 	monochromePalettes: MonochromePalette[];
 	fullPalettes: FullPalette[];
 };
+
+export type PathLibraryEntry = {
+	id: string;
+	name: string;
+	createdAt: number;
+	path: Path;
+	secondaryPath: Path | null;
+};
+
+export type PathLibrary = {
+	entries: PathLibraryEntry[];
+};
