@@ -4,17 +4,18 @@ import type { Composition } from '$lib/types';
 import { DEFAULT_COMPOSITION } from './default';
 
 /**
- * Returns a copy of the composition with the transient `wave` field removed from
- * every ring. Persistence and the dirty-check both operate on this shape, so the
- * audio-driven wave never reaches localStorage and a reload never restores a
- * rippled logo. The stored shape is byte-identical to the pre-wave format.
+ * Returns a copy of the composition with transient fields (`wave`, `zoneDrive`)
+ * removed from every ring. Persistence and the dirty-check both operate on this
+ * shape, so audio-driven transients never reach localStorage and a reload never
+ * restores them. The stored shape is byte-identical to the pre-transient format.
  */
-function stripWave(composition: Composition): Composition {
+function stripTransients(composition: Composition): Composition {
 	return {
 		...composition,
 		rings: composition.rings.map((ring) => {
 			const rest = { ...ring };
 			delete rest.wave;
+			delete rest.zoneDrive;
 			return rest;
 		})
 	};
@@ -39,7 +40,7 @@ export function createPersistedComposition(key: string, initial: Composition): C
 		untrack(() => {
 			const saved = localStorageSync.read<Composition>(key);
 			if (saved) Object.assign(state, saved);
-			lastSavedStripped = JSON.stringify(stripWave($state.snapshot(state) as Composition));
+			lastSavedStripped = JSON.stringify(stripTransients($state.snapshot(state) as Composition));
 		});
 
 		// The unsubscribe handle is intentionally discarded: `composition` is a
@@ -49,13 +50,13 @@ export function createPersistedComposition(key: string, initial: Composition): C
 			localStorageSync.subscribe<Composition>(key, (remote) => {
 				untrack(() => {
 					Object.assign(state, remote);
-					lastSavedStripped = JSON.stringify(stripWave($state.snapshot(state) as Composition));
+					lastSavedStripped = JSON.stringify(stripTransients($state.snapshot(state) as Composition));
 				});
 			});
 		}
 
 		$effect(() => {
-			const stripped = stripWave($state.snapshot(state) as Composition);
+			const stripped = stripTransients($state.snapshot(state) as Composition);
 			const serialized = JSON.stringify(stripped);
 			if (serialized === lastSavedStripped) return; // wave-only change → no write
 			untrack(() => {
