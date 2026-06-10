@@ -38,9 +38,9 @@ Lower Y = outer (far from center). Higher Y = inner (close to center).
 
 **New file:** `src/lib/geometry/zones.ts`
 
-```ts
-export type ZoneDrive = { bassPush: number; midPush: number; treblePush: number };
+Types (`ZoneDrive`, `ZoneIntensity`) live in `src/lib/types.ts` (see Section 2). `zones.ts` imports them.
 
+```ts
 export function applyZonesToPath(path: Path, drive: ZoneDrive): Path
 export function resolveZoneIntensity(ring: Ring, def: ZoneIntensity): ZoneIntensity
 ```
@@ -122,7 +122,7 @@ Frequency splits:
 
 ```ts
 const SHIMMER_FREQ = 8;  // Hz — treble bobbing frequency; promote to slider later if needed
-const SCALE = 30;        // px push at intensity=1, level=1; tune empirically
+const SCALE = 30;        // template-space units of push at intensity=1, level=1; tune empirically
 
 // frame(nowMs):
 //   { bass, mid, treble } = audioSource.readZones()
@@ -175,7 +175,7 @@ if (mode === 'audioZones' && ring.zoneDrive) {
 - Static (no rAF — treble shimmer is driver-side; preview shows max radial extent)
 - Redraws reactively when `ring.templatePath` or intensities change
 
-**`RingEditor.svelte`:** no new changes (morphInactive extension handled in AnimationSection).
+**`RingEditor.svelte`:** extend `morphInactive` derived: `mode === 'audioBars' || mode === 'audioZones'`. (Currently only guards `audioBars` — added in session 5.)
 
 ---
 
