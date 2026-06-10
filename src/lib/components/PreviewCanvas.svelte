@@ -16,7 +16,8 @@
 		$effect(() => {
 			const comp = composition;
 			// audioBars rides the primary petal; bypass morph in the render only.
-			const ignoreMorph = animationState.mode === 'audioBars';
+			const ignoreMorph =
+				animationState.mode === 'audioBars' || animationState.mode === 'audioZones';
 			renderPipeline.render({
 				composition: comp,
 				scope,

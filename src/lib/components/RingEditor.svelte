@@ -22,7 +22,9 @@
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
 
-	const morphInactive = $derived(animationState.mode === 'audioBars');
+	const morphInactive = $derived(
+		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+	);
 
 	let {
 		ring,
