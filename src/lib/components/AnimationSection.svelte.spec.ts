@@ -18,6 +18,7 @@ const animationApi = vi.hoisted(() => ({
 		loop: false,
 		alternate: false,
 		audioSource: 'demo' as 'demo' | 'mic' | 'file' | 'off',
+		elapsedMs: 0,
 		audioBars: {
 			smoothing: 0.5,
 			minHz: 20,
@@ -235,11 +236,25 @@ describe('AnimationSection', () => {
 		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
 	});
 
-	it('shows the global progress bar in audioBars + mic mode', async () => {
+	it('shows elapsed counter and no progress bar in audioBars + mic mode', async () => {
 		animationApi.animationState.mode = 'audioBars';
 		animationApi.animationState.audioSource = 'mic';
+		animationApi.animationState.elapsedMs = 0;
 		render(AnimationSection);
-		await expect.element(page.getByRole('progressbar')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Elapsed time')).toBeInTheDocument();
+		await expect.element(page.getByText('0:00')).toBeInTheDocument();
+		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Duration (s)')).not.toBeInTheDocument();
+	});
+
+	it('formats elapsed time correctly in audioBars + demo mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		animationApi.animationState.audioSource = 'demo';
+		animationApi.animationState.elapsedMs = 65000; // 1 min 5 s
+		render(AnimationSection);
+		await expect.element(page.getByText('1:05')).toBeInTheDocument();
+		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Duration (s)')).not.toBeInTheDocument();
 	});
 
 	it('shows "Listening" indicator in mic mode', async () => {
