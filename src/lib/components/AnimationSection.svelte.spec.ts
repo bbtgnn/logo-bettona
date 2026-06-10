@@ -10,7 +10,7 @@ type RingMock = {
 
 const animationApi = vi.hoisted(() => ({
 	animationState: {
-		mode: null as 'simple' | 'audioBars' | 'dataSeries' | null,
+		mode: null as 'simple' | 'audioBars' | 'audioZones' | 'dataSeries' | null,
 		isPlaying: false,
 		isPaused: false,
 		progress: 0.25,
@@ -27,6 +27,9 @@ const animationApi = vi.hoisted(() => ({
 			waveAmplitudeGain: 0.3,
 			wavePhaseSpeed: 2.2,
 			inputGain: 1
+		},
+		audioZones: {
+			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 }
 		}
 	},
 	togglePlay: vi.fn(),
@@ -36,6 +39,7 @@ const animationApi = vi.hoisted(() => ({
 	setAnimationAlternate: vi.fn(),
 	handleCompositionChanged: vi.fn(),
 	setAudioBarsConfig: vi.fn(),
+	setAudioZonesDefaultIntensity: vi.fn(),
 	setAudioSource: vi.fn(),
 	audioSource: {
 		loadFile: vi.fn(async () => {}),
