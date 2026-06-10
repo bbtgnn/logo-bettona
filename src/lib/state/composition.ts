@@ -5,7 +5,8 @@ import type {
 	FullPalette,
 	MonochromePalette,
 	Ring,
-	WaveState
+	WaveState,
+	ZoneDrive
 } from '$lib/types';
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
@@ -144,6 +145,12 @@ export function setRingMorphT(index: number, t: number) {
 
 export function setRingWave(index: number, wave: WaveState | null) {
 	composition.rings = composition.rings.map((ring, i) => (i === index ? { ...ring, wave } : ring));
+}
+
+export function setRingZoneDrive(index: number, drive: ZoneDrive | null) {
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, zoneDrive: drive } : ring
+	);
 }
 
 export function createRingMorphTarget(index: number) {

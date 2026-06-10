@@ -1,5 +1,6 @@
-import { composition, setRingMorphT, setRingWave } from './composition';
+import { composition, setRingMorphT, setRingWave, setRingZoneDrive } from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
+import { createAudioZonesDriver } from './animation-drivers/audio-zones-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
 import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
@@ -10,6 +11,7 @@ import type {
 	AudioBarsConfig,
 	DataSeriesConfig
 } from './animation-drivers/types';
+import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
 
 export type AnimationMode = AnimationDriverType | null;
 
@@ -19,6 +21,7 @@ export type AnimationState = {
 	isPaused: boolean;
 	progress: number;
 	audioBars: AudioBarsConfig;
+	audioZones: AudioZonesConfig;
 	audioSource: 'demo' | 'mic' | 'file' | 'off';
 	dataSeries: DataSeriesConfig;
 	durationSec: number;
@@ -37,6 +40,10 @@ const defaultAudioBarsConfig: AudioBarsConfig = {
 	inputGain: 1
 };
 
+const defaultAudioZonesConfig: AudioZonesConfig = {
+	defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 }
+};
+
 const defaultDataSeriesConfig: DataSeriesConfig = {
 	seriesByRingIndex: {},
 	speed: 1,
@@ -49,6 +56,7 @@ export const animationState = $state<AnimationState>({
 	isPaused: false,
 	progress: 0,
 	audioBars: defaultAudioBarsConfig,
+	audioZones: defaultAudioZonesConfig,
 	audioSource: 'demo',
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
@@ -103,6 +111,33 @@ runtime.registerDriver(
 			}
 		},
 		applyRingWave: (index, wave) => setRingWave(index, wave)
+	})
+);
+
+runtime.registerDriver(
+	'audioZones',
+	createAudioZonesDriver({
+		getDefaultIntensity: () => animationState.audioZones.defaultIntensity,
+		getRingCount: () => composition.rings.length,
+		getRing: (index) => composition.rings[index],
+		readZones: () => {
+			switch (animationState.audioSource) {
+				case 'demo': {
+					const t = performance.now() / 1000;
+					return {
+						bass: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 0.7))),
+						mid: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.1 + 1.0))),
+						treble: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.9 + 2.1)))
+					};
+				}
+				case 'mic':
+				case 'file':
+					return audioSource.readZones();
+				default:
+					return { bass: 0, mid: 0, treble: 0 };
+			}
+		},
+		applyRingZoneDrive: (index, drive) => setRingZoneDrive(index, drive)
 	})
 );
 
@@ -179,7 +214,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
-	if (animationState.mode === 'audioBars') return false;
+	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -271,7 +306,7 @@ export function setAnimationAlternate(value: boolean) {
 
 export function setAnimationMode(mode: AnimationMode): void {
 	if (animationState.mode === mode) return;
-	if (animationState.mode === 'audioBars') {
+	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') {
 		audioSource.stop();
 	}
 	logicalElapsedMs = 0;
@@ -288,6 +323,13 @@ export function setDataSeriesConfig(next: Partial<AnimationState['dataSeries']>)
 
 export function setAudioBarsConfig(next: Partial<AudioBarsConfig>): void {
 	animationState.audioBars = { ...animationState.audioBars, ...next };
+}
+
+export function setAudioZonesDefaultIntensity(next: Partial<ZoneIntensity>): void {
+	animationState.audioZones = {
+		...animationState.audioZones,
+		defaultIntensity: { ...animationState.audioZones.defaultIntensity, ...next }
+	};
 }
 
 export async function setAudioSource(mode: AnimationState['audioSource']): Promise<void> {
