@@ -18,7 +18,13 @@
 	let loadError = $state<string | null>(null);
 
 	// ── derived ──────────────────────────────────────────────────────────────
-	const hasFile = $derived(audioSource.getFileName() !== null);
+	// audioSource is a plain closure object (getFileName() reads a non-reactive
+	// `let`), so a $derived over it never recomputes after loadFile. Mirror the
+	// name into local $state and flip it on load/clear so the UI actually reacts.
+	// Seeded from the source so a remount with a file already loaded shows it.
+	let loadedName = $state<string | null>(audioSource.getFileName());
+	let loadedDuration = $state(audioSource.getDuration());
+	const hasFile = $derived(loadedName !== null);
 	const isPlaying = $derived(animationState.isPlaying);
 	const inputLevelPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, audioSource.readLevel())) * 100)
@@ -170,6 +176,8 @@
 		loadError = null;
 		try {
 			await audioSource.loadFile(file);
+			loadedName = audioSource.getFileName();
+			loadedDuration = audioSource.getDuration();
 		} catch {
 			loadError = 'Could not decode audio. Try a different file (MP3, WAV, AAC).';
 		} finally {
@@ -191,6 +199,8 @@
 
 	function handleRemove() {
 		audioSource.clearFile();
+		loadedName = null;
+		loadedDuration = 0;
 		if (animationState.isPlaying) togglePlay();
 	}
 </script>
@@ -224,8 +234,8 @@
 		<!-- Loaded state -->
 		<div class="flex items-center justify-between gap-2 rounded border border-border px-2 py-1.5">
 			<div class="min-w-0 flex-1">
-				<p class="truncate text-xs font-medium">{audioSource.getFileName()}</p>
-				<p class="text-[10px] text-muted-foreground">{audioSource.getDuration().toFixed(1)} s</p>
+				<p class="truncate text-xs font-medium">{loadedName}</p>
+				<p class="text-[10px] text-muted-foreground">{loadedDuration.toFixed(1)} s</p>
 			</div>
 			<div class="flex shrink-0 gap-1">
 				<Button variant="ghost" class="h-6 px-2 text-[11px]" onclick={() => fileInputEl?.click()}>

@@ -59,6 +59,21 @@ describe('AudioFilePanel', () => {
 		await expect.element(page.getByText(/12\.4\s*s/)).toBeInTheDocument();
 	});
 
+	it('reveals loaded state after loadFile resolves (no remount)', async () => {
+		// getFileName starts null; loadFile flips it to a name, mimicking the real
+		// closure-backed source. The loaded UI must appear without re-rendering.
+		animApi.audioSource.loadFile.mockImplementation(async () => {
+			animApi.audioSource.getFileName.mockReturnValue('bettona.mp3');
+			animApi.audioSource.getDuration.mockReturnValue(7.7);
+		});
+		render(AudioFilePanel);
+		const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+		const fakeFile = new File([''], 'bettona.mp3', { type: 'audio/mpeg' });
+		Object.defineProperty(fileInput, 'files', { value: [fakeFile], configurable: true });
+		fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+		await expect.element(page.getByText('bettona.mp3')).toBeInTheDocument();
+	});
+
 	it('Play calls audioSource.play() and togglePlay when not already playing', async () => {
 		animApi.audioSource.getFileName.mockReturnValue('bettona.mp3');
 		animApi.audioSource.getDuration.mockReturnValue(5.0);
