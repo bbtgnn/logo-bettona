@@ -12,8 +12,15 @@
 			<SidebarUI.SidebarTrigger />
 			<span class="text-sm font-semibold">Shape Editor</span>
 			<a
-				href="/about"
+				href="/paths"
 				class="ml-auto text-sm text-muted-foreground hover:text-foreground"
+				data-testid="header-paths-link"
+			>
+				Paths
+			</a>
+			<a
+				href="/about"
+				class="ml-4 text-sm text-muted-foreground hover:text-foreground"
 				data-testid="header-about-link"
 			>
 				About
