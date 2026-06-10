@@ -424,4 +424,20 @@ describe('animation runtime integration', () => {
 		void cancelAnimationFrameMock;
 		vi.unstubAllGlobals();
 	});
+
+	it('elapsedMs resets to 0 when simple animation completes naturally', async () => {
+		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
+		const animation = await import('./animation');
+		// default mode is 'simple', durationSec = 3
+		animation.togglePlay();
+		flushNextAnimationFrame(0);
+		flushNextAnimationFrame(1000);
+		expect(animation.animationState.elapsedMs).toBe(1000);
+		flushNextAnimationFrame(3000); // past durationSec — hasCompleted fires
+		expect(animation.animationState.isPlaying).toBe(false);
+		expect(animation.animationState.elapsedMs).toBe(0);
+		void requestAnimationFrameMock;
+		void cancelAnimationFrameMock;
+		vi.unstubAllGlobals();
+	});
 });

@@ -213,6 +213,7 @@ function tick(nowMs: number) {
 		animationState.isPaused = false;
 		lastTickNowMs = null;
 		logicalElapsedMs = 0;
+		animationState.elapsedMs = 0;
 		frameRequestId = null;
 		return;
 	}
