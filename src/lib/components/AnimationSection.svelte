@@ -159,6 +159,19 @@
 						<p class="text-[10px] text-muted-foreground">
 							Listening — speak or play near the microphone.
 						</p>
+						<div class="flex flex-col gap-1">
+							<Label for="mic-sensitivity" class="text-xs">Microphone sensitivity</Label>
+							<input
+								id="mic-sensitivity"
+								type="range"
+								min="0.5"
+								max="4"
+								step="0.1"
+								value={animationState.audioBars.inputGain}
+								oninput={(e) =>
+									setAudioBarsConfig({ inputGain: Number((e.target as HTMLInputElement).value) })}
+							/>
+						</div>
 					{/if}
 
 					{#if animationState.audioSource === 'file'}
