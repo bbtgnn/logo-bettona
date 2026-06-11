@@ -15,6 +15,10 @@ export type WaveConfig = {
 	phaseSpeed: number; // rad/sec, travel speed of the wave
 };
 
+export type ZoneIntensity = { bass: number; mid: number; treble: number };
+export type ZoneDrive = { bassPush: number; midPush: number; treblePush: number };
+export type AudioZonesConfig = { defaultIntensity: ZoneIntensity };
+
 export type Ring = {
 	copies: number;
 	color: string;
@@ -24,6 +28,8 @@ export type Ring = {
 	ringHeight: number;
 	wave?: WaveState | null; // absent/null → no wave → renders identical to today
 	waveConfig?: WaveConfig | null; // null/absent = inherit global AudioBarsConfig default
+	zoneConfig?: ZoneIntensity | null; // persisted; null = inherit global default
+	zoneDrive?: ZoneDrive | null; // transient; stripped from persistence
 };
 
 export type MonochromePalette = {

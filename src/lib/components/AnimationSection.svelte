@@ -10,12 +10,14 @@
 		setAnimationDurationSec,
 		togglePlay,
 		setAudioBarsConfig,
+		setAudioZonesDefaultIntensity,
 		setAudioSource,
 		audioSource
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import RingWaveConfigItem from './RingWaveConfigItem.svelte';
+	import RingZoneConfigItem from './RingZoneConfigItem.svelte';
 	import AudioFilePanel from './AudioFilePanel.svelte';
 	import type { WaveConfig } from '$lib/types';
 
@@ -31,15 +33,19 @@
 	const hasMorphRings = $derived(
 		composition.rings.some((ring) => ring.secondaryTemplatePath !== null)
 	);
-	const requiresMorphRings = $derived(animationState.mode !== 'audioBars');
+	const requiresMorphRings = $derived(
+		animationState.mode !== 'audioBars' && animationState.mode !== 'audioZones'
+	);
 	const blockPlayback = $derived(requiresMorphRings && !hasMorphRings);
 
 	const showInputLevel = $derived(
-		animationState.mode === 'audioBars' && animationState.audioSource === 'mic'
+		(animationState.mode === 'audioBars' || animationState.mode === 'audioZones') &&
+		animationState.audioSource === 'mic'
 	);
 
 	const hideGlobalTransport = $derived(
-		animationState.mode === 'audioBars' && animationState.audioSource === 'file'
+		(animationState.mode === 'audioBars' || animationState.mode === 'audioZones') &&
+		animationState.audioSource === 'file'
 	);
 
 	// Live input meter: polls the analyser's raw peak each frame while a real source
@@ -95,11 +101,12 @@
 					value={animationState.mode ?? ''}
 					onchange={(e) => {
 						const mode = (e.target as HTMLSelectElement).value;
-						setAnimationMode(mode === '' ? null : (mode as 'simple' | 'audioBars' | 'dataSeries'));
+						setAnimationMode(mode === '' ? null : (mode as 'simple' | 'audioBars' | 'audioZones' | 'dataSeries'));
 					}}
 				>
 					<option value="simple">Simple</option>
 					<option value="audioBars">Audio Bars</option>
+					<option value="audioZones">Audio Zones</option>
 					<option value="dataSeries">Data Series</option>
 					<option value="">None</option>
 				</select>
@@ -110,6 +117,10 @@
 				{:else if animationState.mode === 'audioBars'}
 					<p class="text-[11px] text-muted-foreground">
 						Audio Bars mode reacts to live frequency bands for each ring.
+					</p>
+				{:else if animationState.mode === 'audioZones'}
+					<p class="text-[11px] text-muted-foreground">
+						Audio Zones mode deforms each ring's shape across three frequency bands.
 					</p>
 				{/if}
 			</div>
@@ -248,9 +259,129 @@
 				</div>
 			{/if}
 
+			{#if animationState.mode === 'audioZones'}
+				<div class="flex flex-col gap-2 rounded border border-border p-2">
+					<div class="flex flex-col gap-1">
+						<Label for="audio-source-zones" class="text-xs">Audio source</Label>
+						<select
+							id="audio-source-zones"
+							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+							value={animationState.audioSource}
+							onchange={(e) =>
+								setAudioSource(
+									(e.target as HTMLSelectElement).value as 'demo' | 'mic' | 'file' | 'off'
+								)}
+						>
+							<option value="demo">Demo</option>
+							<option value="mic">Microphone</option>
+							<option value="file">File</option>
+						</select>
+					</div>
+
+					{#if showInputLevel}
+						<div class="flex flex-col gap-1">
+							<Label class="text-xs">Input level</Label>
+							<div
+								class="h-1.5 rounded bg-muted"
+								role="meter"
+								aria-label="Audio input level"
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={inputLevelPercent}
+							>
+								<div class="h-full rounded bg-green-500" style:width={`${inputLevelPercent}%`}></div>
+							</div>
+							<p class="text-[10px] text-muted-foreground">
+								Source is being heard when this moves.
+							</p>
+						</div>
+					{/if}
+
+					{#if animationState.audioSource === 'mic'}
+						<p class="text-[10px] text-muted-foreground">
+							Listening — speak or play near the microphone.
+						</p>
+					{/if}
+
+					{#if animationState.audioSource === 'file'}
+						<AudioFilePanel />
+					{/if}
+
+					<div class="flex flex-col gap-1">
+						<Label for="zones-input-gain" class="text-xs">Input gain</Label>
+						<input
+							id="zones-input-gain"
+							type="range"
+							min="0.5"
+							max="4"
+							step="0.1"
+							value={animationState.audioBars.inputGain}
+							oninput={(e) =>
+								setAudioBarsConfig({ inputGain: Number((e.target as HTMLInputElement).value) })}
+						/>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<p class="text-[11px] font-medium text-muted-foreground">Zone intensities (global)</p>
+						<div class="flex flex-col gap-1">
+							<Label for="zones-bass" class="text-xs">Bass</Label>
+							<input
+								id="zones-bass"
+								type="range"
+								min="0"
+								max="1"
+								step="0.01"
+								value={animationState.audioZones.defaultIntensity.bass}
+								oninput={(e) =>
+									setAudioZonesDefaultIntensity({
+										bass: Number((e.target as HTMLInputElement).value)
+									})}
+							/>
+						</div>
+						<div class="flex flex-col gap-1">
+							<Label for="zones-mid" class="text-xs">Mid</Label>
+							<input
+								id="zones-mid"
+								type="range"
+								min="0"
+								max="1"
+								step="0.01"
+								value={animationState.audioZones.defaultIntensity.mid}
+								oninput={(e) =>
+									setAudioZonesDefaultIntensity({
+										mid: Number((e.target as HTMLInputElement).value)
+									})}
+							/>
+						</div>
+						<div class="flex flex-col gap-1">
+							<Label for="zones-treble" class="text-xs">Treble</Label>
+							<input
+								id="zones-treble"
+								type="range"
+								min="0"
+								max="1"
+								step="0.01"
+								value={animationState.audioZones.defaultIntensity.treble}
+								oninput={(e) =>
+									setAudioZonesDefaultIntensity({
+										treble: Number((e.target as HTMLInputElement).value)
+									})}
+							/>
+						</div>
+					</div>
+
+					<div class="flex flex-col gap-1">
+						<p class="text-[11px] font-medium text-muted-foreground">Zones per ring</p>
+						{#each composition.rings as ring, i (i)}
+							<RingZoneConfigItem {ring} index={i} globalDefault={animationState.audioZones.defaultIntensity} />
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			{#if !hideGlobalTransport}
-				{#if animationState.mode === 'audioBars'}
-					<!-- audioBars mic/demo: Play/Pause + elapsed counter (no duration, no progress bar) -->
+				{#if animationState.mode === 'audioBars' || animationState.mode === 'audioZones'}
+					<!-- audioBars/audioZones mic/demo: Play/Pause + elapsed counter (no duration, no progress bar) -->
 					<div class="flex items-center gap-2">
 						<Button
 							onclick={togglePlay}

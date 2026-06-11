@@ -118,4 +118,67 @@ describe('createPersistedComposition', () => {
 		expect(stored.rings[0].wave).toBeUndefined();
 		expect(stored.rings[0].waveConfig).toEqual({ crests: 4, amplitudeGain: 0.5, phaseSpeed: 2.0 });
 	});
+
+	it('does not write to localStorage when only ring.zoneDrive changes', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => { state.baseRadius = 150; });
+		const before = localStorage.getItem(key);
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+			}));
+		});
+
+		expect(localStorage.getItem(key)).toBe(before);
+	});
+
+	it('never includes a zoneDrive key in the stored blob', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+			}));
+			state.baseRadius = 175; // force a write
+		});
+
+		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
+		expect(stored.rings[0].zoneDrive).toBeUndefined();
+		expect(stored.baseRadius).toBe(175);
+	});
+
+	it('persists ring.zoneConfig to localStorage', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				zoneConfig: { bass: 0.8, mid: 0.4, treble: 0.6 }
+			}));
+		});
+
+		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
+		expect(stored.rings[0].zoneConfig).toEqual({ bass: 0.8, mid: 0.4, treble: 0.6 });
+	});
+
+	it('strips zoneDrive but preserves zoneConfig in the same write', () => {
+		const state = createPersistedComposition(key, makeComposition());
+
+		flushSync(() => {
+			state.rings = state.rings.map((ring) => ({
+				...ring,
+				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 },
+				zoneConfig: { bass: 0.9, mid: 0.5, treble: 0.1 }
+			}));
+			state.baseRadius = 175;
+		});
+
+		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
+		expect(stored.rings[0].zoneDrive).toBeUndefined();
+		expect(stored.rings[0].zoneConfig).toEqual({ bass: 0.9, mid: 0.5, treble: 0.1 });
+	});
 });

@@ -25,6 +25,15 @@ const incompatiblePath: Path = {
 	crds: [0, 0, 50, 25, 100, 0]
 };
 
+const petalPath: Path = {
+	cmds: ['M', 'C', 'C'],
+	crds: [
+		0, 100,
+		0, 80, 5, 50, 10, 30,
+		20, 25, 30, 30, 40, 60
+	]
+};
+
 const composition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
@@ -391,5 +400,49 @@ describe('createRenderPipeline().render', () => {
 			viewport
 		});
 		expect((scope.project.activeLayer.children[0] as paper.Path).pathData).toBe(baseline);
+	});
+
+	it('applies zoneDrive deformation when ring.zoneDrive is set', () => {
+		const pipeline = createRenderPipeline();
+		const drive = { bassPush: 5, midPush: 3, treblePush: 2 };
+		const comp: Composition = {
+			baseRadius: 100,
+			ringIncrement: 60,
+			rings: [{
+				copies: 4,
+				color: '#ff0000',
+				templatePath: petalPath,
+				secondaryTemplatePath: null,
+				morphT: 0,
+				ringHeight: 0.4,
+				zoneDrive: drive
+			}],
+			monochromePalettes: [{ main: '#000', bg: '#fff' }],
+			fullPalettes: [{ colors: ['#000', '#fff'] }]
+		};
+		// Should render without throwing and produce 1 rendered ring
+		const result = pipeline.render({ composition: comp, scope, viewport: { width: 600, height: 600 } });
+		expect(result.renderedCount).toBe(1);
+		expect(result.skippedCount).toBe(0);
+	});
+
+	it('renders identically with zoneDrive all-zero vs no zoneDrive', () => {
+		const pipeline1 = createRenderPipeline();
+		const pipeline2 = createRenderPipeline();
+
+		const compWithDrive: Composition = {
+			...composition,
+			rings: [{ ...composition.rings[0], templatePath: petalPath, zoneDrive: { bassPush: 0, midPush: 0, treblePush: 0 } }]
+		};
+		const compNoDrive: Composition = {
+			...composition,
+			rings: [{ ...composition.rings[0], templatePath: petalPath }]
+		};
+
+		const r1 = pipeline1.render({ composition: compWithDrive, scope, viewport: { width: 600, height: 600 } });
+		const r2 = pipeline2.render({ composition: compNoDrive, scope, viewport: { width: 600, height: 600 } });
+
+		expect(r1.renderedCount).toBe(r2.renderedCount);
+		expect(r1.skippedCount).toBe(r2.skippedCount);
 	});
 });

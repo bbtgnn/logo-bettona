@@ -26,7 +26,9 @@
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
 
-	const morphInactive = $derived(animationState.mode === 'audioBars');
+	const morphInactive = $derived(
+		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+	);
 
 	let {
 		ring,

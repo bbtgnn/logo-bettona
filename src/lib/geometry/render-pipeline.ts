@@ -3,6 +3,7 @@ import type { Composition } from '$lib/types';
 import { buildRingPath } from './bend';
 import { interpolatePath, validatePathCompatibility } from './path-morph';
 import { applyWaveToPath } from './wave';
+import { applyZonesToPath } from './zones';
 
 type RenderViewport = {
 	width: number;
@@ -156,6 +157,14 @@ export function createRenderPipeline(): {
 					effectiveRing = {
 						...effectiveRing,
 						templatePath: applyWaveToPath(effectiveRing.templatePath, effectiveRing.wave)
+					};
+				}
+
+				// Apply zone deformation (audioZones mode) BEFORE bend mirrors/tiles — same slot as wave.
+				if (effectiveRing.zoneDrive && effectiveRing.templatePath) {
+					effectiveRing = {
+						...effectiveRing,
+						templatePath: applyZonesToPath(effectiveRing.templatePath, effectiveRing.zoneDrive)
 					};
 				}
 
