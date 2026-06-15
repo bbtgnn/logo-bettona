@@ -333,6 +333,22 @@
 				/>
 			</div>
 
+			<div class="flex flex-col gap-2">
+				<Label class="text-xs"
+					>Rotation <span class="text-muted-foreground"
+						>{(((ring.rotation ?? 0) * 360) / (ring.copies || 1)).toFixed(0)}°</span
+					></Label
+				>
+				<Slider
+					type="single"
+					min={0}
+					max={1}
+					step={0.01}
+					value={ring.rotation ?? 0}
+					onValueChange={(v) => updateRing(index, { rotation: v })}
+				/>
+			</div>
+
 			{#if colorMode.mode === 'manual'}
 				<div class="flex flex-col gap-1">
 					<Label for="color-{index}" class="text-xs">Color</Label>
