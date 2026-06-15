@@ -426,6 +426,28 @@ describe('createRenderPipeline().render', () => {
 		expect(result.skippedCount).toBe(0);
 	});
 
+	it('global rotation rigidly turns the whole mark (90° swaps bounds aspect ratio)', () => {
+		const asym: Composition = {
+			...composition,
+			rings: [{ ...composition.rings[0], copies: 1, templatePath: rectPath }]
+		};
+		const viewport = { width: 600, height: 600 };
+		const pipeline = createRenderPipeline();
+
+		pipeline.render({ composition: { ...asym, rotation: 0 }, scope, viewport });
+		const b0 = scope.project.activeLayer.bounds.clone();
+
+		pipeline.render({ composition: { ...asym, rotation: 0.25 }, scope, viewport });
+		const b90 = scope.project.activeLayer.bounds.clone();
+
+		const ar0 = b0.width / b0.height;
+		const ar90 = b90.width / b90.height;
+		// probe must be non-square for the test to mean anything
+		expect(Math.abs(ar0 - 1)).toBeGreaterThan(0.1);
+		// a rigid 90° rotation swaps width and height → ar90 ≈ 1/ar0
+		expect(ar90).toBeCloseTo(1 / ar0);
+	});
+
 	it('renders identically with zoneDrive all-zero vs no zoneDrive', () => {
 		const pipeline1 = createRenderPipeline();
 		const pipeline2 = createRenderPipeline();

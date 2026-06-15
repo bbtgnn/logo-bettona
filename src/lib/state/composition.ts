@@ -242,6 +242,10 @@ export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
 }
 
+export function setCompositionRotation(value: number) {
+	composition.rotation = value;
+}
+
 export function setRingExpanded(index: number, expanded: boolean) {
 	uiState.expandedRings = { ...uiState.expandedRings, [index]: expanded };
 }

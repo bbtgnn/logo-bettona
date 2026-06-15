@@ -187,6 +187,11 @@ export function createRenderPipeline(): {
 			}
 		}
 
+		const globalRotation = (composition.rotation ?? 0) * 360;
+		if (globalRotation !== 0) {
+			scope.project.activeLayer.rotate(globalRotation, new paper.Point(0, 0));
+		}
+
 		try {
 			fitToView(scope, viewport);
 			scope.view.update();

@@ -52,6 +52,7 @@ export type ColorModeState = {
 export type Composition = {
 	baseRadius: number;
 	ringIncrement: number;
+	rotation?: number; // 0..1, fraction of a full turn applied to the whole mark. absent/undefined = 0 = today's behavior
 	rings: Ring[];
 	monochromePalettes: MonochromePalette[];
 	fullPalettes: FullPalette[];

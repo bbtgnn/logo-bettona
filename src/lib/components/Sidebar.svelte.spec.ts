@@ -69,7 +69,8 @@ vi.mock('$lib/state/composition', () => ({
 	createRingMorphTarget: vi.fn(),
 	removeRingMorphTarget: vi.fn(),
 	setRingMorphT: vi.fn(),
-	updateRingPathVariant: vi.fn(() => ({ ok: true }))
+	updateRingPathVariant: vi.fn(() => ({ ok: true })),
+	setCompositionRotation: vi.fn()
 }));
 
 import Sidebar from './Sidebar.svelte';
