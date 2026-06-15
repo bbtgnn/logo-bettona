@@ -71,8 +71,9 @@ wave taper depends on it.
 Add a control directly after the existing "Ring height" slider, same Label +
 Slider pattern:
 
-- Label `Rotation`, value shown in degrees for readability:
-  `{(((ring.rotation ?? 0) * 360) / ring.copies).toFixed(0)}°`
+- Label `Rotation`, value shown in degrees for readability, guarding against a
+  transient `copies=0` during editing (`|| 1` denominator avoids NaN/Infinity):
+  `{(((ring.rotation ?? 0) * 360) / (ring.copies || 1)).toFixed(0)}°`
 - `Slider type="single" min={0} max={1} step={0.01}`
 - `value={ring.rotation ?? 0}`
 - `onValueChange={(v) => updateRing(index, { rotation: v })}`
@@ -93,11 +94,21 @@ add `rotation` to it.
 
 ### 6. Test (`src/lib/geometry/bend.svelte.spec.ts`)
 
-Add one minimal test: a ring built with `rotation=0.5` (half a sector) yields a
-path whose sampled anchor points equal the `rotation=0` path's anchors rotated by
-`π / copies` about the origin `(0,0)`, within a small epsilon.
+Add one minimal test asserting a **rotation invariant** rather than an
+index-by-index anchor comparison (segment order may not line up after rotation,
+producing a false failure at the mirror-symmetric half-sector angle):
 
-(`0.5 * fullCopyAngle = 0.5 * 2π/copies = π/copies`.)
+Build a ring at `rotation=0` and the same ring at `rotation=0.5` (half a sector).
+Assert, within a small epsilon:
+
+- `path.bounds.center` stays at the origin `(0,0)` — rotation about origin can't
+  move the centroid of a symmetric assembly,
+- `path.length` is unchanged vs `rotation=0` — rigid rotation preserves arc
+  length.
+
+(Optionally also a set-equality check: every `rotation=0.5` anchor matches some
+`rotation=0` anchor rotated by `π / copies` about origin. The invariant alone is
+sufficient. `0.5 * fullCopyAngle = 0.5 * 2π/copies = π/copies`.)
 
 ## Constraints
 
