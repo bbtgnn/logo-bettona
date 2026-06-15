@@ -80,10 +80,11 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 
 	// Tile all copies
 	const fullCopyAngle = (2 * Math.PI) / ring.copies;
+	const ringRotation = (ring.rotation ?? 0) * fullCopyAngle;
 	const allSegments: paper.Segment[] = [];
 
 	for (let k = 0; k < ring.copies; k++) {
-		const copySegs = buildOneCopy(k * fullCopyAngle);
+		const copySegs = buildOneCopy(k * fullCopyAngle + ringRotation);
 		allSegments.push(...copySegs);
 	}
 

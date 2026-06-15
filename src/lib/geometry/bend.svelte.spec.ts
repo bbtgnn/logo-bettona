@@ -83,6 +83,52 @@ describe('buildRingPath', () => {
 		}
 	});
 
+	it('rotation rigidly turns the whole ring by the chosen sector fraction', () => {
+		const radius = 100;
+		const copies = 4;
+		// Quarter sector. The per-copy mirror gives the ring dihedral symmetry whose
+		// rotations are multiples of a HALF sector, so a half-sector turn maps the
+		// anchor SET onto itself and would not discriminate. A quarter-sector turn is
+		// never a symmetry, so the rotated set genuinely differs from the original —
+		// making this an order-independent test with teeth (no index-by-index compare,
+		// which could false-fail when segment order shifts).
+		const frac = 0.25;
+		const ring0 = baseRing({ copies });
+		const ringRot = baseRing({ copies, rotation: frac });
+
+		const path0 = buildRingPath(ring0, radius, scope);
+		const pathRot = buildRingPath(ringRot, radius, scope);
+		expect(path0).not.toBeNull();
+		expect(pathRot).not.toBeNull();
+
+		const origin = new paper.Point(0, 0);
+
+		// Invariant guard: rigid rotation about origin preserves the (symmetric)
+		// bounding-box centre and the total arc length.
+		expect(path0!.bounds.center.x).toBeCloseTo(0, 3);
+		expect(path0!.bounds.center.y).toBeCloseTo(0, 3);
+		expect(pathRot!.bounds.center.x).toBeCloseTo(0, 3);
+		expect(pathRot!.bounds.center.y).toBeCloseTo(0, 3);
+		expect(pathRot!.length).toBeCloseTo(path0!.length, 3);
+
+		// Discriminating + order-independent: every rotated anchor equals some
+		// rotation=0 anchor turned by frac*360/copies degrees about the origin.
+		// Because a quarter sector is not a symmetry, this fails when rotation is
+		// ignored (sets differ) and passes once it is applied.
+		const deg = (frac * 360) / copies; // 22.5° for copies=4
+		const anchors0 = path0!.segments.map((s) => s.point);
+		const anchorsRot = pathRot!.segments.map((s) => s.point);
+		expect(anchorsRot.length).toBe(anchors0.length);
+
+		for (const pr of anchorsRot) {
+			const matched = anchors0.some((p0) => {
+				const r = p0.rotate(deg, origin);
+				return Math.abs(r.x - pr.x) < 1e-6 && Math.abs(r.y - pr.y) < 1e-6;
+			});
+			expect(matched).toBe(true);
+		}
+	});
+
 	it('preserves collinearity of handles through a smooth anchor', () => {
 		// A path with one smooth (C1) anchor: the junction between two cubic curves
 		// where handleIn and handleOut at the junction are opposite vectors

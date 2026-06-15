@@ -26,6 +26,7 @@ export type Ring = {
 	secondaryTemplatePath: Path | null;
 	morphT: number;
 	ringHeight: number;
+	rotation?: number; // 0..1, fraction of one full sector. absent/undefined = 0 = today's behavior
 	wave?: WaveState | null; // absent/null → no wave → renders identical to today
 	waveConfig?: WaveConfig | null; // null/absent = inherit global AudioBarsConfig default
 	zoneConfig?: ZoneIntensity | null; // persisted; null = inherit global default
