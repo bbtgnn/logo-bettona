@@ -1,13 +1,20 @@
 import type { Path, ZoneIntensity, ZoneDrive } from '$lib/types';
 
-/** Template-space units of deformation at intensity=1, audio-level=1. Tune empirically. */
+/** @deprecated unused after extent-relative rework; removed once ZonePreview migrates. */
 export const ZONE_SCALE = 30;
-
-/** Fraction of mid tangential push also applied radially (outward). */
-export const MID_RADIAL_RATIO = 0.4;
-
-/** Fraction of the treble push expressed as tangential vibration amplitude. */
+/** @deprecated unused after extent-relative rework; removed once ZonePreview migrates. */
 export const VIBR_AMT = 0.5;
+
+/** Bass: outer tip reach as a multiple of petal radial extent (≈ full petal length). */
+export const BASS_REACH = 1.2;
+/** Mid: tangential widening as a fraction of radial extent. */
+export const MID_X_REACH = 0.6;
+/** Mid: slight radial-out nudge as a fraction of radial extent. */
+export const MID_Y_REACH = 0.25;
+/** Treble: inner-tip inward retraction as a fraction of radial extent. */
+export const TREBLE_RETRACT = 0.5;
+/** Treble: tangential vibration amplitude as a fraction of radial extent. */
+export const VIBR_REACH = 0.3;
 
 type AnchorInfo = {
 	anchorIdx: number;
@@ -16,12 +23,17 @@ type AnchorInfo = {
 };
 
 /**
- * Deforms an authored bezier path on three zones tied to audio bands.
- * Anchors are sorted by Y ascending (lower Y = outer in bend.ts space):
- *   outermost → bass → dy = -bassPush  (tip reaches radially out)
- *   middle(s)  → mid  → dx = +midPush, dy = -midPush*MID_RADIAL_RATIO (widens + pushes out)
- *   innermost  → treble → dy = +trebleRetract (inward), dx = trebleVibrate (tangential jitter)
+ * Deforms an authored bezier path on three zones tied to audio bands. Drive
+ * fields are normalized (0..1; trebleVibrate signed) and scaled by the petal's
+ * own radial extent (maxY - minY) × per-band REACH, so deformation is
+ * proportional to petal size. Anchors are sorted by Y ascending (lower Y = outer
+ * in bend.ts space):
+ *   outermost → bass → dy = -extent·BASS_REACH·bassPush (tip reaches radially out)
+ *   middle(s)  → mid  → dx = +extent·MID_X_REACH·midPush, dy = -extent·MID_Y_REACH·midPush
+ *   innermost  → treble → dy = +extent·TREBLE_RETRACT·trebleRetract (inward),
+ *                         dx = extent·VIBR_REACH·trebleVibrate (tangential jitter)
  * Handles follow their anchor by the same vector. Pure — never mutates input.
+ * Returns an unchanged copy when radial extent is zero (no tip/base to tell apart).
  */
 export function applyZonesToPath(path: Path, drive: ZoneDrive): Path {
 	const { bassPush, midPush, trebleRetract, trebleVibrate } = drive;
@@ -77,6 +89,18 @@ export function applyZonesToPath(path: Path, drive: ZoneDrive): Path {
 		crds[idx + 1] += dy;
 	}
 
+	// Radial extent of the petal (Y axis is radial; sorted ascending by Y).
+	const minY = path.crds[sorted[0].anchorIdx + 1];
+	const maxY = path.crds[sorted[sorted.length - 1].anchorIdx + 1];
+	const radialExtent = maxY - minY;
+	if (radialExtent === 0) return { cmds: [...path.cmds], crds };
+
+	const bassDelta = bassPush * radialExtent * BASS_REACH;
+	const midXDelta = midPush * radialExtent * MID_X_REACH;
+	const midYDelta = midPush * radialExtent * MID_Y_REACH;
+	const trebleRetractDelta = trebleRetract * radialExtent * TREBLE_RETRACT;
+	const trebleVibrateDelta = trebleVibrate * radialExtent * VIBR_REACH;
+
 	for (let i = 0; i < sorted.length; i++) {
 		const anchor = sorted[i];
 		let dx = 0;
@@ -84,15 +108,15 @@ export function applyZonesToPath(path: Path, drive: ZoneDrive): Path {
 
 		if (i === 0) {
 			// Outermost — bass — radially outward (decrease Y)
-			dy = -bassPush;
+			dy = -bassDelta;
 		} else if (i === sorted.length - 1) {
 			// Innermost — treble — retract inward (increase Y) + tangential vibration
-			dy = trebleRetract;
-			dx = trebleVibrate;
+			dy = trebleRetractDelta;
+			dx = trebleVibrateDelta;
 		} else {
 			// Middle — mid — tangential widening + slight radial push outward
-			dx = midPush;
-			dy = -midPush * MID_RADIAL_RATIO;
+			dx = midXDelta;
+			dy = -midYDelta;
 		}
 
 		translate(anchor.anchorIdx, dx, dy);

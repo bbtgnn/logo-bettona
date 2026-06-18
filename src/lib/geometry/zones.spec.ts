@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Path } from '$lib/types';
-import { applyZonesToPath, resolveZoneIntensity, ZONE_SCALE } from './zones';
+import {
+  applyZonesToPath,
+  resolveZoneIntensity,
+  BASS_REACH,
+  MID_X_REACH,
+  MID_Y_REACH,
+  TREBLE_RETRACT,
+  VIBR_REACH
+} from './zones';
 
 // 3-anchor petal: M=(0,100) inner, first-C=(10,30) outer, second-C=(40,60) middle
 // Parsed anchor order by Y ascending: (10,30) → bass, (40,60) → mid, (0,100) → treble
@@ -43,16 +51,20 @@ describe('applyZonesToPath', () => {
     expect(result.crds).toHaveLength(petal.crds.length);
   });
 
-  it('bass: moves outermost anchor (idx 6) + handles (idx 4, 8) down by bassPush', () => {
+  // `petal` radial extent = maxY(100) - minY(30) = 70. Deltas scale by extent × REACH.
+  const RADIAL_EXTENT = 70;
+
+  it('bass pushes the outermost anchor (idx 6) + handles radially out by extent * BASS_REACH', () => {
     const result = applyZonesToPath(petal, {
-      bassPush: 10,
+      bassPush: 1,
       midPush: 0,
       trebleRetract: 0,
       trebleVibrate: 0
     });
-    expect(result.crds[7]).toBeCloseTo(20, 6); // 30 - 10
-    expect(result.crds[5]).toBeCloseTo(40, 6); // 50 - 10
-    expect(result.crds[9]).toBeCloseTo(15, 6); // 25 - 10
+    const d = RADIAL_EXTENT * BASS_REACH;
+    expect(result.crds[7]).toBeCloseTo(30 - d, 6); // outer anchor Y
+    expect(result.crds[5]).toBeCloseTo(50 - d, 6); // entry handle Y
+    expect(result.crds[9]).toBeCloseTo(25 - d, 6); // exit handle Y
     expect(result.crds[6]).toBe(petal.crds[6]); // X unchanged
     expect(result.crds[0]).toBe(petal.crds[0]); // M anchor unchanged
     expect(result.crds[1]).toBe(petal.crds[1]);
@@ -60,40 +72,37 @@ describe('applyZonesToPath', () => {
     expect(result.crds[13]).toBe(petal.crds[13]);
   });
 
-  it('mid: moves middle anchor (idx 12) right by midPush AND up by midPush*0.4', () => {
+  it('mid widens the middle anchor (idx 12) in +x and nudges it out in -y, both extent-scaled', () => {
     const result = applyZonesToPath(petal, {
       bassPush: 0,
-      midPush: 10,
+      midPush: 1,
       trebleRetract: 0,
       trebleVibrate: 0
     });
-    // X: 40 + 10 = 50
-    expect(result.crds[12]).toBeCloseTo(50, 6);
-    // Y: 60 - 10*0.4 = 56 (radial out = decrease Y)
-    expect(result.crds[13]).toBeCloseTo(56, 6);
-    // entry handle (idx 10,11): X 30+10=40, Y 30-4=26
-    expect(result.crds[10]).toBeCloseTo(40, 6);
-    expect(result.crds[11]).toBeCloseTo(26, 6);
-    // C1 (outer) anchor unchanged
-    expect(result.crds[6]).toBe(petal.crds[6]);
+    const dx = RADIAL_EXTENT * MID_X_REACH;
+    const dy = RADIAL_EXTENT * MID_Y_REACH;
+    expect(result.crds[12]).toBeCloseTo(40 + dx, 6); // anchor X
+    expect(result.crds[13]).toBeCloseTo(60 - dy, 6); // anchor Y (radial out = decrease Y)
+    expect(result.crds[10]).toBeCloseTo(30 + dx, 6); // entry handle X
+    expect(result.crds[11]).toBeCloseTo(30 - dy, 6); // entry handle Y
+    expect(result.crds[6]).toBe(petal.crds[6]); // outer anchor unchanged
     expect(result.crds[7]).toBe(petal.crds[7]);
   });
 
-  it('treble: retracts innermost anchor (idx 0) inward by trebleRetract AND shifts X by trebleVibrate', () => {
+  it('treble retracts the innermost anchor (idx 0) in +y and jitters it in x, extent-scaled', () => {
     const result = applyZonesToPath(petal, {
       bassPush: 0,
       midPush: 0,
-      trebleRetract: 8,
-      trebleVibrate: 3
+      trebleRetract: 1,
+      trebleVibrate: 1
     });
-    // innermost is M anchor at (0,100): Y 100 + 8 = 108, X 0 + 3 = 3
-    expect(result.crds[1]).toBeCloseTo(108, 6);
-    expect(result.crds[0]).toBeCloseTo(3, 6);
-    // exit handle (C1 cp1 idx 2,3): X 0+3=3, Y 80+8=88
-    expect(result.crds[2]).toBeCloseTo(3, 6);
-    expect(result.crds[3]).toBeCloseTo(88, 6);
-    // C1 (outer) anchor unchanged
-    expect(result.crds[6]).toBe(petal.crds[6]);
+    const dy = RADIAL_EXTENT * TREBLE_RETRACT;
+    const dx = RADIAL_EXTENT * VIBR_REACH;
+    expect(result.crds[1]).toBeCloseTo(100 + dy, 6); // M anchor Y retract inward
+    expect(result.crds[0]).toBeCloseTo(0 + dx, 6); // M anchor X jitter
+    expect(result.crds[2]).toBeCloseTo(0 + dx, 6); // exit handle X
+    expect(result.crds[3]).toBeCloseTo(80 + dy, 6); // exit handle Y
+    expect(result.crds[6]).toBe(petal.crds[6]); // outer anchor unchanged
     expect(result.crds[7]).toBe(petal.crds[7]);
   });
 
@@ -102,34 +111,62 @@ describe('applyZonesToPath', () => {
       bassPush: 0,
       midPush: 0,
       trebleRetract: 0,
-      trebleVibrate: -5
+      trebleVibrate: -1
     });
-    expect(result.crds[0]).toBeCloseTo(-5, 6);
+    expect(result.crds[0]).toBeCloseTo(0 - RADIAL_EXTENT * VIBR_REACH, 6);
   });
 
-  it('N=1: single anchor — bass wins', () => {
-    const single: Path = { cmds: ['M'], crds: [10, 50] };
-    const result = applyZonesToPath(single, {
-      bassPush: 5,
-      midPush: 3,
-      trebleRetract: 2,
+  it('magnitude scales with radial extent (double extent → double delta)', () => {
+    // Same petal stretched: outer Y=0, middle Y=60, inner Y=140 → extent 140.
+    const tall: Path = {
+      cmds: ['M', 'C', 'C'],
+      crds: [0, 140, 0, 80, 5, 50, 10, 0, 20, 25, 30, 30, 40, 60]
+    };
+    const result = applyZonesToPath(tall, {
+      bassPush: 1,
+      midPush: 0,
+      trebleRetract: 0,
+      trebleVibrate: 0
+    });
+    // outermost is now C1 anchor (Y=0); extent = 140.
+    expect(result.crds[7]).toBeCloseTo(0 - 140 * BASS_REACH, 6);
+  });
+
+  it('returns an unchanged copy when radial extent is zero', () => {
+    const flat: Path = { cmds: ['M', 'L'], crds: [0, 50, 20, 50] }; // both anchors Y=50
+    const result = applyZonesToPath(flat, {
+      bassPush: 1,
+      midPush: 1,
+      trebleRetract: 1,
       trebleVibrate: 1
     });
-    expect(result.crds[1]).toBeCloseTo(45, 6); // 50 - 5 (bass)
-    expect(result.crds[0]).toBe(10);
+    expect(result.crds).toEqual(flat.crds);
+    expect(result.crds).not.toBe(flat.crds);
   });
 
-  it('N=2: outermost gets bass, innermost gets treble, no mid', () => {
-    const two: Path = { cmds: ['M', 'L'], crds: [0, 100, 0, 30] };
-    const result = applyZonesToPath(two, {
-      bassPush: 10,
-      midPush: 99,
-      trebleRetract: 5,
-      trebleVibrate: 4
+  it('N=1: single anchor has zero extent → unchanged copy', () => {
+    const single: Path = { cmds: ['M'], crds: [10, 50] };
+    const result = applyZonesToPath(single, {
+      bassPush: 1,
+      midPush: 1,
+      trebleRetract: 1,
+      trebleVibrate: 1
     });
-    expect(result.crds[3]).toBeCloseTo(20, 6); // outermost 30 - 10
-    expect(result.crds[1]).toBeCloseTo(105, 6); // innermost 100 + 5 retract
-    expect(result.crds[0]).toBeCloseTo(4, 6); // innermost X + vibrate
+    expect(result.crds).toEqual(single.crds);
+    expect(result.crds).not.toBe(single.crds);
+  });
+
+  it('N=2: outermost gets bass, innermost gets treble, no mid (extent-scaled)', () => {
+    const two: Path = { cmds: ['M', 'L'], crds: [0, 100, 0, 30] }; // extent 70
+    const result = applyZonesToPath(two, {
+      bassPush: 1,
+      midPush: 99,
+      trebleRetract: 1,
+      trebleVibrate: 1
+    });
+    expect(result.crds[3]).toBeCloseTo(30 - 70 * BASS_REACH, 6); // outermost bass
+    expect(result.crds[1]).toBeCloseTo(100 + 70 * TREBLE_RETRACT, 6); // innermost retract
+    expect(result.crds[0]).toBeCloseTo(0 + 70 * VIBR_REACH, 6); // innermost X jitter
     expect(result.crds[2]).toBe(0); // outermost X unchanged
   });
 
@@ -159,12 +196,5 @@ describe('resolveZoneIntensity', () => {
   it('returns ring.zoneConfig when set, ignoring def', () => {
     const override = { bass: 0.9, mid: 0.1, treble: 0.7 };
     expect(resolveZoneIntensity({ zoneConfig: override }, def)).toEqual(override);
-  });
-});
-
-describe('ZONE_SCALE', () => {
-  it('is a positive number', () => {
-    expect(typeof ZONE_SCALE).toBe('number');
-    expect(ZONE_SCALE).toBeGreaterThan(0);
   });
 });
