@@ -19,9 +19,22 @@
 		setKaleidoscopeBackgroundColor,
 		requestTileRefresh
 	} from '$lib/state/kaleidoscope.svelte';
+	import { animationState } from '$lib/state/animation';
+	import { keyframes, KALEIDO_GLOBAL_ROTATION } from '$lib/state/keyframes.svelte';
 
 	const num = (e: Event) => Number((e.target as HTMLInputElement).value);
 	const checked = (e: Event) => (e.target as HTMLInputElement).checked;
+
+	keyframes.ensureTrack(KALEIDO_GLOBAL_ROTATION);
+	const rotationAnimated = $derived(keyframes.tracks[KALEIDO_GLOBAL_ROTATION]?.enabled ?? false);
+
+	function onRotationInput(value: number) {
+		if (rotationAnimated) {
+			keyframes.upsertKeyframeAtTime(KALEIDO_GLOBAL_ROTATION, animationState.progress, value);
+		} else {
+			setGlobalRotation(value);
+		}
+	}
 </script>
 
 <SidebarCollapsible>
@@ -139,6 +152,16 @@
 				/>
 			</div>
 
+			<label class="flex items-center gap-2 text-xs">
+				<input
+					type="checkbox"
+					aria-label="Anima rotazione"
+					checked={rotationAnimated}
+					onchange={(e) => keyframes.setTrackEnabled(KALEIDO_GLOBAL_ROTATION, checked(e))}
+				/>
+				Anima rotazione
+			</label>
+
 			<div class="flex flex-col gap-1">
 				<Label for="k-globalrot" class="text-xs">Rotazione globale</Label>
 				<input
@@ -149,7 +172,7 @@
 					max="360"
 					step="1"
 					value={kaleidoscope.globalRotation}
-					oninput={(e) => setGlobalRotation(num(e))}
+					oninput={(e) => onRotationInput(num(e))}
 				/>
 			</div>
 

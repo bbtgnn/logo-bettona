@@ -9,6 +9,8 @@ import {
 	setLiveTile,
 	setTileBackground
 } from '$lib/state/kaleidoscope.svelte';
+import { animationState } from '$lib/state/animation';
+import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
 
 describe('KaleidoscopeSection', () => {
 	beforeEach(() => setKaleidoscopeEnabled(false));
@@ -72,5 +74,29 @@ describe('KaleidoscopeSection', () => {
 		setTileBackground(false);
 		render(KaleidoscopeSection);
 		await expect.element(page.getByLabelText('Sfondo caleidoscopio')).toBeInTheDocument();
+	});
+});
+
+describe('KaleidoscopeSection rotation keyframing', () => {
+	beforeEach(() => {
+		keyframes.ensureTrack(ROT);
+		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
+		keyframes.setTrackEnabled(ROT, false);
+		animationState.progress = 0;
+	});
+
+	it('enables the rotation track via the stopwatch checkbox', async () => {
+		render(KaleidoscopeSection);
+		await userEvent.click(page.getByLabelText('Anima rotazione'));
+		expect(keyframes.tracks[ROT].enabled).toBe(true);
+	});
+
+	it('writes a keyframe at the playhead when the track is enabled', async () => {
+		keyframes.setTrackEnabled(ROT, true);
+		animationState.progress = 0.5;
+		render(KaleidoscopeSection);
+		await userEvent.fill(page.getByLabelText('Rotazione globale'), '120');
+		const kf = keyframes.tracks[ROT].keyframes.find((k) => Math.abs(k.time - 0.5) < 1e-3);
+		expect(kf?.value).toBe(120);
 	});
 });
