@@ -7,6 +7,7 @@
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 	import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
+	import { exportStatus as sharedExportStatus } from '$lib/state/export-status.svelte';
 
 	let scope: paper.PaperScope;
 	let canvasEl: HTMLCanvasElement;
@@ -87,6 +88,7 @@
 		if (!animationState.isPlaying) togglePlay();
 		const audio = exportAudio ? getExportAudioStream() : null;
 		exportStatus = 'rendering';
+		sharedExportStatus.rendering = true;
 		exportProgress = 0;
 		try {
 			await exportCanvasAnimation({
@@ -102,6 +104,7 @@
 		} finally {
 			audio?.dispose();
 			exportStatus = 'idle';
+			sharedExportStatus.rendering = false;
 			exportProgress = 0;
 		}
 	}

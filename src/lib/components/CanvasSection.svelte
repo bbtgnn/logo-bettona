@@ -3,6 +3,7 @@
 	import { composition, setAspectRatio } from '$lib/state/composition';
 	import { ASPECT_RATIOS } from '$lib/geometry/aspect-ratio';
 	import type { AspectRatio } from '$lib/types';
+	import { exportStatus } from '$lib/state/export-status.svelte';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 </script>
 
@@ -16,8 +17,9 @@
 			<Label for="canvas-ratio" class="text-xs">Aspect ratio</Label>
 			<select
 				id="canvas-ratio"
-				class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+				class="h-9 rounded-md border border-input bg-background px-3 text-xs disabled:opacity-50"
 				value={composition.aspectRatio}
+				disabled={exportStatus.rendering}
 				onchange={(e) => setAspectRatio((e.target as HTMLSelectElement).value as AspectRatio)}
 			>
 				{#each ASPECT_RATIOS as ratio (ratio)}
