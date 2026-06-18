@@ -111,3 +111,35 @@ describe('renderKaleidoscopeToCanvas', () => {
 		expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
 	});
 });
+
+import { extractSvgParts, generateKaleidoscopeSVG } from './kaleidoscope';
+
+const tileSvg =
+	'<svg width="100" height="50" viewBox="0 0 100 50" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="50" fill="#0f0"/></svg>';
+
+describe('extractSvgParts', () => {
+	it('pulls inner markup and viewBox', () => {
+		const { inner, viewBox } = extractSvgParts(tileSvg);
+		expect(viewBox).toBe('0 0 100 50');
+		expect(inner).toContain('<rect');
+	});
+});
+
+describe('generateKaleidoscopeSVG', () => {
+	it('emits one wedge clip use per sector and repeat² tile uses each', () => {
+		const out = generateKaleidoscopeSVG(tileSvg, baseParams, 600);
+		expect((out.match(/clip-path="url\(#kaleido-wedge\)"/g) ?? [])).toHaveLength(6);
+		expect((out.match(/<use href="#kaleido-tile"/g) ?? [])).toHaveLength(6 * 4);
+	});
+
+	it('mirrors even sectors and includes background + mask when enabled', () => {
+		const out = generateKaleidoscopeSVG(
+			tileSvg,
+			{ ...baseParams, drawBackground: true, circularMask: true },
+			600
+		);
+		expect(out).toContain('scale(-1,1)');
+		expect(out).toContain('<rect');
+		expect(out).toContain('clip-path="url(#kaleido-outer)"');
+	});
+});
