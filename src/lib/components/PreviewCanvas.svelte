@@ -1,13 +1,21 @@
 <script lang="ts">
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
+	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { composition } from '$lib/state/composition';
-	import { animationState } from '$lib/state/animation';
+	import { animationState, togglePlay } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
+	import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
 
 	let scope: paper.PaperScope;
+	let canvasEl: HTMLCanvasElement;
 	const renderPipeline = createRenderPipeline();
+
+	let exportStatus = $state<'idle' | 'rendering'>('idle');
+	let exportProgress = $state(0);
+	let exportDurationSec = $state(5);
+	const animationExportSupported = isAnimationExportSupported();
 
 	// Rest mark fills this fraction of the frame, leaving headroom for petals to
 	// open toward the edge. Coupled with BASS_REACH (zones.ts).
@@ -16,6 +24,7 @@
 	const CANVAS_LONG_SIDE = 600;
 
 	function setupCanvas(canvas: HTMLCanvasElement) {
+		canvasEl = canvas;
 		scope = new paper.PaperScope();
 		scope.setup(canvas);
 
@@ -71,10 +80,63 @@
 		a.click();
 		URL.revokeObjectURL(url);
 	}
+
+	async function exportAnimation() {
+		if (exportStatus === 'rendering' || !canvasEl) return;
+		if (!animationState.isPlaying) togglePlay();
+		exportStatus = 'rendering';
+		exportProgress = 0;
+		try {
+			await exportCanvasAnimation({
+				canvas: canvasEl,
+				durationSec: exportDurationSec,
+				onProgress: (p) => {
+					exportProgress = p;
+				}
+			});
+		} catch (err) {
+			console.error('Animation export failed', err);
+		} finally {
+			exportStatus = 'idle';
+			exportProgress = 0;
+		}
+	}
 </script>
 
 <div class="flex shrink-0 flex-col items-center gap-3">
 	<canvas {@attach setupCanvas} width="600" height="600" class="rounded-lg border bg-white"
 	></canvas>
 	<Button variant="outline" onclick={exportSvg} class="w-full max-w-[600px]">Export SVG</Button>
+
+	<div class="flex w-full max-w-[600px] flex-col gap-2">
+		<div class="flex items-center gap-2">
+			<Label for="export-duration" class="text-xs">Durata (s)</Label>
+			<input
+				id="export-duration"
+				type="number"
+				min="1"
+				step="1"
+				class="h-9 w-20 rounded-md border border-input bg-background px-3 text-xs"
+				value={exportDurationSec}
+				disabled={exportStatus === 'rendering'}
+				oninput={(e) =>
+					(exportDurationSec = Math.max(1, Number((e.target as HTMLInputElement).value) || 1))}
+			/>
+		</div>
+		{#if exportStatus === 'rendering'}
+			<div class="flex flex-col gap-1">
+				<div class="h-2 w-full overflow-hidden rounded bg-muted">
+					<div class="h-full bg-primary transition-[width]" style="width: {Math.round(exportProgress * 100)}%"></div>
+				</div>
+				<span class="text-center text-xs text-muted-foreground">Rendering… {Math.round(exportProgress * 100)}%</span>
+			</div>
+		{:else}
+			<Button variant="outline" onclick={exportAnimation} disabled={!animationExportSupported} class="w-full">
+				Export Animation
+			</Button>
+			{#if !animationExportSupported}
+				<span class="text-center text-[11px] text-muted-foreground">Export video non supportato dal browser</span>
+			{/if}
+		{/if}
+	</div>
 </div>
