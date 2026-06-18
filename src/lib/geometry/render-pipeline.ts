@@ -22,6 +22,14 @@ export type RenderInput = {
 	 * shape is the petal the user actually authored, not a residual morph blend.
 	 */
 	ignoreMorph?: boolean;
+	/**
+	 * When set (finite, > 0), apply this fixed scale + recenter in the finalize phase
+	 * instead of the bounds-derived `fitToView`. Lets audioZones hold a stable scale so
+	 * opening petals extend toward the canvas edge instead of being re-fitted away.
+	 */
+	fitScale?: number;
+	/** When true, skip zone deformation so the rest pose can be measured. */
+	ignoreZoneDrive?: boolean;
 };
 
 export type RenderResult = {
@@ -29,6 +37,8 @@ export type RenderResult = {
 	skippedCount: number;
 	warnings: string[];
 	renderDurationMs: number;
+	/** Max side of the united layer bounds BEFORE fitting; 0 when empty. */
+	boundSide: number;
 };
 
 export class RenderPipelineError extends Error {
@@ -42,6 +52,22 @@ function toPipelineError(error: unknown, context: string): RenderPipelineError {
 	if (error instanceof RenderPipelineError) return error;
 	const details = error instanceof Error ? error.message : String(error);
 	return new RenderPipelineError(`${context}: ${details}`);
+}
+
+/**
+ * Fixed render scale for a rest pose: places the mark at `restFraction` of the
+ * available square, leaving headroom for petals to open. Returns 1 (no scaling)
+ * for a degenerate bound or viewport.
+ */
+export function computeRestScale(
+	boundSide: number,
+	viewport: { width: number; height: number; padding?: number },
+	restFraction: number
+): number {
+	const padding = viewport.padding ?? 32;
+	const available = Math.min(viewport.width, viewport.height) - padding * 2;
+	if (!Number.isFinite(boundSide) || boundSide <= 0 || available <= 0) return 1;
+	return (available * restFraction) / boundSide;
 }
 
 export function createRenderPipeline(): {
@@ -98,6 +124,23 @@ export function createRenderPipeline(): {
 
 		const scale = available / Math.max(bounds.width, bounds.height);
 		scope.project.activeLayer.scale(scale, bounds.center);
+		scope.project.activeLayer.position = scope.view.bounds.center;
+	}
+
+	function measureBoundSide(scope: paper.PaperScope): number {
+		const items = scope.project.activeLayer.children;
+		if (items.length === 0) return 0;
+		let bounds = items[0].bounds.clone();
+		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
+		return Math.max(bounds.width, bounds.height);
+	}
+
+	function applyFixedScale(scope: paper.PaperScope, fitScale: number): void {
+		const items = scope.project.activeLayer.children;
+		if (items.length === 0) return;
+		let bounds = items[0].bounds.clone();
+		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
+		scope.project.activeLayer.scale(fitScale, bounds.center);
 		scope.project.activeLayer.position = scope.view.bounds.center;
 	}
 
@@ -161,7 +204,7 @@ export function createRenderPipeline(): {
 				}
 
 				// Apply zone deformation (audioZones mode) BEFORE bend mirrors/tiles — same slot as wave.
-				if (effectiveRing.zoneDrive && effectiveRing.templatePath) {
+				if (!input.ignoreZoneDrive && effectiveRing.zoneDrive && effectiveRing.templatePath) {
 					effectiveRing = {
 						...effectiveRing,
 						templatePath: applyZonesToPath(effectiveRing.templatePath, effectiveRing.zoneDrive)
@@ -187,8 +230,14 @@ export function createRenderPipeline(): {
 			}
 		}
 
+		let boundSide = 0;
 		try {
-			fitToView(scope, viewport);
+			boundSide = measureBoundSide(scope);
+			if (input.fitScale && Number.isFinite(input.fitScale) && input.fitScale > 0) {
+				applyFixedScale(scope, input.fitScale);
+			} else {
+				fitToView(scope, viewport);
+			}
 			scope.view.update();
 		} catch (error) {
 			throw toPipelineError(error, 'Render pipeline failed during finalize phase');
@@ -198,7 +247,8 @@ export function createRenderPipeline(): {
 			renderedCount,
 			skippedCount,
 			warnings,
-			renderDurationMs: performance.now() - startedAt
+			renderDurationMs: performance.now() - startedAt,
+			boundSide
 		};
 	}
 

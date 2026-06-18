@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import paper from 'paper';
 import type { Composition, Path } from '$lib/types';
-import { createRenderPipeline, RenderPipelineError } from './render-pipeline';
+import { createRenderPipeline, RenderPipelineError, computeRestScale } from './render-pipeline';
 
 let scope: paper.PaperScope;
 
@@ -444,5 +444,73 @@ describe('createRenderPipeline().render', () => {
 
 		expect(r1.renderedCount).toBe(r2.renderedCount);
 		expect(r1.skippedCount).toBe(r2.skippedCount);
+	});
+});
+describe('computeRestScale', () => {
+	it('maps the rest bound to restFraction of the available square', () => {
+		// available = min(600,600) - 2*32 = 536; restFraction 0.5 → target 268; boundSide 134 → scale 2.
+		expect(computeRestScale(134, { width: 600, height: 600, padding: 32 }, 0.5)).toBeCloseTo(2, 6);
+	});
+
+	it('falls back to 1 for a degenerate bound or viewport', () => {
+		expect(computeRestScale(0, { width: 600, height: 600, padding: 32 }, 0.45)).toBe(1);
+		expect(computeRestScale(100, { width: 10, height: 10, padding: 32 }, 0.45)).toBe(1);
+		expect(computeRestScale(Number.NaN, { width: 600, height: 600 }, 0.45)).toBe(1);
+	});
+});
+
+describe('createRenderPipeline().render fixed scale', () => {
+	it('returns a positive boundSide and still renders without fitScale', () => {
+		const pipeline = createRenderPipeline();
+		const result = pipeline.render({
+			composition,
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		expect(result.boundSide).toBeGreaterThan(0);
+	});
+
+	it('with fitScale, scales the layer by exactly fitScale and skips bounds-fit', () => {
+		const pipeline = createRenderPipeline();
+		// Rest render to learn the un-fitted bound side.
+		const rest = pipeline.render({
+			composition,
+			scope,
+			ignoreZoneDrive: true,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const scale = 0.5;
+		pipeline.render({
+			composition,
+			scope,
+			fitScale: scale,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const b = scope.project.activeLayer.bounds;
+		expect(Math.max(b.width, b.height)).toBeCloseTo(rest.boundSide * scale, 4);
+	});
+
+	it('ignoreZoneDrive renders the rest pose (zoneDrive has no effect on boundSide)', () => {
+		const pipeline = createRenderPipeline();
+		const driven: Composition = {
+			...composition,
+			rings: composition.rings.map((r) => ({
+				...r,
+				templatePath: petalPath,
+				zoneDrive: { bassPush: 1, midPush: 1, trebleRetract: 1, trebleVibrate: 1 }
+			}))
+		};
+		const withDrive = pipeline.render({
+			composition: driven,
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const ignored = pipeline.render({
+			composition: driven,
+			scope,
+			ignoreZoneDrive: true,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		expect(ignored.boundSide).toBeLessThan(withDrive.boundSide);
 	});
 });
