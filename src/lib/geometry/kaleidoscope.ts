@@ -50,3 +50,77 @@ export function carpetTileOffsets(repeat: number, tileW: number, tileH: number):
 	}
 	return offsets;
 }
+
+export function renderKaleidoscopeToCanvas(
+	ctx: CanvasRenderingContext2D,
+	tile: CanvasImageSource,
+	tileW: number,
+	tileH: number,
+	params: KaleidoscopeParams,
+	size: number
+): void {
+	const sectors = clampSectors(params.sectors);
+	const wedge = wedgeAngle(sectors);
+	const cx = size / 2;
+	const cy = size / 2;
+	const maxSide = Math.max(tileW, tileH) || 1;
+	const drawW = size * params.tileSize * (tileW / maxSide);
+	const drawH = size * params.tileSize * (tileH / maxSide);
+	const offsetPx = params.offsetDistance * size;
+	const clipRadius = size * 1.5;
+
+	ctx.clearRect(0, 0, size, size);
+	if (params.drawBackground) {
+		ctx.fillStyle = params.backgroundColor;
+		ctx.fillRect(0, 0, size, size);
+	}
+
+	ctx.save();
+	if (params.globalRotation) {
+		ctx.translate(cx, cy);
+		ctx.rotate(degToRad(params.globalRotation));
+		ctx.translate(-cx, -cy);
+	}
+
+	const offsets = carpetTileOffsets(params.repeat, drawW, drawH);
+
+	for (let i = 0; i < sectors; i++) {
+		ctx.save();
+		ctx.translate(cx, cy);
+		ctx.rotate(i * wedge);
+
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.arc(0, 0, clipRadius, -wedge / 2, wedge / 2);
+		ctx.closePath();
+		ctx.clip();
+
+		if (isSectorMirrored(i)) ctx.scale(-1, 1);
+		ctx.translate(offsetPx, 0);
+		ctx.rotate(degToRad(params.tileRotation));
+		ctx.scale(params.scale, params.scale);
+
+		for (const off of offsets) {
+			ctx.save();
+			ctx.translate(off.x, off.y);
+			if (params.carpetRotation) ctx.rotate(degToRad(params.carpetRotation));
+			ctx.drawImage(tile, -drawW / 2, -drawH / 2, drawW, drawH);
+			ctx.restore();
+		}
+
+		ctx.restore();
+	}
+
+	ctx.restore();
+
+	if (params.circularMask) {
+		ctx.save();
+		ctx.globalCompositeOperation = 'destination-in';
+		ctx.beginPath();
+		ctx.arc(cx, cy, size / 2, 0, 2 * Math.PI);
+		ctx.closePath();
+		ctx.fillStyle = '#000000';
+		ctx.fill();
+		ctx.restore();
+	}
+}

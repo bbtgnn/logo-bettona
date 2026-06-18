@@ -46,3 +46,68 @@ describe('kaleidoscope geometry helpers', () => {
 		expect(offsets).toContainEqual({ x: -5, y: -10 });
 	});
 });
+
+import { renderKaleidoscopeToCanvas } from './kaleidoscope';
+import type { KaleidoscopeParams } from './kaleidoscope';
+
+function makeRecordingCtx() {
+	const calls: Record<string, number> = {};
+	const rec = (name: string) => (calls[name] = (calls[name] ?? 0) + 1);
+	const ctx = {
+		calls,
+		fillStyle: '',
+		globalCompositeOperation: 'source-over',
+		save: () => rec('save'),
+		restore: () => rec('restore'),
+		translate: () => rec('translate'),
+		rotate: () => rec('rotate'),
+		scale: () => rec('scale'),
+		beginPath: () => rec('beginPath'),
+		moveTo: () => rec('moveTo'),
+		arc: () => rec('arc'),
+		closePath: () => rec('closePath'),
+		clip: () => rec('clip'),
+		fill: () => rec('fill'),
+		fillRect: () => rec('fillRect'),
+		clearRect: () => rec('clearRect'),
+		drawImage: () => rec('drawImage')
+	};
+	return ctx as unknown as CanvasRenderingContext2D & { calls: Record<string, number> };
+}
+
+const baseParams: KaleidoscopeParams = {
+	sectors: 6,
+	repeat: 2,
+	offsetDistance: 0.1,
+	scale: 1,
+	tileSize: 0.5,
+	tileRotation: 0,
+	carpetRotation: 0,
+	globalRotation: 0,
+	circularMask: false,
+	backgroundColor: '#000000',
+	drawBackground: false
+};
+
+describe('renderKaleidoscopeToCanvas', () => {
+	it('clips once per sector and draws repeat² tiles per sector', () => {
+		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
+		const tile = {} as CanvasImageSource;
+		renderKaleidoscopeToCanvas(ctx, tile, 100, 100, baseParams, 600);
+		expect(ctx.calls.clip).toBe(6);
+		expect(ctx.calls.drawImage).toBe(6 * 4);
+		expect(ctx.calls.save).toBe(ctx.calls.restore);
+	});
+
+	it('paints background when drawBackground is true', () => {
+		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, drawBackground: true }, 600);
+		expect(ctx.calls.fillRect).toBe(1);
+	});
+
+	it('applies the circular mask when enabled', () => {
+		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, circularMask: true }, 600);
+		expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
+	});
+});
