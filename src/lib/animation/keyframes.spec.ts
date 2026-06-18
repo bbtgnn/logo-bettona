@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { clamp01, sortKeyframes, sampleTrack, type Track, type Keyframe } from './keyframes';
+import {
+	clamp01,
+	sortKeyframes,
+	sampleTrack,
+	sampleBezierSegment,
+	type Track,
+	type Keyframe
+} from './keyframes';
 
 const kf = (time: number, value: number, interp: Keyframe['interp'] = 'linear'): Keyframe => ({
 	id: `${time}`,
@@ -55,5 +62,40 @@ describe('keyframes pure', () => {
 		const tr = track([kf(0, 10, 'hold'), kf(1, 20, 'hold')]);
 		expect(sampleTrack(tr, 0.99)).toBe(10);
 		expect(sampleTrack(tr, 1)).toBe(20);
+	});
+});
+
+describe('keyframes bezier', () => {
+	const a = (interp: 'bezier') => kf(0, 0, interp);
+	const b = kf(1, 100, 'bezier');
+
+	it('hits the endpoints exactly', () => {
+		expect(sampleBezierSegment(a('bezier'), b, 0)).toBeCloseTo(0, 6);
+		expect(sampleBezierSegment(a('bezier'), b, 1)).toBeCloseTo(100, 6);
+	});
+
+	it('easy-ease is symmetric: midpoint is the mid value', () => {
+		expect(sampleBezierSegment(a('bezier'), b, 0.5)).toBeCloseTo(50, 1);
+	});
+
+	it('easy-ease eases in (slower than linear early)', () => {
+		// At t=0.25 an ease-in curve sits below the linear value (25).
+		expect(sampleBezierSegment(a('bezier'), b, 0.25)).toBeLessThan(25);
+	});
+
+	it('is monotonic increasing across the segment', () => {
+		let prev = -Infinity;
+		for (let t = 0; t <= 1; t += 0.05) {
+			const v = sampleBezierSegment(a('bezier'), b, t);
+			expect(v).toBeGreaterThanOrEqual(prev - 1e-6);
+			prev = v;
+		}
+	});
+
+	it('sampleTrack routes bezier keyframes through the bezier curve', () => {
+		const tr = track([kf(0, 0, 'bezier'), kf(1, 100, 'bezier')]);
+		expect(sampleTrack(tr, 0.25)).toBeLessThan(25);
+		expect(sampleTrack(tr, 0)).toBeCloseTo(0, 6);
+		expect(sampleTrack(tr, 1)).toBeCloseTo(100, 6);
 	});
 });

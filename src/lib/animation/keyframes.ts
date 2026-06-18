@@ -30,9 +30,49 @@ function lerp(a: number, b: number, u: number): number {
 	return a + (b - a) * u;
 }
 
-// Bezier path is added in Task 2; until then it falls back to linear.
+function cubic(p0: number, p1: number, p2: number, p3: number, u: number): number {
+	const v = 1 - u;
+	return v * v * v * p0 + 3 * v * v * u * p1 + 3 * v * u * u * p2 + u * u * u * p3;
+}
+
+export function sampleBezierSegment(a: Keyframe, b: Keyframe, t: number): number {
+	const span = b.time - a.time;
+	if (span <= 0) return b.value;
+	const dv = b.value - a.value;
+
+	const outDx = Math.max(0, Math.min(1, a.handleOut.dx));
+	const inDx = Math.max(-1, Math.min(0, b.handleIn.dx));
+
+	const x0 = a.time;
+	const x1 = a.time + outDx * span;
+	const x2 = b.time + inDx * span;
+	const x3 = b.time;
+
+	const y0 = a.value;
+	const y1 = a.value + a.handleOut.dy * dv;
+	const y2 = b.value + b.handleIn.dy * dv;
+	const y3 = b.value;
+
+	if (t <= a.time) return a.value;
+	if (t >= b.time) return b.value;
+
+	// Bisection solve X(u) = t (X is monotonic given the dx clamps above).
+	let lo = 0;
+	let hi = 1;
+	let u = (t - a.time) / span;
+	for (let i = 0; i < 40; i++) {
+		const x = cubic(x0, x1, x2, x3, u);
+		if (Math.abs(x - t) < 1e-7) break;
+		if (x < t) lo = u;
+		else hi = u;
+		u = (lo + hi) / 2;
+	}
+	return cubic(y0, y1, y2, y3, u);
+}
+
 function sampleSegment(a: Keyframe, b: Keyframe, t: number): number {
 	if (a.interp === 'hold') return t >= b.time ? b.value : a.value;
+	if (a.interp === 'bezier') return sampleBezierSegment(a, b, t);
 	const span = b.time - a.time;
 	const u = span <= 0 ? 1 : (t - a.time) / span;
 	return lerp(a.value, b.value, u);
