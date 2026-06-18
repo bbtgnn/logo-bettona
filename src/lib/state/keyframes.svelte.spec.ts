@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { flushSync } from 'svelte';
+import { localStorageSync } from 'rune-sync/localstorage';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from './keyframes.svelte';
+
+const PERSIST_KEY = 'kaleidoscope-keyframes';
 
 describe('keyframes store', () => {
 	beforeEach(() => {
@@ -68,5 +72,14 @@ describe('keyframes store', () => {
 		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
 		keyframes.setTrackEnabled(ROT, true);
 		expect(keyframes.hasEnabledTracks()).toBe(true);
+	});
+
+	it('persists keyframe edits to localStorage (round-trip)', () => {
+		keyframes.addKeyframe(ROT, { time: 0.5, value: 77 });
+		flushSync(); // run the persistence $effect synchronously
+		const saved = localStorageSync.read<{ tracks: typeof keyframes.tracks }>(PERSIST_KEY) as {
+			tracks: typeof keyframes.tracks;
+		} | null;
+		expect(saved?.tracks[ROT].keyframes.some((k) => k.value === 77)).toBe(true);
 	});
 });

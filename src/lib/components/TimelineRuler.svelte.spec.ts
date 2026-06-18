@@ -3,16 +3,25 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelineRuler from './TimelineRuler.svelte';
 import { animationState } from '$lib/state/animation';
+import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
+import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
 
 describe('TimelineRuler', () => {
 	beforeEach(() => {
 		animationState.progress = 0;
+		keyframes.ensureTrack(ROT);
+		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
+		keyframes.setTrackEnabled(ROT, false);
 	});
 
-	it('renders a playhead positioned from progress', async () => {
+	it('positions the playhead proportionally to progress', async () => {
 		animationState.progress = 0.5;
 		render(TimelineRuler);
-		await expect.element(page.getByTestId('playhead')).toBeInTheDocument();
+		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
+		const playhead = page.getByTestId('playhead').element() as HTMLElement;
+		const left = parseFloat(playhead.style.left);
+		expect(left).toBeCloseTo(ruler.clientWidth / 2, 0);
+		expect(left).toBeGreaterThan(0);
 	});
 
 	it('scrubs progress on ruler click', async () => {
@@ -26,5 +35,18 @@ describe('TimelineRuler', () => {
 			})
 		);
 		expect(animationState.progress).toBeCloseTo(0.5, 1);
+	});
+
+	it('applies the keyframe rotation while scrubbing a paused timeline', async () => {
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		keyframes.setTrackEnabled(ROT, true);
+		render(TimelineRuler);
+		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
+		const rect = ruler.getBoundingClientRect();
+		ruler.dispatchEvent(
+			new PointerEvent('pointerdown', { bubbles: true, clientX: rect.left + rect.width / 2 })
+		);
+		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 0);
 	});
 });

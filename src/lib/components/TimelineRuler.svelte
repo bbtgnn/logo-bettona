@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { animationState } from '$lib/state/animation';
+	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
 	import { timeFromX, xFromTime } from '$lib/animation/timeline-geometry';
 
 	let rulerEl = $state<HTMLDivElement>();
@@ -8,6 +8,9 @@
 		if (!rulerEl) return;
 		const rect = rulerEl.getBoundingClientRect();
 		animationState.progress = timeFromX(clientX - rect.left, rect.width);
+		// tick() only runs while playing; re-apply here so scrubbing a paused
+		// timeline still drives the kaleidoscope to the playhead's value.
+		applyKaleidoscopeKeyframes(animationState.progress);
 	}
 
 	function onPointerDown(e: PointerEvent) {
