@@ -7,6 +7,7 @@
 	import { composition, addRing, reorderRings } from '$lib/state/composition';
 	import SettingsSection from './SettingsSection.svelte';
 	import CanvasSection from './CanvasSection.svelte';
+	import KaleidoscopeSection from './KaleidoscopeSection.svelte';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 
 	let dragFromIndex: number | null = null;
@@ -38,6 +39,8 @@
 		<SettingsSection />
 
 		<CanvasSection />
+
+		<KaleidoscopeSection />
 
 		<SidebarCollapsible>
 			{#snippet trigger()}

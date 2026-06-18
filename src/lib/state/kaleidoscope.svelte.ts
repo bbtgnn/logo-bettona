@@ -4,6 +4,7 @@ export type KaleidoscopeState = KaleidoscopeParams & {
 	enabled: boolean;
 	liveTile: boolean;
 	tileBackground: boolean;
+	refreshNonce: number;
 };
 
 export const kaleidoscope = $state<KaleidoscopeState>({
@@ -20,7 +21,8 @@ export const kaleidoscope = $state<KaleidoscopeState>({
 	backgroundColor: '#ffffff',
 	drawBackground: true, // mirrors !tileBackground; see setTileBackground
 	liveTile: false,
-	tileBackground: false
+	tileBackground: false,
+	refreshNonce: 0
 });
 
 export function setKaleidoscopeEnabled(v: boolean) {
@@ -63,4 +65,8 @@ export function setTileBackground(v: boolean) {
 }
 export function setKaleidoscopeBackgroundColor(c: string) {
 	kaleidoscope.backgroundColor = c;
+}
+// Bumped to ask PreviewCanvas for a fresh static-tile snapshot (live tile off).
+export function requestTileRefresh() {
+	kaleidoscope.refreshNonce++;
 }
