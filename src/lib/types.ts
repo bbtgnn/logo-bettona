@@ -17,7 +17,11 @@ export type WaveConfig = {
 
 export type ZoneIntensity = { bass: number; mid: number; treble: number };
 export type ZoneDrive = { bassPush: number; midPush: number; treblePush: number };
-export type AudioZonesConfig = { defaultIntensity: ZoneIntensity };
+export type EnvelopeParams = { attack: number; release: number };
+export type AudioZonesConfig = {
+	defaultIntensity: ZoneIntensity;
+	envelopes: { bass: EnvelopeParams; mid: EnvelopeParams; treble: EnvelopeParams };
+};
 
 export type Ring = {
 	copies: number;
