@@ -56,9 +56,12 @@ export type ColorModeState = {
 	palette: number;
 };
 
+export type AspectRatio = '1:1' | '3:4' | '4:3' | '4:5' | '5:4' | '9:16' | '16:9';
+
 export type Composition = {
 	baseRadius: number;
 	ringIncrement: number;
+	aspectRatio: AspectRatio;
 	rings: Ring[];
 	monochromePalettes: MonochromePalette[];
 	fullPalettes: FullPalette[];

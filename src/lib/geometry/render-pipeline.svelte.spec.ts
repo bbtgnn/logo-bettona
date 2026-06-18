@@ -37,6 +37,7 @@ const petalPath: Path = {
 const composition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
+	aspectRatio: '1:1',
 	rings: [
 		{
 			copies: 4,
@@ -408,6 +409,7 @@ describe('createRenderPipeline().render', () => {
 		const comp: Composition = {
 			baseRadius: 100,
 			ringIncrement: 60,
+			aspectRatio: '1:1',
 			rings: [{
 				copies: 4,
 				color: '#ff0000',

@@ -3,6 +3,7 @@ import type { Composition } from '$lib/types';
 export const DEFAULT_COMPOSITION: Composition = {
 	baseRadius: 5,
 	ringIncrement: 2,
+	aspectRatio: '1:1',
 	rings: [
 		{
 			copies: 8,

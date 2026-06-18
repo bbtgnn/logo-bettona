@@ -37,6 +37,7 @@
 		const composition: Composition = {
 			baseRadius,
 			ringIncrement,
+			aspectRatio: '1:1',
 			rings: [
 				{
 					copies,

@@ -1,5 +1,6 @@
 import { lsSync } from 'rune-sync/localstorage';
 import type {
+	AspectRatio,
 	ColorModeState,
 	ColorMode,
 	FullPalette,
@@ -240,6 +241,10 @@ export function setBaseRadius(value: number) {
 
 export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
+}
+
+export function setAspectRatio(ratio: AspectRatio) {
+	composition.aspectRatio = ratio;
 }
 
 export function setRingExpanded(index: number, expanded: boolean) {

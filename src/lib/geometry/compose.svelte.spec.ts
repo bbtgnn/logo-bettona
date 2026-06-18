@@ -18,6 +18,7 @@ const rectPath: Path = {
 const twoRingComposition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
+	aspectRatio: '1:1',
 	rings: [
 		{
 			copies: 4,

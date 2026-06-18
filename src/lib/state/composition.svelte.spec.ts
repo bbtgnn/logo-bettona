@@ -4,6 +4,7 @@ import type { Composition, ColorModeState, Path } from '$lib/types';
 const initialComposition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 50,
+	aspectRatio: '1:1',
 	rings: [],
 	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
 	fullPalettes: [{ colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'] }]
