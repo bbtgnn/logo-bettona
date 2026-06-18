@@ -29,7 +29,12 @@ const animationApi = vi.hoisted(() => ({
 			inputGain: 1
 		},
 		audioZones: {
-			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 }
+			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 },
+			envelopes: {
+				bass: { attack: 0.35, release: 0.18 },
+				mid: { attack: 0.5, release: 0.25 },
+				treble: { attack: 0.8, release: 0.5 }
+			}
 		}
 	},
 	togglePlay: vi.fn(),
@@ -40,6 +45,7 @@ const animationApi = vi.hoisted(() => ({
 	handleCompositionChanged: vi.fn(),
 	setAudioBarsConfig: vi.fn(),
 	setAudioZonesDefaultIntensity: vi.fn(),
+	setAudioZonesEnvelope: vi.fn(),
 	setAudioSource: vi.fn(),
 	audioSource: {
 		loadFile: vi.fn(async () => {}),
@@ -276,5 +282,15 @@ describe('AnimationSection', () => {
 		// AudioFilePanel has its own meter; AnimationSection must not add a second one
 		const els = await meters.elements();
 		expect(els.length).toBeLessThanOrEqual(1);
+	});
+
+	it('audioZones: dragging the bass attack slider calls setAudioZonesEnvelope', async () => {
+		animationApi.animationState.mode = 'audioZones';
+		render(AnimationSection);
+		await tick();
+		const slider = page.getByLabelText('Bass attack');
+		await expect.element(slider).toBeInTheDocument();
+		await userEvent.fill(slider, '0.6');
+		expect(animationApi.setAudioZonesEnvelope).toHaveBeenCalledWith('bass', { attack: 0.6 });
 	});
 });

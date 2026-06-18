@@ -11,6 +11,7 @@
 		togglePlay,
 		setAudioBarsConfig,
 		setAudioZonesDefaultIntensity,
+		setAudioZonesEnvelope,
 		setAudioSource,
 		audioSource
 	} from '$lib/state/animation';
@@ -26,6 +27,12 @@
 		amplitudeGain: animationState.audioBars.waveAmplitudeGain,
 		phaseSpeed: animationState.audioBars.wavePhaseSpeed
 	});
+
+	const zoneBands = [
+		{ band: 'bass', label: 'Bass' },
+		{ band: 'mid', label: 'Mid' },
+		{ band: 'treble', label: 'Treble' }
+	] as const;
 
 	const progressPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, animationState.progress)) * 100)
@@ -368,6 +375,42 @@
 									})}
 							/>
 						</div>
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<p class="text-[11px] font-medium text-muted-foreground">Zone response (global)</p>
+						{#each zoneBands as { band, label } (band)}
+							<div class="flex flex-col gap-1">
+								<Label for="zones-{band}-attack" class="text-xs">{label} attack</Label>
+								<input
+									id="zones-{band}-attack"
+									aria-label="{label} attack"
+									type="range"
+									min="0"
+									max="1"
+									step="0.01"
+									value={animationState.audioZones.envelopes[band].attack}
+									oninput={(e) =>
+										setAudioZonesEnvelope(band, {
+											attack: Number((e.target as HTMLInputElement).value)
+										})}
+								/>
+								<Label for="zones-{band}-release" class="text-xs">{label} release</Label>
+								<input
+									id="zones-{band}-release"
+									aria-label="{label} release"
+									type="range"
+									min="0"
+									max="1"
+									step="0.01"
+									value={animationState.audioZones.envelopes[band].release}
+									oninput={(e) =>
+										setAudioZonesEnvelope(band, {
+											release: Number((e.target as HTMLInputElement).value)
+										})}
+								/>
+							</div>
+						{/each}
 					</div>
 
 					<div class="flex flex-col gap-1">
