@@ -31,7 +31,7 @@ describe('createAnimationRuntime', () => {
 		runtime.registerDriver('dataSeries', {
 			init: () => undefined,
 			dispose: () => undefined,
-			frame: () => {
+			frame: (): Record<number, number> => {
 				frameIndex += 1;
 				if (frameIndex === 1) return { 0: 0.2, 1: 0.8 };
 				return { 0: 0.4 };

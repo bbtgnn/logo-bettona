@@ -268,7 +268,7 @@ describe('animation runtime integration', () => {
 		expect(animation.animationState.isPlaying).toBe(false);
 		expect(animation.animationState.progress).toBe(1);
 		expect(setRingMorphT).toHaveBeenCalledWith(0, 1);
-		expect(setRingMorphT.mock.calls.at(-1)?.[1]).toBe(1);
+		expect(vi.mocked(setRingMorphT).mock.calls.at(-1)?.[1]).toBe(1);
 
 		void requestAnimationFrameMock;
 		void cancelAnimationFrameMock;
