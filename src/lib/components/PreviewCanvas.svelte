@@ -42,6 +42,9 @@
 
 		// redraw() only writes to paper.js canvas — no $state reassignment
 		$effect(() => {
+			// Kaleidoscope mode owns the visible canvas via its own rAF loop; yield to it
+			// so the two writers don't race (flicker) on shared canvas pixels.
+			if (kaleidoscope.enabled) return;
 			const comp = composition;
 			// Canvas pixel size comes from the persisted aspect ratio; the render pipeline
 			// applies this as the paper view size, so changing the ratio reshapes the canvas.
@@ -72,6 +75,8 @@
 		return () => {
 			scope.project.clear();
 			renderPipeline.dispose();
+			// Release the offscreen tile scope created lazily for kaleidoscope mode.
+			tileScope?.project.clear();
 		};
 	}
 
@@ -209,7 +214,10 @@
 	});
 
 	$effect(() => {
+		// Re-snapshot the static tile on explicit refresh or when the tile background
+		// toggles, so the frozen tile reflects "Sfondo tessera" without a manual refresh.
 		void kaleidoscope.refreshNonce;
+		void kaleidoscope.tileBackground;
 		if (kaleidoscope.enabled && !kaleidoscope.liveTile) refreshTile();
 	});
 </script>
