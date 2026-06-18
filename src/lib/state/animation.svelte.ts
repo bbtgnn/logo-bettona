@@ -6,6 +6,7 @@ import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
 import { createFallbackBars } from './animation-drivers/fallback-bars';
 import { createAudioSource } from './animation-drivers/audio-source';
+import { demoZones } from './animation-drivers/demo-zones';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
@@ -128,14 +129,8 @@ runtime.registerDriver(
 		getRing: (index) => composition.rings[index],
 		readZones: () => {
 			switch (animationState.audioSource) {
-				case 'demo': {
-					const t = performance.now() / 1000;
-					return {
-						bass: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 0.7))),
-						mid: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.1 + 1.0))),
-						treble: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.9 + 2.1)))
-					};
-				}
+				case 'demo':
+					return demoZones(performance.now());
 				case 'mic':
 				case 'file':
 					return audioSource.readZones();
