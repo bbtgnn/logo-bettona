@@ -13,6 +13,8 @@ import type {
 	DataSeriesConfig
 } from './animation-drivers/types';
 import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
+import { keyframes, KALEIDO_GLOBAL_ROTATION } from './keyframes.svelte';
+import { setGlobalRotation } from './kaleidoscope.svelte';
 
 export type AnimationMode = AnimationDriverType | null;
 
@@ -195,6 +197,20 @@ function hasMorphTargets(): boolean {
 	return animatedIndices.length > 0;
 }
 
+function hasEnabledKeyframeTracks(): boolean {
+	return keyframes.hasEnabledTracks();
+}
+
+/**
+ * Applies the kaleidoscope keyframe tracks at the given normalized progress.
+ * Block 2 wires only globalRotation; Block 3 extends this to the other params.
+ * A disabled/empty track returns null and leaves the static slider value in place.
+ */
+export function applyKaleidoscopeKeyframes(progress: number): void {
+	const rotation = keyframes.sampleParam(KALEIDO_GLOBAL_ROTATION, progress);
+	if (rotation !== null) setGlobalRotation(rotation);
+}
+
 function getProgressFromElapsed(elapsedMs: number): number {
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -238,6 +254,9 @@ function tick(nowMs: number) {
 		animationState.progress = progress;
 	}
 
+	// Kaleidoscope keyframes ride the same clock regardless of driver mode.
+	applyKaleidoscopeKeyframes(progress);
+
 	if (hasCompleted(logicalElapsedMs)) {
 		animationState.isPlaying = false;
 		animationState.isPaused = false;
@@ -252,7 +271,7 @@ function tick(nowMs: number) {
 
 function startNewAnimation() {
 	lastRingCount = composition.rings.length;
-	if (!hasRunnableMode() && !hasMorphTargets()) {
+	if (!hasRunnableMode() && !hasMorphTargets() && !hasEnabledKeyframeTracks()) {
 		stopInternal(true);
 		return;
 	}
@@ -358,7 +377,7 @@ export function togglePlay() {
 		return;
 	}
 
-	if (!hasRunnableMode() && !hasMorphTargets()) {
+	if (!hasRunnableMode() && !hasMorphTargets() && !hasEnabledKeyframeTracks()) {
 		stopInternal(true);
 		return;
 	}

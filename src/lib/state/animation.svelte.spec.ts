@@ -464,3 +464,27 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 });
+
+describe('kaleidoscope keyframe application', () => {
+	it('does nothing when the track is disabled (slider value stands)', async () => {
+		const animation = await import('./animation');
+		const { keyframes, KALEIDO_GLOBAL_ROTATION: ROT } = await import('./keyframes.svelte');
+		const { kaleidoscope, setGlobalRotation } = await import('./kaleidoscope.svelte');
+		setGlobalRotation(33);
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		animation.applyKaleidoscopeKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBe(33);
+	});
+
+	it('applies the sampled rotation when the track is enabled', async () => {
+		const animation = await import('./animation');
+		const { keyframes, KALEIDO_GLOBAL_ROTATION: ROT } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		keyframes.setTrackEnabled(ROT, true);
+		animation.applyKaleidoscopeKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 4);
+	});
+});
