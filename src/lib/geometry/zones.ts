@@ -1,10 +1,5 @@
 import type { Path, ZoneIntensity, ZoneDrive } from '$lib/types';
 
-/** @deprecated unused after extent-relative rework; removed once ZonePreview migrates. */
-export const ZONE_SCALE = 30;
-/** @deprecated unused after extent-relative rework; removed once ZonePreview migrates. */
-export const VIBR_AMT = 0.5;
-
 /** Bass: outer tip reach as a multiple of petal radial extent (≈ full petal length). */
 export const BASS_REACH = 1.2;
 /** Mid: tangential widening as a fraction of radial extent. */

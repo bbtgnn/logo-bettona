@@ -1,7 +1,7 @@
 <script lang="ts">
 	import paper from 'paper';
 	import type { Path, Ring, ZoneIntensity } from '$lib/types';
-	import { applyZonesToPath, ZONE_SCALE, VIBR_AMT } from '$lib/geometry/zones';
+	import { applyZonesToPath } from '$lib/geometry/zones';
 	import { buildRingPath } from '$lib/geometry/bend';
 
 	let {
@@ -50,11 +50,13 @@
 					ringHeight
 				};
 
+				// Normalized 0..1 drive at full amplitude; zones.ts scales by petal
+				// radial extent × reach. Vibration phase = 1 (max) for the static preview.
 				const maxDrive = {
-					bassPush: intensity.bass * ZONE_SCALE,
-					midPush: intensity.mid * ZONE_SCALE,
-					trebleRetract: intensity.treble * ZONE_SCALE,
-					trebleVibrate: intensity.treble * ZONE_SCALE * VIBR_AMT
+					bassPush: intensity.bass,
+					midPush: intensity.mid,
+					trebleRetract: intensity.treble,
+					trebleVibrate: intensity.treble
 				};
 
 				// reach: max-amplitude zone deformation, translucent fill
