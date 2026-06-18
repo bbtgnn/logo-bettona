@@ -4,6 +4,7 @@
 	import { composition } from '$lib/state/composition';
 	import { animationState } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
+	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 
 	let scope: paper.PaperScope;
 	const renderPipeline = createRenderPipeline();
@@ -11,6 +12,8 @@
 	// Rest mark fills this fraction of the frame, leaving headroom for petals to
 	// open toward the edge. Coupled with BASS_REACH (zones.ts).
 	const REST_FRACTION = 0.45;
+	// Longest side of the canvas in pixels; the aspect ratio sets the other side.
+	const CANVAS_LONG_SIDE = 600;
 
 	function setupCanvas(canvas: HTMLCanvasElement) {
 		scope = new paper.PaperScope();
@@ -19,11 +22,10 @@
 		// redraw() only writes to paper.js canvas — no $state reassignment
 		$effect(() => {
 			const comp = composition;
-			const viewport = {
-				width: scope.view.size.width,
-				height: scope.view.size.height,
-				padding: 32
-			};
+			// Canvas pixel size comes from the persisted aspect ratio; the render pipeline
+			// applies this as the paper view size, so changing the ratio reshapes the canvas.
+			const { width, height } = ratioToCanvasSize(comp.aspectRatio, CANVAS_LONG_SIDE);
+			const viewport = { width, height, padding: 32 };
 			// audioBars/audioZones ride the primary petal; bypass morph in the render only.
 			const ignoreMorph =
 				animationState.mode === 'audioBars' || animationState.mode === 'audioZones';
