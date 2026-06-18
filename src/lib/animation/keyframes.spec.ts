@@ -63,6 +63,24 @@ describe('keyframes pure', () => {
 		expect(sampleTrack(tr, 0.99)).toBe(10);
 		expect(sampleTrack(tr, 1)).toBe(20);
 	});
+
+	it('is stable for two keyframes at the same time (steps to the later value)', () => {
+		const tr = track([kf(0.5, 1), kf(0.5, 2)]);
+		const v = sampleTrack(tr, 0.5);
+		expect(Number.isFinite(v as number)).toBe(true);
+		expect(v).toBe(2);
+	});
+
+	it('routes the correct segment in a multi-segment track', () => {
+		const tr = track([kf(0, 0), kf(0.3, 30), kf(0.7, 70), kf(1, 100)]);
+		// Mid of segment 2 of 3 (between 0.3 and 0.7) → linear 50.
+		expect(sampleTrack(tr, 0.5)).toBeCloseTo(50, 6);
+	});
+
+	it('samples exactly at an interior keyframe boundary', () => {
+		const tr = track([kf(0, 0), kf(0.3, 30), kf(1, 100)]);
+		expect(sampleTrack(tr, 0.3)).toBeCloseTo(30, 6);
+	});
 });
 
 describe('keyframes bezier', () => {
@@ -90,6 +108,21 @@ describe('keyframes bezier', () => {
 			expect(v).toBeGreaterThanOrEqual(prev - 1e-6);
 			prev = v;
 		}
+	});
+
+	it('stays monotonic at the dx clamp extremes (raw unclamped handles)', () => {
+		// Feed raw out-of-range dx (5 / -5): the internal clamp must keep X monotonic,
+		// so Y stays monotonic increasing across the segment.
+		const a2: Keyframe = { ...kf(0, 0, 'bezier'), handleOut: { dx: 5, dy: 0 } };
+		const b2: Keyframe = { ...kf(1, 100, 'bezier'), handleIn: { dx: -5, dy: 0 } };
+		let prev = -Infinity;
+		for (let t = 0; t <= 1; t += 0.05) {
+			const v = sampleBezierSegment(a2, b2, t);
+			expect(v).toBeGreaterThanOrEqual(prev - 1e-6);
+			prev = v;
+		}
+		expect(sampleBezierSegment(a2, b2, 0)).toBeCloseTo(0, 6);
+		expect(sampleBezierSegment(a2, b2, 1)).toBeCloseTo(100, 6);
 	});
 
 	it('sampleTrack routes bezier keyframes through the bezier curve', () => {

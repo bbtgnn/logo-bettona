@@ -82,8 +82,10 @@ export function sampleTrack(track: Track, t: number): number | null {
 	const kfs = sortKeyframes(track.keyframes);
 	if (kfs.length === 0) return null;
 	if (kfs.length === 1) return kfs[0].value;
-	if (t <= kfs[0].time) return kfs[0].value;
+	// Upper edge is checked first so that keyframes sharing the same time resolve
+	// to the later value (spec: "equal times → step to the later value").
 	if (t >= kfs[kfs.length - 1].time) return kfs[kfs.length - 1].value;
+	if (t <= kfs[0].time) return kfs[0].value;
 	for (let i = 0; i < kfs.length - 1; i++) {
 		const a = kfs[i];
 		const b = kfs[i + 1];
