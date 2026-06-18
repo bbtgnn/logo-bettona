@@ -39,4 +39,11 @@ describe('kaleidoscope state', () => {
 		expect(kaleidoscope.tileBackground).toBe(true);
 		expect(kaleidoscope.backgroundColor).toBe('#123456');
 	});
+
+	it('mirrors drawBackground as the inverse of tileBackground', () => {
+		setTileBackground(true);
+		expect(kaleidoscope.drawBackground).toBe(false);
+		setTileBackground(false);
+		expect(kaleidoscope.drawBackground).toBe(true);
+	});
 });
