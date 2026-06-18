@@ -125,6 +125,16 @@ export function renderKaleidoscopeToCanvas(
 	}
 }
 
+// Minimal escaping for values interpolated into SVG attribute strings. Current
+// callers feed a color-input value, but this hardens against a malformed string.
+function escapeAttr(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/"/g, '&quot;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
+}
+
 export function extractSvgParts(svg: string): { inner: string; viewBox: string } {
 	const innerMatch = svg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
 	const inner = innerMatch && innerMatch[1] ? innerMatch[1].trim() : '';
@@ -144,7 +154,8 @@ export function generateKaleidoscopeSVG(
 	size: number
 ): string {
 	const { inner, viewBox } = extractSvgParts(tileSvg);
-	const [, , vbWStr, vbHStr] = viewBox.split(' ');
+	// viewBox values may be separated by any whitespace and/or commas (both SVG-valid).
+	const [, , vbWStr, vbHStr] = viewBox.trim().split(/[\s,]+/);
 	const vbW = Number(vbWStr) || 1;
 	const vbH = Number(vbHStr) || 1;
 	const sectors = clampSectors(params.sectors);
@@ -200,7 +211,7 @@ export function generateKaleidoscopeSVG(
 		`</defs>`;
 
 	const bg = params.drawBackground
-		? `<rect width="${size}" height="${size}" fill="${params.backgroundColor}"/>`
+		? `<rect width="${size}" height="${size}" fill="${escapeAttr(params.backgroundColor)}"/>`
 		: '';
 
 	const globalOpen = params.globalRotation

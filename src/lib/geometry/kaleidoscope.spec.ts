@@ -142,4 +142,24 @@ describe('generateKaleidoscopeSVG', () => {
 		expect(out).toContain('<rect');
 		expect(out).toContain('clip-path="url(#kaleido-outer)"');
 	});
+
+	it('parses viewBox with commas / irregular whitespace (aspect parity)', () => {
+		// vbW=100 vbH=50, tileSize 0.5, size 600, maxSide 100 → drawH = 600*0.5*(50/100) = 150.
+		const commaTile =
+			'<svg viewBox="0,0,100,50" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="50" fill="#0f0"/></svg>';
+		const spacedTile =
+			'<svg viewBox="0  0   100   50" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="50" fill="#0f0"/></svg>';
+		expect(generateKaleidoscopeSVG(commaTile, baseParams, 600)).toContain('height="150.0000"');
+		expect(generateKaleidoscopeSVG(spacedTile, baseParams, 600)).toContain('height="150.0000"');
+	});
+
+	it('escapes the background color before interpolating into the fill attribute', () => {
+		const out = generateKaleidoscopeSVG(
+			tileSvg,
+			{ ...baseParams, drawBackground: true, backgroundColor: '"><script>x' },
+			600
+		);
+		expect(out).not.toContain('"><script>');
+		expect(out).toContain('&quot;&gt;&lt;script&gt;x');
+	});
 });
