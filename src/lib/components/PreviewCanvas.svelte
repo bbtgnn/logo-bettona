@@ -2,16 +2,26 @@
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
-	import { composition } from '$lib/state/composition';
+	import { composition, getCompositionBackgroundColor } from '$lib/state/composition';
 	import { animationState, togglePlay, getExportAudioStream } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 	import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
 	import { exportStatus as sharedExportStatus } from '$lib/state/export-status.svelte';
+	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
+	import { renderKaleidoscopeToCanvas, generateKaleidoscopeSVG } from '$lib/geometry/kaleidoscope';
+	import { composeTileWithBackground } from '$lib/geometry/kaleidoscope-tile';
 
 	let scope: paper.PaperScope;
 	let canvasEl: HTMLCanvasElement;
 	const renderPipeline = createRenderPipeline();
+
+	// Offscreen square scope/canvas: renders the composition as the kaleidoscope tile.
+	const TILE_PX = 600;
+	let tileScope: paper.PaperScope | undefined;
+	let tileCanvas: HTMLCanvasElement | undefined;
+	let staticTile: HTMLCanvasElement | undefined;
+	let kaleidoFrame: number | null = null;
 
 	let exportStatus = $state<'idle' | 'rendering'>('idle');
 	let exportProgress = $state(0);
@@ -110,12 +120,113 @@
 			exportProgress = 0;
 		}
 	}
+
+	function ensureTileScope() {
+		if (tileScope) return;
+		tileCanvas = document.createElement('canvas');
+		tileCanvas.width = TILE_PX;
+		tileCanvas.height = TILE_PX;
+		tileScope = new paper.PaperScope();
+		tileScope.setup(tileCanvas);
+	}
+
+	function renderTile(): HTMLCanvasElement {
+		ensureTileScope();
+		const viewport = { width: TILE_PX, height: TILE_PX, padding: 32 };
+		const ignoreMorph =
+			animationState.mode === 'audioBars' || animationState.mode === 'audioZones';
+		renderPipeline.render({ composition, scope: tileScope!, ignoreMorph, viewport });
+		const bg = kaleidoscope.tileBackground ? getCompositionBackgroundColor() : null;
+		return composeTileWithBackground(tileCanvas!, bg);
+	}
+
+	function refreshTile() {
+		staticTile = renderTile();
+	}
+
+	function drawKaleidoscope() {
+		if (!canvasEl) return;
+		const ctx = canvasEl.getContext('2d');
+		if (!ctx) return;
+		const tile = kaleidoscope.liveTile ? renderTile() : (staticTile ??= renderTile());
+		const size = Math.min(canvasEl.width, canvasEl.height);
+		renderKaleidoscopeToCanvas(ctx, tile, tile.width, tile.height, kaleidoscope, size);
+	}
+
+	function exportKaleidoscopePng() {
+		if (!canvasEl) return;
+		canvasEl.toBlob((blob) => {
+			if (!blob) return;
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = 'kaleidoscope.png';
+			a.click();
+			URL.revokeObjectURL(url);
+		}, 'image/png');
+	}
+
+	function exportKaleidoscopeSvg() {
+		ensureTileScope();
+		renderTile();
+		tileScope!.activate();
+		const tileSvg = tileScope!.project.exportSVG({ asString: true }) as string;
+		const size = canvasEl ? Math.min(canvasEl.width, canvasEl.height) : TILE_PX;
+		const svg = generateKaleidoscopeSVG(tileSvg, kaleidoscope, size);
+		const blob = new Blob([svg], { type: 'image/svg+xml' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'kaleidoscope.svg';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	$effect(() => {
+		if (!kaleidoscope.enabled) {
+			if (kaleidoFrame !== null) {
+				cancelAnimationFrame(kaleidoFrame);
+				kaleidoFrame = null;
+			}
+			return;
+		}
+		// Touch reactive params so the loop restarts when they change.
+		void kaleidoscope.sectors;
+		void kaleidoscope.repeat;
+		void kaleidoscope.liveTile;
+		staticTile = undefined;
+		const loop = () => {
+			drawKaleidoscope();
+			kaleidoFrame = requestAnimationFrame(loop);
+		};
+		kaleidoFrame = requestAnimationFrame(loop);
+		return () => {
+			if (kaleidoFrame !== null) {
+				cancelAnimationFrame(kaleidoFrame);
+				kaleidoFrame = null;
+			}
+		};
+	});
+
+	$effect(() => {
+		void kaleidoscope.refreshNonce;
+		if (kaleidoscope.enabled && !kaleidoscope.liveTile) refreshTile();
+	});
 </script>
 
 <div class="flex shrink-0 flex-col items-center gap-3">
 	<canvas {@attach setupCanvas} width="600" height="600" class="rounded-lg border bg-white"
 	></canvas>
 	<Button variant="outline" onclick={exportSvg} class="w-full max-w-[600px]">Export SVG</Button>
+
+	{#if kaleidoscope.enabled}
+		<Button variant="outline" onclick={exportKaleidoscopePng} class="w-full max-w-[600px]">
+			Esporta PNG (caleidoscopio)
+		</Button>
+		<Button variant="outline" onclick={exportKaleidoscopeSvg} class="w-full max-w-[600px]">
+			Esporta SVG (caleidoscopio)
+		</Button>
+	{/if}
 
 	<div class="flex w-full max-w-[600px] flex-col gap-2">
 		<div class="flex items-center gap-2">

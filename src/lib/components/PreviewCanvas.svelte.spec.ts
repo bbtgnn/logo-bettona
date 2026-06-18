@@ -1,8 +1,10 @@
 import type paper from 'paper';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition } from '$lib/state/composition';
+import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
 
 let lastRenderedScope: paper.PaperScope | undefined;
 let lastRenderInput: RenderInput | undefined;
@@ -122,6 +124,21 @@ describe('PreviewCanvas.svelte', () => {
 
 		view.unmount();
 		expect(disposeCallCount).toBe(1);
+	});
+
+	it('shows kaleidoscope export buttons when mode is enabled', async () => {
+		render(PreviewCanvas);
+		setKaleidoscopeEnabled(true);
+		try {
+			await expect
+				.element(page.getByText('Esporta PNG (caleidoscopio)'))
+				.toBeInTheDocument();
+			await expect
+				.element(page.getByText('Esporta SVG (caleidoscopio)'))
+				.toBeInTheDocument();
+		} finally {
+			setKaleidoscopeEnabled(false);
+		}
 	});
 
 });
