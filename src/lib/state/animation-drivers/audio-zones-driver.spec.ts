@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import type { Ring, ZoneIntensity, ZoneDrive, EnvelopeParams } from '$lib/types';
 import { createAudioZonesDriver } from './audio-zones-driver';
-import { ZONE_SCALE } from '$lib/geometry/zones';
 
 const defaultIntensity: ZoneIntensity = { bass: 0.5, mid: 0.5, treble: 0.5 };
 const instant: EnvelopeParams = { attack: 1, release: 1 };
 const instantEnvelopes = { bass: instant, mid: instant, treble: instant };
+
+// Mirror of the driver's per-band threshold→expand response curve, for expectations.
+const RESP = {
+  bass: { floor: 0.235, sat: 0.863 },
+  mid: { floor: 0.196, sat: 0.863 },
+  treble: { floor: 0.275, sat: 0.863 }
+};
+function respondExpect(raw: number, floor: number, sat: number): number {
+  if (sat <= floor) return 0;
+  return Math.max(0, Math.min(1, (raw - floor) / (sat - floor)));
+}
 
 type DriveCall = { index: number; drive: ZoneDrive | null };
 
@@ -52,35 +62,69 @@ describe('createAudioZonesDriver', () => {
     expect(calls[1].drive).not.toBeNull();
   });
 
-  it('frame() with instant attack scales bassPush by bass * intensity.bass * ZONE_SCALE', () => {
+  it('frame() emits normalized bassPush = respond(raw) * intensity (instant attack)', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 0.5, mid: 0, treble: 0 }, calls });
     driver.init();
     driver.frame(0);
-    expect(calls[0].drive?.bassPush).toBeCloseTo(0.5 * 0.5 * ZONE_SCALE, 4);
+    const expected = respondExpect(0.5, RESP.bass.floor, RESP.bass.sat) * defaultIntensity.bass;
+    expect(calls[0].drive?.bassPush).toBeCloseTo(expected, 6);
   });
 
-  it('frame() with instant attack scales midPush by mid * intensity.mid * ZONE_SCALE', () => {
+  it('frame() emits normalized midPush = respond(raw) * intensity (instant attack)', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0.8, treble: 0 }, calls });
     driver.init();
     driver.frame(0);
-    expect(calls[0].drive?.midPush).toBeCloseTo(0.8 * 0.5 * ZONE_SCALE, 4);
+    const expected = respondExpect(0.8, RESP.mid.floor, RESP.mid.sat) * defaultIntensity.mid;
+    expect(calls[0].drive?.midPush).toBeCloseTo(expected, 6);
+  });
+
+  it('frame() floors a sub-threshold band to zero deformation', () => {
+    const calls: DriveCall[] = [];
+    const driver = makeDriver({ ringCount: 1, zones: { bass: 0.1, mid: 0.1, treble: 0.1 }, calls });
+    driver.init();
+    driver.frame(0);
+    expect(calls[0].drive?.bassPush).toBe(0);
+    expect(calls[0].drive?.midPush).toBe(0);
+    expect(calls[0].drive?.trebleRetract).toBe(0);
+    expect(calls[0].drive?.trebleVibrate).toBe(0);
+  });
+
+  it('frame() saturates an above-sat band to intensity (1 * intensity)', () => {
+    const calls: DriveCall[] = [];
+    const driver = makeDriver({ ringCount: 1, zones: { bass: 1.0, mid: 0, treble: 0 }, calls });
+    driver.init();
+    driver.frame(0);
+    expect(calls[0].drive?.bassPush).toBeCloseTo(defaultIntensity.bass, 6);
+  });
+
+  it('frame() keeps all normalized fields within range under full input', () => {
+    const calls: DriveCall[] = [];
+    const driver = makeDriver({ ringCount: 1, zones: { bass: 1.0, mid: 1.0, treble: 1.0 }, calls });
+    driver.init();
+    driver.frame(31.25); // phase = +1
+    const d = calls[0].drive!;
+    expect(d.bassPush).toBeGreaterThanOrEqual(0);
+    expect(d.bassPush).toBeLessThanOrEqual(1);
+    expect(d.midPush).toBeLessThanOrEqual(1);
+    expect(d.trebleRetract).toBeLessThanOrEqual(1);
+    expect(Math.abs(d.trebleVibrate)).toBeLessThanOrEqual(1);
   });
 
   it('attack ramps the smoothed level toward raw on rising input', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({
       ringCount: 1,
-      zones: { bass: 1, mid: 0, treble: 0 },
+      zones: { bass: 1, mid: 0, treble: 0 }, // respond(1) = 1
       envelopes: { bass: { attack: 0.5, release: 0.5 }, mid: instant, treble: instant },
       calls
     });
     driver.init();
     driver.frame(0);
-    expect(calls[0].drive?.bassPush).toBeCloseTo(0.5 * 0.5 * ZONE_SCALE, 4);
+    expect(calls[0].drive?.bassPush).toBeCloseTo(0.5 * 0.5, 6);
     driver.frame(16);
-    expect(calls[1].drive?.bassPush).toBeCloseTo(0.75 * 0.5 * ZONE_SCALE, 4);
+    expect(calls[1].drive?.bassPush).toBeCloseTo(0.75 * 0.5, 6);
   });
 
   it('release decays slower than attack rises (asymmetry)', () => {
@@ -101,17 +145,17 @@ describe('createAudioZonesDriver', () => {
       applyRingZoneDrive: (index, drive) => calls.push({ index, drive })
     });
     driver.init();
-    driver.frame(0); // attack 1 → smoothed.bass = 1
-    expect(calls[0].drive?.bassPush).toBeCloseTo(1 * 0.5 * ZONE_SCALE, 4);
-    driver.frame(16); // raw 0, release 0.25 → smoothed = lerp(1,0,0.25)=0.75
-    expect(calls[1].drive?.bassPush).toBeCloseTo(0.75 * 0.5 * ZONE_SCALE, 4);
+    driver.frame(0); // respond(1)=1, attack 1 → smoothed.bass = 1
+    expect(calls[0].drive?.bassPush).toBeCloseTo(1 * 0.5, 6);
+    driver.frame(16); // raw 0 → respond 0, release 0.25 → smoothed = lerp(1,0,0.25)=0.75
+    expect(calls[1].drive?.bassPush).toBeCloseTo(0.75 * 0.5, 6);
   });
 
   it('init() resets smoothed state between runs', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({
       ringCount: 1,
-      zones: { bass: 1, mid: 0, treble: 0 },
+      zones: { bass: 1, mid: 0, treble: 0 }, // respond(1) = 1
       envelopes: { bass: { attack: 0.5, release: 0.5 }, mid: instant, treble: instant },
       calls
     });
@@ -119,29 +163,29 @@ describe('createAudioZonesDriver', () => {
     driver.frame(0); // smoothed.bass = 0.5
     driver.init(); // reset to 0
     driver.frame(0); // smoothed.bass = 0.5 again, not 0.75
-    expect(calls[1].drive?.bassPush).toBeCloseTo(0.5 * 0.5 * ZONE_SCALE, 4);
+    expect(calls[1].drive?.bassPush).toBeCloseTo(0.5 * 0.5, 6);
   });
 
-  it('treble: trebleRetract = smoothed.treble * intensity * ZONE_SCALE', () => {
+  it('treble: trebleRetract = respond(treble) * intensity (instant attack)', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0, treble: 0.4 }, calls });
     driver.init();
     driver.frame(0);
-    // instant attack → smoothed.treble = 0.4; intensity 0.5
-    expect(calls[0].drive?.trebleRetract).toBeCloseTo(0.4 * 0.5 * ZONE_SCALE, 4);
+    const expected = respondExpect(0.4, RESP.treble.floor, RESP.treble.sat) * defaultIntensity.treble;
+    expect(calls[0].drive?.trebleRetract).toBeCloseTo(expected, 6);
   });
 
-  it('treble: trebleVibrate = trebleRetract * VIBR_AMT * sin(2*pi*8*t)', () => {
+  it('treble: trebleVibrate = trebleRetract * sin(2*pi*8*t)', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0, treble: 0.4 }, calls });
     driver.init();
     // nowSec=1.0 → sin(2*pi*8*1)=0 → vibrate≈0
     driver.frame(1000);
-    expect(calls[0].drive?.trebleVibrate).toBeCloseTo(0, 4);
-    // nowMs=31.25 → 8*t = 0.25 → sin(pi/2)=1 → full-amplitude vibrate
+    expect(calls[0].drive?.trebleVibrate).toBeCloseTo(0, 6);
+    // nowMs=31.25 → 8*t = 0.25 → sin(pi/2)=1 → full-amplitude vibrate = trebleRetract * 1
     driver.frame(31.25);
-    const trebleBase = 0.4 * 0.5 * ZONE_SCALE; // smoothed.treble * intensity * ZONE_SCALE
-    expect(calls[1].drive?.trebleVibrate).toBeCloseTo(trebleBase * 0.5, 4);
+    const trebleNorm = respondExpect(0.4, RESP.treble.floor, RESP.treble.sat) * defaultIntensity.treble;
+    expect(calls[1].drive?.trebleVibrate).toBeCloseTo(trebleNorm, 6);
   });
 
   it('frame() applies per-ring zoneConfig override', () => {
@@ -155,7 +199,8 @@ describe('createAudioZonesDriver', () => {
     });
     driver.init();
     driver.frame(0);
-    expect(calls[0].drive?.bassPush).toBeCloseTo(0.5 * 1.0 * ZONE_SCALE, 4);
+    const expected = respondExpect(0.5, RESP.bass.floor, RESP.bass.sat) * 1.0;
+    expect(calls[0].drive?.bassPush).toBeCloseTo(expected, 6);
   });
 
   it('frame() returns {}', () => {
