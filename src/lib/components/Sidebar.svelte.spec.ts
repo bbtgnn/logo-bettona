@@ -46,6 +46,7 @@ vi.mock('$lib/state/composition', () => ({
 	composition: {
 		baseRadius: 100,
 		ringIncrement: 50,
+		aspectRatio: '1:1',
 		rings: [],
 		monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
 		fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
@@ -57,6 +58,7 @@ vi.mock('$lib/state/composition', () => ({
 	reorderRings: vi.fn(),
 	setBaseRadius: vi.fn(),
 	setRingIncrement: vi.fn(),
+	setAspectRatio: vi.fn(),
 	setColorMode: vi.fn(),
 	setActivePalette: vi.fn(),
 	addMonochromePalette: vi.fn(),
