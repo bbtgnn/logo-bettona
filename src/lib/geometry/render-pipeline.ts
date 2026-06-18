@@ -107,15 +107,15 @@ export function createRenderPipeline(): {
 		}
 	}
 
-	function fitToView(scope: paper.PaperScope, viewport: RenderViewport): void {
-		const allItems = scope.project.activeLayer.children;
-		if (allItems.length === 0) return;
+	function unionBounds(scope: paper.PaperScope): paper.Rectangle | null {
+		const items = scope.project.activeLayer.children;
+		if (items.length === 0) return null;
+		let bounds = items[0].bounds.clone();
+		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
+		return bounds;
+	}
 
-		let bounds = allItems[0].bounds.clone();
-		for (let i = 1; i < allItems.length; i++) {
-			bounds = bounds.unite(allItems[i].bounds);
-		}
-
+	function fitToView(scope: paper.PaperScope, viewport: RenderViewport, bounds: paper.Rectangle): void {
 		if (bounds.width === 0 || bounds.height === 0) return;
 
 		const padding = viewport.padding ?? 32;
@@ -127,19 +127,7 @@ export function createRenderPipeline(): {
 		scope.project.activeLayer.position = scope.view.bounds.center;
 	}
 
-	function measureBoundSide(scope: paper.PaperScope): number {
-		const items = scope.project.activeLayer.children;
-		if (items.length === 0) return 0;
-		let bounds = items[0].bounds.clone();
-		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
-		return Math.max(bounds.width, bounds.height);
-	}
-
-	function applyFixedScale(scope: paper.PaperScope, fitScale: number): void {
-		const items = scope.project.activeLayer.children;
-		if (items.length === 0) return;
-		let bounds = items[0].bounds.clone();
-		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
+	function applyFixedScale(scope: paper.PaperScope, fitScale: number, bounds: paper.Rectangle): void {
 		scope.project.activeLayer.scale(fitScale, bounds.center);
 		scope.project.activeLayer.position = scope.view.bounds.center;
 	}
@@ -232,11 +220,14 @@ export function createRenderPipeline(): {
 
 		let boundSide = 0;
 		try {
-			boundSide = measureBoundSide(scope);
-			if (input.fitScale && Number.isFinite(input.fitScale) && input.fitScale > 0) {
-				applyFixedScale(scope, input.fitScale);
-			} else {
-				fitToView(scope, viewport);
+			const bounds = unionBounds(scope);
+			boundSide = bounds ? Math.max(bounds.width, bounds.height) : 0;
+			if (bounds) {
+				if (input.fitScale && Number.isFinite(input.fitScale) && input.fitScale > 0) {
+					applyFixedScale(scope, input.fitScale, bounds);
+				} else {
+					fitToView(scope, viewport, bounds);
+				}
 			}
 			scope.view.update();
 		} catch (error) {
