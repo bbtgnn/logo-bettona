@@ -16,7 +16,7 @@
 			<Label for="canvas-ratio" class="text-xs">Aspect ratio</Label>
 			<select
 				id="canvas-ratio"
-				class="rounded border bg-transparent px-2 py-1 text-xs"
+				class="h-9 rounded-md border border-input bg-background px-3 text-xs"
 				value={composition.aspectRatio}
 				onchange={(e) => setAspectRatio((e.target as HTMLSelectElement).value as AspectRatio)}
 			>
