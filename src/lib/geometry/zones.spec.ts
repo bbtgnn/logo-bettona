@@ -182,6 +182,12 @@ describe('applyZonesToPath', () => {
   });
 });
 
+describe('BASS_REACH', () => {
+  it('is tuned for full-frame opening (2.0)', () => {
+    expect(BASS_REACH).toBeCloseTo(2.0, 6);
+  });
+});
+
 describe('resolveZoneIntensity', () => {
   const def = { bass: 0.5, mid: 0.5, treble: 0.5 };
 

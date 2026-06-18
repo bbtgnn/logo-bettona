@@ -1,7 +1,7 @@
 import type { Path, ZoneIntensity, ZoneDrive } from '$lib/types';
 
-/** Bass: outer tip reach as a multiple of petal radial extent (≈ full petal length). */
-export const BASS_REACH = 1.2;
+/** Bass: outer tip reach as a multiple of petal radial extent. Tuned with REST_FRACTION (PreviewCanvas) so a full-bass hit fills the reserved headroom. */
+export const BASS_REACH = 2.0;
 /** Mid: tangential widening as a fraction of radial extent. */
 export const MID_X_REACH = 0.6;
 /** Mid: slight radial-out nudge as a fraction of radial extent. */
