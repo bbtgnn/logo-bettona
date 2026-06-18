@@ -247,6 +247,11 @@ export function setAspectRatio(ratio: AspectRatio) {
 	composition.aspectRatio = ratio;
 }
 
+export function getCompositionBackgroundColor(): string {
+	const mono = composition.monochromePalettes[colorMode.palette];
+	return mono?.bg ?? '#ffffff';
+}
+
 export function setRingExpanded(index: number, expanded: boolean) {
 	uiState.expandedRings = { ...uiState.expandedRings, [index]: expanded };
 }
