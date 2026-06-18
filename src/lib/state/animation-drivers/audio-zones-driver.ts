@@ -1,15 +1,16 @@
 import type { Ring, ZoneIntensity, ZoneDrive, EnvelopeParams } from '$lib/types';
 import { resolveZoneIntensity } from '$lib/geometry/zones';
 
-const VIBR_FREQ = 8; // Hz — treble tangential vibration frequency (fixed)
-
 // Per-band threshold→expand response curve, ported from the old p5 sketch
-// (0–255 thresholds bass 60 / mid 50 / treble 70, saturation 220, ÷255).
-// Below floor → 0 (still petals); above sat → 1 (snap).
-const RESPONSE = {
-  bass: { floor: 0.235, sat: 0.863 },
-  mid: { floor: 0.196, sat: 0.863 },
-  treble: { floor: 0.275, sat: 0.863 }
+// Below floor → 0 (still in silence); above sat → 1 (full effect). Lower floor =
+// reacts to quieter sound; lower sat = reaches full effect sooner. Widened from the
+// old p5 thresholds to make all three bands more sensitive without raising the max
+// reach (so nothing clips the edge). Exported as the single source of truth (the spec
+// imports it) so this can be tuned without churning test literals.
+export const RESPONSE = {
+  bass: { floor: 0.15, sat: 0.65 },
+  mid: { floor: 0.12, sat: 0.65 },
+  treble: { floor: 0.18, sat: 0.65 }
 } as const;
 
 function respond(raw: number, floor: number, sat: number): number {
@@ -17,11 +18,16 @@ function respond(raw: number, floor: number, sat: number): number {
   return clamp01((raw - floor) / (sat - floor));
 }
 
-// Per-band asymmetric attack/release, baked from the old p5 sketch (sketch.js 79-81).
-const ENVELOPE = {
-  bass: { attack: 0.35, release: 0.18 },
-  mid: { attack: 0.5, release: 0.25 },
-  treble: { attack: 0.8, release: 0.5 }
+// Per-band asymmetric attack/release (applied per rAF frame at ~60fps).
+// Goal is the old repo's "breathing flower": a SMOOTH organic swell-and-settle, not
+// a hard snap. The old p5 sketch ran at 30fps with attack/release 0.35/0.18 (bass),
+// 0.5/0.25 (mid), 0.8/0.5 (treble). We tick at ~60fps, so per-frame rates are
+// dt-corrected (r60 = 1 - sqrt(1 - r30)) to reproduce the same time response.
+// Exported so the spec verifies the mechanic against the live values (no magic literals).
+export const ENVELOPE = {
+  bass: { attack: 0.2, release: 0.1 },
+  mid: { attack: 0.3, release: 0.13 },
+  treble: { attack: 0.55, release: 0.3 }
 } as const;
 
 type AnimationDriver = {
@@ -86,18 +92,19 @@ export function createAudioZonesDriver(deps: CreateAudioZonesDriverDeps): Animat
 
       const defaultIntensity = deps.getDefaultIntensity();
       const ringCount = normalizeRingCount(deps.getRingCount());
-      const nowSec = (Number.isFinite(nowMs) ? nowMs : 0) / 1000;
-      const vibratePhase = Math.sin(2 * Math.PI * VIBR_FREQ * nowSec);
 
       for (let i = 0; i < ringCount; i++) {
         const ring = deps.getRing(i);
         const cfg = resolveZoneIntensity(ring, defaultIntensity);
         const trebleNorm = smoothed.treble * cfg.treble;
+        // No 8Hz oscillator (that read as a "panic attack" jitter and is absent from
+        // the old sketch). Treble is a smooth magnitude: inner tip retracts inward and
+        // leans tangentially, both growing/settling with the envelope. Breathing, not jitter.
         deps.applyRingZoneDrive(i, {
           bassPush: smoothed.bass * cfg.bass,
           midPush: smoothed.mid * cfg.mid,
           trebleRetract: trebleNorm,
-          trebleVibrate: trebleNorm * vibratePhase
+          trebleVibrate: trebleNorm
         });
       }
 

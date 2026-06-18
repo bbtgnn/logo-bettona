@@ -1,21 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Ring, ZoneIntensity, ZoneDrive } from '$lib/types';
-import { createAudioZonesDriver } from './audio-zones-driver';
+import { createAudioZonesDriver, ENVELOPE, RESPONSE as RESP } from './audio-zones-driver';
 
 const defaultIntensity: ZoneIntensity = { bass: 0.5, mid: 0.5, treble: 0.5 };
 
-// Mirror of the driver's per-band threshold→expand response curve, for expectations.
-const RESP = {
-  bass: { floor: 0.235, sat: 0.863 },
-  mid: { floor: 0.196, sat: 0.863 },
-  treble: { floor: 0.275, sat: 0.863 }
-};
-// Mirror of the driver's baked per-band attack/release envelope (old p5 sketch values).
-const ENVELOPE = {
-  bass: { attack: 0.35, release: 0.18 },
-  mid: { attack: 0.5, release: 0.25 },
-  treble: { attack: 0.8, release: 0.5 }
-};
+// RESP/ENVELOPE are imported from the driver so these tests verify the smoothing MECHANIC
+// against the live attack/release values — they stay green when the values are tuned.
 function respondExpect(raw: number, floor: number, sat: number): number {
   if (sat <= floor) return 0;
   return Math.max(0, Math.min(1, (raw - floor) / (sat - floor)));
@@ -108,7 +98,7 @@ describe('createAudioZonesDriver', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 1.0, mid: 1.0, treble: 1.0 }, calls });
     driver.init();
-    driver.frame(31.25); // phase = +1
+    driver.frame(31.25);
     const d = calls[0].drive!;
     expect(d.bassPush).toBeGreaterThanOrEqual(0);
     expect(d.bassPush).toBeLessThanOrEqual(1);
@@ -117,17 +107,20 @@ describe('createAudioZonesDriver', () => {
     expect(Math.abs(d.trebleVibrate)).toBeLessThanOrEqual(1);
   });
 
-  it('attack uses the baked bass attack (0.35) on rising input', () => {
+  it('attack rate governs the rise on rising input', () => {
+    const a = ENVELOPE.bass.attack;
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 1, mid: 0, treble: 0 }, calls }); // respond(1)=1
     driver.init();
-    driver.frame(0); // smoothed = 0 + (1-0)*0.35 = 0.35
-    expect(calls[0].drive?.bassPush).toBeCloseTo(0.35 * defaultIntensity.bass, 6);
-    driver.frame(16); // smoothed = 0.35 + (1-0.35)*0.35 = 0.5775
-    expect(calls[1].drive?.bassPush).toBeCloseTo((0.35 + (1 - 0.35) * 0.35) * defaultIntensity.bass, 6);
+    driver.frame(0); // smoothed = 0 + (1-0)*a
+    expect(calls[0].drive?.bassPush).toBeCloseTo(a * defaultIntensity.bass, 6);
+    driver.frame(16); // smoothed = a + (1-a)*a
+    expect(calls[1].drive?.bassPush).toBeCloseTo((a + (1 - a) * a) * defaultIntensity.bass, 6);
   });
 
-  it('release uses the baked bass release (0.18) when input falls (asymmetry)', () => {
+  it('release rate (distinct from attack) governs the fall — asymmetry', () => {
+    const a = ENVELOPE.bass.attack;
+    const r = ENVELOPE.bass.release;
     const calls: DriveCall[] = [];
     const driver = createAudioZonesDriver({
       getDefaultIntensity: () => defaultIntensity,
@@ -140,20 +133,21 @@ describe('createAudioZonesDriver', () => {
       applyRingZoneDrive: (index, drive) => calls.push({ index, drive })
     });
     driver.init();
-    driver.frame(0); // respond(1)=1, attack 0.35 → smoothed = 0.35
-    expect(calls[0].drive?.bassPush).toBeCloseTo(0.35 * defaultIntensity.bass, 6);
-    driver.frame(16); // raw 0 → respond 0, release 0.18 → 0.35 + (0-0.35)*0.18 = 0.287
-    expect(calls[1].drive?.bassPush).toBeCloseTo((0.35 + (0 - 0.35) * 0.18) * defaultIntensity.bass, 6);
+    driver.frame(0); // respond(1)=1, attack → smoothed = a
+    expect(calls[0].drive?.bassPush).toBeCloseTo(a * defaultIntensity.bass, 6);
+    driver.frame(16); // raw 0 → respond 0, release → a + (0-a)*r
+    expect(calls[1].drive?.bassPush).toBeCloseTo((a + (0 - a) * r) * defaultIntensity.bass, 6);
   });
 
   it('init() resets smoothed state between runs', () => {
+    const a = ENVELOPE.bass.attack;
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 1, mid: 0, treble: 0 }, calls });
     driver.init();
-    driver.frame(0); // smoothed = 0.35
+    driver.frame(0); // smoothed = a
     driver.init(); // reset to 0
-    driver.frame(0); // smoothed = 0.35 again, not compounding
-    expect(calls[1].drive?.bassPush).toBeCloseTo(0.35 * defaultIntensity.bass, 6);
+    driver.frame(0); // smoothed = a again, not compounding
+    expect(calls[1].drive?.bassPush).toBeCloseTo(a * defaultIntensity.bass, 6);
   });
 
   it('treble: trebleRetract = respond(treble) * treble attack * intensity (first frame)', () => {
@@ -168,18 +162,18 @@ describe('createAudioZonesDriver', () => {
     expect(calls[0].drive?.trebleRetract).toBeCloseTo(expected, 6);
   });
 
-  it('treble vibrate equals retract times the sine phase, same frame', () => {
+  it('treble vibrate is a smooth magnitude (== retract), with no time/phase dependence', () => {
     const calls: DriveCall[] = [];
     const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0, treble: 0.4 }, calls });
     driver.init();
-    // phase = sin(2*pi*8*1)=0 → vibrate ≈ 0 even though retract is non-zero
+    // No 8Hz oscillator: vibrate tracks retract and does not depend on nowMs.
     driver.frame(1000);
-    expect(calls[0].drive?.trebleVibrate).toBeCloseTo(0, 6);
-    expect(calls[0].drive?.trebleRetract ?? 0).toBeGreaterThan(0);
-    // phase = sin(2*pi*8*0.03125)=sin(pi/2)=1 → vibrate equals retract this frame
+    const a = calls[0].drive!;
+    expect(a.trebleRetract).toBeGreaterThan(0);
+    expect(a.trebleVibrate).toBeCloseTo(a.trebleRetract, 6);
     driver.frame(31.25);
-    const d = calls[1].drive!;
-    expect(d.trebleVibrate).toBeCloseTo(d.trebleRetract, 6);
+    const b = calls[1].drive!;
+    expect(b.trebleVibrate).toBeCloseTo(b.trebleRetract, 6);
   });
 
   it('frame() applies per-ring zoneConfig override', () => {

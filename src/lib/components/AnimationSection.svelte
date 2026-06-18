@@ -307,9 +307,9 @@
 					{/if}
 
 					<div class="flex flex-col gap-2">
-						<p class="text-[11px] font-medium text-muted-foreground">Zone intensities (global)</p>
+						<p class="text-[11px] font-medium text-muted-foreground">Intensità per banda</p>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-bass" class="text-xs">Bass</Label>
+							<Label for="zones-bass" class="text-xs">Bassi · punta</Label>
 							<input
 								id="zones-bass"
 								type="range"
@@ -324,7 +324,7 @@
 							/>
 						</div>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-mid" class="text-xs">Mid</Label>
+							<Label for="zones-mid" class="text-xs">Medi · fianchi</Label>
 							<input
 								id="zones-mid"
 								type="range"
@@ -339,7 +339,7 @@
 							/>
 						</div>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-treble" class="text-xs">Treble</Label>
+							<Label for="zones-treble" class="text-xs">Alti · base</Label>
 							<input
 								id="zones-treble"
 								type="range"

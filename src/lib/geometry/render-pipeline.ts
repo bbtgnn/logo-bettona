@@ -3,7 +3,6 @@ import type { Composition } from '$lib/types';
 import { buildRingPath } from './bend';
 import { interpolatePath, validatePathCompatibility } from './path-morph';
 import { applyWaveToPath } from './wave';
-import { applyZonesToPath } from './zones';
 
 type RenderViewport = {
 	width: number;
@@ -191,12 +190,11 @@ export function createRenderPipeline(): {
 					};
 				}
 
-				// Apply zone deformation (audioZones mode) BEFORE bend mirrors/tiles — same slot as wave.
-				if (!input.ignoreZoneDrive && effectiveRing.zoneDrive && effectiveRing.templatePath) {
-					effectiveRing = {
-						...effectiveRing,
-						templatePath: applyZonesToPath(effectiveRing.templatePath, effectiveRing.zoneDrive)
-					};
+				// Zone deformation (audioZones mode) is applied inside buildRingPath in final
+				// polar space, driven by ring.zoneDrive. Strip the drive when measuring the
+				// rest pose so the fixed scale is taken from the undeformed shape.
+				if (input.ignoreZoneDrive && effectiveRing.zoneDrive) {
+					effectiveRing = { ...effectiveRing, zoneDrive: null };
 				}
 
 				const radius = composition.baseRadius + composition.ringIncrement * i;
