@@ -99,6 +99,11 @@ describe('createAudioSource', () => {
 		expect(source.readBars()).toEqual([]);
 	});
 
+	it('createRecordingStream returns null when no audio context exists yet', () => {
+		const source = createAudioSource({ getRingCount: () => 4, getConfig: () => config });
+		expect(source.createRecordingStream()).toBeNull();
+	});
+
 	it('reads ringCount values in 0..1 once the mic source is active', async () => {
 		vi.stubGlobal('AudioContext', MockAudioContext);
 		vi.stubGlobal('navigator', {

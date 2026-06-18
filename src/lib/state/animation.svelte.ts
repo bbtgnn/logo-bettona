@@ -374,6 +374,17 @@ export function stopAnimation(resetProgress = true) {
 	stopInternal(resetProgress);
 }
 
+/**
+ * Audio stream for a video export, tapped from the live source. Only real sources
+ * (mic/file) yield a stream; demo/off return null (no real audio to record).
+ */
+export function getExportAudioStream(): { stream: MediaStream; dispose: () => void } | null {
+	if (animationState.audioSource === 'mic' || animationState.audioSource === 'file') {
+		return audioSource.createRecordingStream();
+	}
+	return null;
+}
+
 export function handleCompositionChanged() {
 	const currentIndices = getMorphRingIndices();
 

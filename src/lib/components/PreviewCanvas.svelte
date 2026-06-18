@@ -3,7 +3,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { composition } from '$lib/state/composition';
-	import { animationState, togglePlay } from '$lib/state/animation';
+	import { animationState, togglePlay, getExportAudioStream } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 	import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
@@ -15,6 +15,7 @@
 	let exportStatus = $state<'idle' | 'rendering'>('idle');
 	let exportProgress = $state(0);
 	let exportDurationSec = $state(5);
+	let exportAudio = $state(false);
 	const animationExportSupported = isAnimationExportSupported();
 
 	// Rest mark fills this fraction of the frame, leaving headroom for petals to
@@ -84,12 +85,14 @@
 	async function exportAnimation() {
 		if (exportStatus === 'rendering' || !canvasEl) return;
 		if (!animationState.isPlaying) togglePlay();
+		const audio = exportAudio ? getExportAudioStream() : null;
 		exportStatus = 'rendering';
 		exportProgress = 0;
 		try {
 			await exportCanvasAnimation({
 				canvas: canvasEl,
 				durationSec: exportDurationSec,
+				audioStream: audio?.stream ?? null,
 				onProgress: (p) => {
 					exportProgress = p;
 				}
@@ -97,6 +100,7 @@
 		} catch (err) {
 			console.error('Animation export failed', err);
 		} finally {
+			audio?.dispose();
 			exportStatus = 'idle';
 			exportProgress = 0;
 		}
@@ -123,6 +127,15 @@
 					(exportDurationSec = Math.max(1, Number((e.target as HTMLInputElement).value) || 1))}
 			/>
 		</div>
+		<label class="flex items-center gap-2 text-xs">
+			<input
+				type="checkbox"
+				checked={exportAudio}
+				disabled={exportStatus === 'rendering'}
+				onchange={(e) => (exportAudio = (e.target as HTMLInputElement).checked)}
+			/>
+			Includi audio
+		</label>
 		{#if exportStatus === 'rendering'}
 			<div class="flex flex-col gap-1">
 				<div class="h-2 w-full overflow-hidden rounded bg-muted">
