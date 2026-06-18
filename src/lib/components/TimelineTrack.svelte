@@ -1,10 +1,16 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
+	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
 	import { timeFromX, xFromTime } from '$lib/animation/timeline-geometry';
 	import type { Interp } from '$lib/animation/keyframes';
 
 	let { paramId, label }: { paramId: string; label: string } = $props();
+
+	// Editing a keyframe should refresh the paused preview; tick only applies while playing.
+	function reapplyIfPaused() {
+		if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
+	}
 
 	let rowEl = $state<HTMLDivElement>();
 	let selectedId = $state<string | null>(null);
@@ -22,6 +28,7 @@
 		const rect = rowEl.getBoundingClientRect();
 		const time = timeFromX(e.clientX - rect.left, rect.width);
 		selectedId = keyframes.addKeyframe(paramId, { time, value: 0 });
+		reapplyIfPaused();
 	}
 
 	function onDiamondDown(e: PointerEvent, id: string) {
@@ -41,6 +48,7 @@
 		keyframes.moveKeyframe(paramId, draggingId, {
 			time: timeFromX(e.clientX - rect.left, rect.width)
 		});
+		reapplyIfPaused();
 	}
 
 	function onDiamondUp(e: PointerEvent) {
@@ -53,11 +61,15 @@
 		if (selectedId) {
 			keyframes.deleteKeyframe(paramId, selectedId);
 			selectedId = null;
+			reapplyIfPaused();
 		}
 	}
 
 	function setInterp(value: string) {
-		if (selectedId) keyframes.setKeyframeInterp(paramId, selectedId, value as Interp);
+		if (selectedId) {
+			keyframes.setKeyframeInterp(paramId, selectedId, value as Interp);
+			reapplyIfPaused();
+		}
 	}
 </script>
 

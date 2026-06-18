@@ -19,7 +19,7 @@
 		setKaleidoscopeBackgroundColor,
 		requestTileRefresh
 	} from '$lib/state/kaleidoscope.svelte';
-	import { animationState } from '$lib/state/animation';
+	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
 	import { keyframes, KALEIDO_GLOBAL_ROTATION } from '$lib/state/keyframes.svelte';
 
 	const num = (e: Event) => Number((e.target as HTMLInputElement).value);
@@ -31,6 +31,8 @@
 	function onRotationInput(value: number) {
 		if (rotationAnimated) {
 			keyframes.upsertKeyframeAtTime(KALEIDO_GLOBAL_ROTATION, animationState.progress, value);
+			// Reflect the just-authored keyframe in the paused preview (tick only runs while playing).
+			if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
 		} else {
 			setGlobalRotation(value);
 		}

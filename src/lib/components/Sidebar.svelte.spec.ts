@@ -31,6 +31,7 @@ vi.mock('$lib/state/animation', () => ({
 		elapsedMs: 0
 	},
 	togglePlay: vi.fn(),
+	applyKaleidoscopeKeyframes: vi.fn(),
 	setAnimationMode: vi.fn(),
 	setAnimationDurationSec: vi.fn(),
 	setAnimationLoop: vi.fn(),

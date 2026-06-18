@@ -36,7 +36,7 @@
 <div
 	bind:this={rulerEl}
 	data-testid="timeline-ruler"
-	class="relative h-6 w-full cursor-col-resize select-none rounded bg-muted"
+	class="relative h-6 w-full cursor-col-resize rounded bg-muted select-none"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}

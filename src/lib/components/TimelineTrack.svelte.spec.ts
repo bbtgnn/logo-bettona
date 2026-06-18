@@ -3,10 +3,15 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelineTrack from './TimelineTrack.svelte';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
+import { animationState } from '$lib/state/animation';
+import { kaleidoscope, setGlobalRotation } from '$lib/state/kaleidoscope.svelte';
 
 function reset() {
 	keyframes.ensureTrack(ROT);
 	for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
+	keyframes.setTrackEnabled(ROT, false);
+	animationState.isPlaying = false;
+	animationState.progress = 0;
 }
 
 describe('TimelineTrack', () => {
@@ -43,5 +48,18 @@ describe('TimelineTrack', () => {
 		await userEvent.click(page.getByTestId(`kf-${id}`));
 		await userEvent.selectOptions(page.getByLabelText('Interpolazione keyframe'), 'hold');
 		expect(keyframes.tracks[ROT].keyframes[0].interp).toBe('hold');
+	});
+
+	it('refreshes the paused preview when adding a keyframe on an enabled track', async () => {
+		keyframes.setTrackEnabled(ROT, true);
+		setGlobalRotation(99);
+		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
+		const row = page.getByTestId(`track-${ROT}`).element() as HTMLElement;
+		const rect = row.getBoundingClientRect();
+		row.dispatchEvent(
+			new MouseEvent('dblclick', { bubbles: true, clientX: rect.left + rect.width / 2 })
+		);
+		// Single keyframe (value 0) now drives the param everywhere → preview updates from 99.
+		expect(kaleidoscope.globalRotation).toBe(0);
 	});
 });

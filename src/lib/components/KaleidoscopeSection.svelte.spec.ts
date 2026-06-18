@@ -99,4 +99,13 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		const kf = keyframes.tracks[ROT].keyframes.find((k) => Math.abs(k.time - 0.5) < 1e-3);
 		expect(kf?.value).toBe(120);
 	});
+
+	it('reflects the authored keyframe in the paused preview', async () => {
+		keyframes.setTrackEnabled(ROT, true);
+		animationState.progress = 0.5;
+		animationState.isPlaying = false;
+		render(KaleidoscopeSection);
+		await userEvent.fill(page.getByLabelText('Rotazione globale'), '210');
+		expect(kaleidoscope.globalRotation).toBeCloseTo(210, 4);
+	});
 });
