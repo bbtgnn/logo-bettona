@@ -84,7 +84,9 @@
 	}
 
 	async function exportAnimation() {
-		if (exportStatus === 'rendering' || !canvasEl) return;
+		if (exportStatus === 'rendering' || !canvasEl || !scope) return;
+		// Same empty-canvas no-op guard as Export SVG: nothing to record.
+		if (scope.project.activeLayer.children.length === 0) return;
 		if (!animationState.isPlaying) togglePlay();
 		const audio = exportAudio ? getExportAudioStream() : null;
 		exportStatus = 'rendering';
