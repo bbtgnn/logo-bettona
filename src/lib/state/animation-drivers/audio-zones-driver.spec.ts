@@ -122,6 +122,27 @@ describe('createAudioZonesDriver', () => {
     expect(calls[1].drive?.bassPush).toBeCloseTo(0.5 * 0.5 * ZONE_SCALE, 4);
   });
 
+  it('treble: trebleRetract = smoothed.treble * intensity * ZONE_SCALE', () => {
+    const calls: DriveCall[] = [];
+    const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0, treble: 0.4 }, calls });
+    driver.init();
+    driver.frame(0);
+    // instant attack → smoothed.treble = 0.4; intensity 0.5
+    expect(calls[0].drive?.trebleRetract).toBeCloseTo(0.4 * 0.5 * ZONE_SCALE, 4);
+  });
+
+  it('treble: trebleVibrate sign follows sin(2*pi*8*t)', () => {
+    const calls: DriveCall[] = [];
+    const driver = makeDriver({ ringCount: 1, zones: { bass: 0, mid: 0, treble: 0.4 }, calls });
+    driver.init();
+    // nowSec=1.0 → sin(2*pi*8*1)=0 → vibrate≈0
+    driver.frame(1000);
+    expect(calls[0].drive?.trebleVibrate).toBeCloseTo(0, 4);
+    // nowMs=31.25 → 8*t = 0.25 → sin>0
+    driver.frame(31.25);
+    expect(calls[1].drive?.trebleVibrate ?? 0).toBeGreaterThan(0);
+  });
+
   it('frame() applies per-ring zoneConfig override', () => {
     const calls: DriveCall[] = [];
     const override: ZoneIntensity = { bass: 1.0, mid: 0, treble: 0 };

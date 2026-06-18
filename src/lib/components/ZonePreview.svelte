@@ -51,9 +51,10 @@
 				};
 
 				const maxDrive = {
-					bassPush:   intensity.bass   * ZONE_SCALE,
-					midPush:    intensity.mid    * ZONE_SCALE,
-					treblePush: intensity.treble * ZONE_SCALE
+					bassPush: intensity.bass * ZONE_SCALE,
+					midPush: intensity.mid * ZONE_SCALE,
+					trebleRetract: intensity.treble * ZONE_SCALE,
+					trebleVibrate: intensity.treble * ZONE_SCALE * 0.5
 				};
 
 				// reach: max-amplitude zone deformation, translucent fill

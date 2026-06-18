@@ -1,7 +1,8 @@
 import type { Ring, ZoneIntensity, ZoneDrive, EnvelopeParams } from '$lib/types';
 import { resolveZoneIntensity, ZONE_SCALE } from '$lib/geometry/zones';
 
-const SHIMMER_FREQ = 8; // Hz — treble bobbing frequency
+const VIBR_FREQ = 8; // Hz — treble tangential vibration frequency (fixed)
+const VIBR_AMT = 0.5; // fraction of treble push expressed as vibration amplitude
 
 type AnimationDriver = {
   init: () => void;
@@ -65,15 +66,17 @@ export function createAudioZonesDriver(deps: CreateAudioZonesDriverDeps): Animat
       const defaultIntensity = deps.getDefaultIntensity();
       const ringCount = normalizeRingCount(deps.getRingCount());
       const nowSec = (Number.isFinite(nowMs) ? nowMs : 0) / 1000;
-      const shimmer = Math.sin(2 * Math.PI * SHIMMER_FREQ * nowSec);
+      const vibratePhase = Math.sin(2 * Math.PI * VIBR_FREQ * nowSec);
 
       for (let i = 0; i < ringCount; i++) {
         const ring = deps.getRing(i);
         const cfg = resolveZoneIntensity(ring, defaultIntensity);
+        const trebleBase = smoothed.treble * cfg.treble * ZONE_SCALE;
         deps.applyRingZoneDrive(i, {
           bassPush: smoothed.bass * cfg.bass * ZONE_SCALE,
           midPush: smoothed.mid * cfg.mid * ZONE_SCALE,
-          treblePush: smoothed.treble * cfg.treble * ZONE_SCALE * shimmer
+          trebleRetract: trebleBase,
+          trebleVibrate: trebleBase * VIBR_AMT * vibratePhase
         });
       }
 

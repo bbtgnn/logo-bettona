@@ -128,7 +128,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 }
 			}));
 		});
 
@@ -141,7 +141,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 }
 			}));
 			state.baseRadius = 175; // force a write
 		});
@@ -171,7 +171,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 },
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 },
 				zoneConfig: { bass: 0.9, mid: 0.5, treble: 0.1 }
 			}));
 			state.baseRadius = 175;

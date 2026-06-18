@@ -3,6 +3,9 @@ import type { Path, ZoneIntensity, ZoneDrive } from '$lib/types';
 /** Template-space units of deformation at intensity=1, audio-level=1. Tune empirically. */
 export const ZONE_SCALE = 30;
 
+/** Fraction of mid tangential push also applied radially (outward). */
+export const MID_RADIAL_RATIO = 0.4;
+
 type AnchorInfo = {
 	anchorIdx: number;
 	entryHandleIdx: number | null;
@@ -13,14 +16,14 @@ type AnchorInfo = {
  * Deforms an authored bezier path on three zones tied to audio bands.
  * Anchors are sorted by Y ascending (lower Y = outer in bend.ts space):
  *   outermost → bass → dy = -bassPush  (tip reaches radially out)
- *   middle(s)  → mid  → dx = +midPush  (body widens tangentially)
- *   innermost  → treble → dy = treblePush (shimmer; sign from driver's Math.sin)
+ *   middle(s)  → mid  → dx = +midPush, dy = -midPush*MID_RADIAL_RATIO (widens + pushes out)
+ *   innermost  → treble → dy = +trebleRetract (inward), dx = trebleVibrate (tangential jitter)
  * Handles follow their anchor by the same vector. Pure — never mutates input.
  */
 export function applyZonesToPath(path: Path, drive: ZoneDrive): Path {
-	const { bassPush, midPush, treblePush } = drive;
+	const { bassPush, midPush, trebleRetract, trebleVibrate } = drive;
 
-	if (bassPush === 0 && midPush === 0 && treblePush === 0) {
+	if (bassPush === 0 && midPush === 0 && trebleRetract === 0 && trebleVibrate === 0) {
 		return { cmds: [...path.cmds], crds: [...path.crds] };
 	}
 
@@ -80,11 +83,13 @@ export function applyZonesToPath(path: Path, drive: ZoneDrive): Path {
 			// Outermost — bass — radially outward (decrease Y)
 			dy = -bassPush;
 		} else if (i === sorted.length - 1) {
-			// Innermost — treble — radial bobbing (sign from driver shimmer)
-			dy = treblePush;
+			// Innermost — treble — retract inward (increase Y) + tangential vibration
+			dy = trebleRetract;
+			dx = trebleVibrate;
 		} else {
-			// Middle — mid — tangential widening
+			// Middle — mid — tangential widening + slight radial push outward
 			dx = midPush;
+			dy = -midPush * MID_RADIAL_RATIO;
 		}
 
 		translate(anchor.anchorIdx, dx, dy);

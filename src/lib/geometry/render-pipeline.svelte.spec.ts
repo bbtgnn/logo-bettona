@@ -404,7 +404,7 @@ describe('createRenderPipeline().render', () => {
 
 	it('applies zoneDrive deformation when ring.zoneDrive is set', () => {
 		const pipeline = createRenderPipeline();
-		const drive = { bassPush: 5, midPush: 3, treblePush: 2 };
+		const drive = { bassPush: 5, midPush: 3, trebleRetract: 2, trebleVibrate: 1 };
 		const comp: Composition = {
 			baseRadius: 100,
 			ringIncrement: 60,
@@ -432,7 +432,7 @@ describe('createRenderPipeline().render', () => {
 
 		const compWithDrive: Composition = {
 			...composition,
-			rings: [{ ...composition.rings[0], templatePath: petalPath, zoneDrive: { bassPush: 0, midPush: 0, treblePush: 0 } }]
+			rings: [{ ...composition.rings[0], templatePath: petalPath, zoneDrive: { bassPush: 0, midPush: 0, trebleRetract: 0, trebleVibrate: 0 } }]
 		};
 		const compNoDrive: Composition = {
 			...composition,

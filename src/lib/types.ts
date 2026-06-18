@@ -16,7 +16,12 @@ export type WaveConfig = {
 };
 
 export type ZoneIntensity = { bass: number; mid: number; treble: number };
-export type ZoneDrive = { bassPush: number; midPush: number; treblePush: number };
+export type ZoneDrive = {
+	bassPush: number; // outermost: radial-out magnitude
+	midPush: number; // middle: tangential widen (drives radial too, ratio internal)
+	trebleRetract: number; // innermost: steady inward magnitude
+	trebleVibrate: number; // innermost: signed tangential oscillation
+};
 export type EnvelopeParams = { attack: number; release: number };
 export type AudioZonesConfig = {
 	defaultIntensity: ZoneIntensity;

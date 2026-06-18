@@ -24,7 +24,14 @@ vi.mock('$lib/state/animation', () => ({
 		loop: false,
 		alternate: false,
 		audioBars: { smoothing: 0.5, minHz: 20, maxHz: 20000, waveCrests: 3, waveAmplitudeGain: 0.3, wavePhaseSpeed: 2.2, inputGain: 1 },
-		audioZones: { defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 } },
+		audioZones: {
+			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 },
+			envelopes: {
+				bass: { attack: 0.35, release: 0.18 },
+				mid: { attack: 0.5, release: 0.25 },
+				treble: { attack: 0.8, release: 0.5 }
+			}
+		},
 		audioSource: 'demo',
 		elapsedMs: 0
 	},
@@ -36,6 +43,7 @@ vi.mock('$lib/state/animation', () => ({
 	handleCompositionChanged: vi.fn(),
 	setAudioBarsConfig: vi.fn(),
 	setAudioZonesDefaultIntensity: vi.fn(),
+	setAudioZonesEnvelope: vi.fn(),
 	setAudioSource: vi.fn(),
 	audioSource: { loadFile: vi.fn(), play: vi.fn(), pause: vi.fn(), readLevel: vi.fn(() => 0) }
 }));
