@@ -6,6 +6,9 @@ export const ZONE_SCALE = 30;
 /** Fraction of mid tangential push also applied radially (outward). */
 export const MID_RADIAL_RATIO = 0.4;
 
+/** Fraction of the treble push expressed as tangential vibration amplitude. */
+export const VIBR_AMT = 0.5;
+
 type AnchorInfo = {
 	anchorIdx: number;
 	entryHandleIdx: number | null;

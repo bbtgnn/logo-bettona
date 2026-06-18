@@ -1,7 +1,7 @@
 <script lang="ts">
 	import paper from 'paper';
 	import type { Path, Ring, ZoneIntensity } from '$lib/types';
-	import { applyZonesToPath, ZONE_SCALE } from '$lib/geometry/zones';
+	import { applyZonesToPath, ZONE_SCALE, VIBR_AMT } from '$lib/geometry/zones';
 	import { buildRingPath } from '$lib/geometry/bend';
 
 	let {
@@ -54,7 +54,7 @@
 					bassPush: intensity.bass * ZONE_SCALE,
 					midPush: intensity.mid * ZONE_SCALE,
 					trebleRetract: intensity.treble * ZONE_SCALE,
-					trebleVibrate: intensity.treble * ZONE_SCALE * 0.5
+					trebleVibrate: intensity.treble * ZONE_SCALE * VIBR_AMT
 				};
 
 				// reach: max-amplitude zone deformation, translucent fill

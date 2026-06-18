@@ -1,8 +1,7 @@
 import type { Ring, ZoneIntensity, ZoneDrive, EnvelopeParams } from '$lib/types';
-import { resolveZoneIntensity, ZONE_SCALE } from '$lib/geometry/zones';
+import { resolveZoneIntensity, ZONE_SCALE, VIBR_AMT } from '$lib/geometry/zones';
 
 const VIBR_FREQ = 8; // Hz — treble tangential vibration frequency (fixed)
-const VIBR_AMT = 0.5; // fraction of treble push expressed as vibration amplitude
 
 type AnimationDriver = {
   init: () => void;
