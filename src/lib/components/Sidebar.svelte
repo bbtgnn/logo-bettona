@@ -6,6 +6,7 @@
 	import ColorsSection from './ColorsSection.svelte';
 	import { composition, addRing, reorderRings } from '$lib/state/composition';
 	import SettingsSection from './SettingsSection.svelte';
+	import CanvasSection from './CanvasSection.svelte';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 
 	let dragFromIndex: number | null = null;
@@ -35,6 +36,8 @@
 <SidebarUI.Sidebar>
 	<SidebarUI.SidebarContent class="divide-y divide-border" data-testid="sidebar-content">
 		<SettingsSection />
+
+		<CanvasSection />
 
 		<SidebarCollapsible>
 			{#snippet trigger()}
