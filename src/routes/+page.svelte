@@ -2,6 +2,7 @@
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import PreviewCanvas from '$lib/components/PreviewCanvas.svelte';
+	import TimelinePanel from '$lib/components/TimelinePanel.svelte';
 </script>
 
 <SidebarUI.SidebarProvider>
@@ -29,5 +30,6 @@
 		<main class="flex flex-1 items-center justify-center p-8">
 			<PreviewCanvas />
 		</main>
+		<TimelinePanel />
 	</SidebarUI.SidebarInset>
 </SidebarUI.SidebarProvider>
