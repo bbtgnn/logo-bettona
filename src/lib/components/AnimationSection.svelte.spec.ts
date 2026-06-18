@@ -29,12 +29,7 @@ const animationApi = vi.hoisted(() => ({
 			inputGain: 1
 		},
 		audioZones: {
-			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 },
-			envelopes: {
-				bass: { attack: 0.35, release: 0.18 },
-				mid: { attack: 0.5, release: 0.25 },
-				treble: { attack: 0.8, release: 0.5 }
-			}
+			defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 }
 		}
 	},
 	togglePlay: vi.fn(),

@@ -25,7 +25,6 @@ export type ZoneDrive = {
 export type EnvelopeParams = { attack: number; release: number };
 export type AudioZonesConfig = {
 	defaultIntensity: ZoneIntensity;
-	envelopes: { bass: EnvelopeParams; mid: EnvelopeParams; treble: EnvelopeParams };
 };
 
 export type Ring = {

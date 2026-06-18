@@ -12,7 +12,7 @@ import type {
 	AudioBarsConfig,
 	DataSeriesConfig
 } from './animation-drivers/types';
-import type { AudioZonesConfig, ZoneIntensity, EnvelopeParams } from '$lib/types';
+import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
 
 export type AnimationMode = AnimationDriverType | null;
 
@@ -42,12 +42,7 @@ const defaultAudioBarsConfig: AudioBarsConfig = {
 };
 
 const defaultAudioZonesConfig: AudioZonesConfig = {
-	defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 },
-	envelopes: {
-		bass: { attack: 0.35, release: 0.18 },
-		mid: { attack: 0.5, release: 0.25 },
-		treble: { attack: 0.8, release: 0.5 }
-	}
+	defaultIntensity: { bass: 0.5, mid: 0.5, treble: 0.5 }
 };
 
 const defaultDataSeriesConfig: DataSeriesConfig = {
@@ -124,7 +119,6 @@ runtime.registerDriver(
 	'audioZones',
 	createAudioZonesDriver({
 		getDefaultIntensity: () => animationState.audioZones.defaultIntensity,
-		getEnvelopes: () => animationState.audioZones.envelopes,
 		getRingCount: () => composition.rings.length,
 		getRing: (index) => composition.rings[index],
 		readZones: () => {
@@ -330,19 +324,6 @@ export function setAudioZonesDefaultIntensity(next: Partial<ZoneIntensity>): voi
 	animationState.audioZones = {
 		...animationState.audioZones,
 		defaultIntensity: { ...animationState.audioZones.defaultIntensity, ...next }
-	};
-}
-
-export function setAudioZonesEnvelope(
-	band: 'bass' | 'mid' | 'treble',
-	next: Partial<EnvelopeParams>
-): void {
-	animationState.audioZones = {
-		...animationState.audioZones,
-		envelopes: {
-			...animationState.audioZones.envelopes,
-			[band]: { ...animationState.audioZones.envelopes[band], ...next }
-		}
 	};
 }
 

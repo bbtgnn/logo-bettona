@@ -17,20 +17,24 @@ function respond(raw: number, floor: number, sat: number): number {
   return clamp01((raw - floor) / (sat - floor));
 }
 
+// Per-band asymmetric attack/release, baked from the old p5 sketch (sketch.js 79-81).
+const ENVELOPE = {
+  bass: { attack: 0.35, release: 0.18 },
+  mid: { attack: 0.5, release: 0.25 },
+  treble: { attack: 0.8, release: 0.5 }
+} as const;
+
 type AnimationDriver = {
   init: () => void;
   dispose: () => void;
   frame: (nowMs: number) => Record<number, number>;
 };
 
-type Envelopes = { bass: EnvelopeParams; mid: EnvelopeParams; treble: EnvelopeParams };
-
 type CreateAudioZonesDriverDeps = {
   getDefaultIntensity: () => ZoneIntensity;
   getRingCount: () => number;
   getRing: (index: number) => Ring;
   readZones: () => { bass: number; mid: number; treble: number };
-  getEnvelopes: () => Envelopes;
   applyRingZoneDrive: (index: number, drive: ZoneDrive | null) => void;
 };
 
@@ -69,16 +73,15 @@ export function createAudioZonesDriver(deps: CreateAudioZonesDriverDeps): Animat
 
     frame(nowMs) {
       const raw = deps.readZones();
-      const env = deps.getEnvelopes();
       const responded = {
         bass: respond(clamp01(raw.bass), RESPONSE.bass.floor, RESPONSE.bass.sat),
         mid: respond(clamp01(raw.mid), RESPONSE.mid.floor, RESPONSE.mid.sat),
         treble: respond(clamp01(raw.treble), RESPONSE.treble.floor, RESPONSE.treble.sat)
       };
       smoothed = {
-        bass: envelope(smoothed.bass, responded.bass, env.bass),
-        mid: envelope(smoothed.mid, responded.mid, env.mid),
-        treble: envelope(smoothed.treble, responded.treble, env.treble)
+        bass: envelope(smoothed.bass, responded.bass, ENVELOPE.bass),
+        mid: envelope(smoothed.mid, responded.mid, ENVELOPE.mid),
+        treble: envelope(smoothed.treble, responded.treble, ENVELOPE.treble)
       };
 
       const defaultIntensity = deps.getDefaultIntensity();
