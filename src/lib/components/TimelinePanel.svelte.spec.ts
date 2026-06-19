@@ -3,10 +3,24 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelinePanel from './TimelinePanel.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
+import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 
 describe('TimelinePanel', () => {
 	beforeEach(() => {
 		for (const id of Object.keys(keyframes.tracks)) delete keyframes.tracks[id];
+		kaleidoscope.enabled = true;
+	});
+
+	it('renders nothing when kaleidoscope mode is off', async () => {
+		kaleidoscope.enabled = false;
+		render(TimelinePanel);
+		expect(page.getByTestId('timeline-panel').query()).toBeNull();
+	});
+
+	it('renders the panel when kaleidoscope mode is on', async () => {
+		kaleidoscope.enabled = true;
+		render(TimelinePanel);
+		await expect.element(page.getByTestId('timeline-panel')).toBeInTheDocument();
 	});
 
 	it('starts collapsed and expands on toggle', async () => {
