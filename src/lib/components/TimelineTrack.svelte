@@ -2,7 +2,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
-	import { timeFromX, xFromTime } from '$lib/animation/timeline-geometry';
+	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
 
 	let {
 		paramId,
@@ -25,6 +25,7 @@
 	let draggingId: string | null = null;
 
 	const kfs = $derived(keyframes.tracks[paramId]?.keyframes ?? []);
+	const selectedKf = $derived(kfs.find((k) => k.id === selectedId) ?? null);
 
 	function rowWidth(): number {
 		return rowEl?.clientWidth ?? 0;
@@ -90,15 +91,28 @@
 				type="button"
 				data-testid="kf-{kf.id}"
 				aria-label="Keyframe"
-				class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border {kf.id ===
+				class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border bg-foreground {kf.id ===
 				selectedId
-					? 'bg-primary'
-					: 'bg-foreground'}"
+					? 'ring-2 ring-sky-400'
+					: ''}"
 				style="left: {xFromTime(kf.time, rowWidth())}px"
 				onpointerdown={(e) => onDiamondDown(e, kf.id)}
 				onpointermove={onDiamondMove}
 				onpointerup={onDiamondUp}
 			></button>
 		{/each}
+		{#if selectedKf}
+			<div
+				class="pointer-events-none absolute top-0 bottom-0 w-px bg-sky-400/60"
+				style="left: {xFromTime(selectedKf.time, rowWidth())}px"
+			></div>
+			<span
+				data-testid="kf-time"
+				class="pointer-events-none absolute -top-4 -translate-x-1/2 rounded bg-sky-400 px-1 text-[10px] leading-tight text-white"
+				style="left: {xFromTime(selectedKf.time, rowWidth())}px"
+			>
+				{formatSeconds(selectedKf.time * animationState.durationSec)}
+			</span>
+		{/if}
 	</div>
 </div>

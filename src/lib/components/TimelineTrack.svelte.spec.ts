@@ -12,6 +12,7 @@ function reset() {
 	keyframes.setTrackEnabled(ROT, false);
 	animationState.isPlaying = false;
 	animationState.progress = 0;
+	animationState.durationSec = 3;
 }
 
 describe('TimelineTrack', () => {
@@ -29,6 +30,20 @@ describe('TimelineTrack', () => {
 		await userEvent.click(page.getByRole('button', { name: 'Aggiungi keyframe' }));
 		expect(keyframes.tracks[ROT].keyframes).toHaveLength(1);
 		expect(keyframes.tracks[ROT].keyframes[0].time).toBeCloseTo(0.4, 6);
+	});
+
+	it('marks the selected diamond with a blue ring', async () => {
+		const id = keyframes.addKeyframe(ROT, { time: 0.5, value: 10 });
+		render(TimelineTrack, { paramId: ROT, label: 'Rotazione', selectedId: id });
+		const diamond = page.getByTestId(`kf-${id}`).element() as HTMLElement;
+		expect(diamond.className).toContain('ring-sky-400');
+	});
+
+	it('shows the selected keyframe time in seconds', async () => {
+		animationState.durationSec = 4;
+		const id = keyframes.addKeyframe(ROT, { time: 0.5, value: 10 }); // 0.5 * 4 = 2s
+		render(TimelineTrack, { paramId: ROT, label: 'Rotazione', selectedId: id });
+		await expect.element(page.getByTestId('kf-time')).toHaveTextContent('2s');
 	});
 
 	it('calls onselect with the keyframe id when a diamond is clicked', async () => {
