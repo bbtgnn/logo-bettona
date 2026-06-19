@@ -54,9 +54,14 @@
 		(laneColEl?.offsetLeft ?? 0) + xFromTime(animationState.progress, laneColEl?.clientWidth ?? 0)
 	);
 
-	// Keep the graph selection valid: default to / fall back to the first armed param.
+	// Keep the graph selection valid. Prefer the explicit pick; otherwise default to
+	// an armed param that already has keyframes (so the graph opens on a curve, not an
+	// empty editor), then fall back to the first armed param.
 	const graphParam = $derived(
-		armedParams.find((p) => p.id === graphParamId) ?? armedParams[0] ?? null
+		armedParams.find((p) => p.id === graphParamId) ??
+			armedParams.find((p) => (keyframes.tracks[p.id]?.keyframes.length ?? 0) > 0) ??
+			armedParams[0] ??
+			null
 	);
 </script>
 

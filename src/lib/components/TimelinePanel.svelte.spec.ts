@@ -96,6 +96,20 @@ describe('TimelinePanel', () => {
 		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
 	});
 
+	it('graph view defaults to an armed param that already has keyframes', async () => {
+		// scale is armed but empty; sectors is armed AND has a keyframe.
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		keyframes.ensureTrack('kaleidoscope.sectors');
+		keyframes.setTrackEnabled('kaleidoscope.sectors', true);
+		keyframes.addKeyframe('kaleidoscope.sectors', { time: 0.5, value: 10 });
+		render(TimelinePanel);
+		await userEvent.click(page.getByRole('button', { name: 'Graph Editor' }));
+		// scale comes first in the registry, but the graph should skip it for the
+		// param that actually has a curve.
+		await expect.element(page.getByLabelText('Parametro grafico')).toHaveValue('kaleidoscope.sectors');
+	});
+
 	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
