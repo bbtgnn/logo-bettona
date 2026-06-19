@@ -34,7 +34,9 @@
 	});
 
 	function confirm() {
-		if (!entry || rings.length === 0) return;
+		// Guard the index too: rings can shrink under the sheet (prop change), and a
+		// stale ringIndex would otherwise dereference an undefined ring downstream.
+		if (!entry || ringIndex < 0 || ringIndex >= rings.length) return;
 		onapply(ringIndex, slot);
 		open = false;
 	}

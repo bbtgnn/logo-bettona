@@ -54,4 +54,16 @@ describe('ApplyToRingSheet', () => {
 		await userEvent.click(page.getByTestId('apply-confirm'));
 		expect(onapply).toHaveBeenCalledWith(1, 'secondary');
 	});
+
+	it('does not apply when the selected ring index is out of range after rings shrink', async () => {
+		const onapply = vi.fn();
+		const { rerender } = render(ApplyToRingSheet, {
+			props: { open: true, entry: entry(false), rings: [ring(), ring(), ring()], onapply }
+		});
+		await userEvent.selectOptions(page.getByTestId('apply-ring-select'), '2');
+		// rings shrink to 1 while the sheet stays open; stale ringIndex (2) is now invalid.
+		await rerender({ open: true, entry: entry(false), rings: [ring()], onapply });
+		await userEvent.click(page.getByTestId('apply-confirm'));
+		expect(onapply).not.toHaveBeenCalled();
+	});
 });
