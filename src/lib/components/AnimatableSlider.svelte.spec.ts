@@ -49,4 +49,15 @@ describe('AnimatableSlider', () => {
 		await slider.fill('2');
 		expect(keyframes.tracks[param.id].keyframes.length).toBeGreaterThan(0);
 	});
+
+	it('when not animatable: no stopwatch, slider always sets the value directly', async () => {
+		// Even with the track armed, a non-animatable slider must ignore arming.
+		keyframes.tracks[param.id].enabled = true;
+		render(AnimatableSlider, { param, animatable: false });
+		expect(page.getByLabelText('Anima Scala globale').query()).toBeNull();
+		const slider = page.getByLabelText('Scala globale', { exact: true });
+		await slider.fill('2');
+		expect(kaleidoscope.scale).toBe(2);
+		expect(keyframes.tracks[param.id].keyframes).toHaveLength(0);
+	});
 });
