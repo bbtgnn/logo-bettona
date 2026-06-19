@@ -466,6 +466,10 @@ describe('animation runtime integration', () => {
 });
 
 describe('kaleidoscope keyframe application', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
 	it('does nothing when the track is disabled (slider value stands)', async () => {
 		const animation = await import('./animation');
 		const { keyframes, KALEIDO_GLOBAL_ROTATION: ROT } = await import('./keyframes.svelte');
