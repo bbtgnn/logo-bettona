@@ -4,7 +4,6 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition } from '$lib/state/composition';
-import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
 import { animationState, setAnimationDurationSec } from '$lib/state/animation';
 
 let lastRenderedScope: paper.PaperScope | undefined;
@@ -127,27 +126,19 @@ describe('PreviewCanvas.svelte', () => {
 		expect(disposeCallCount).toBe(1);
 	});
 
-	it('shows kaleidoscope export buttons when mode is enabled', async () => {
+	it('exposes only Export SVG — no animation/audio export controls', async () => {
 		render(PreviewCanvas);
-		setKaleidoscopeEnabled(true);
-		try {
-			await expect
-				.element(page.getByText('Esporta PNG (caleidoscopio)'))
-				.toBeInTheDocument();
-			await expect
-				.element(page.getByText('Esporta SVG (caleidoscopio)'))
-				.toBeInTheDocument();
-		} finally {
-			setKaleidoscopeEnabled(false);
-		}
+		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+		expect(page.getByRole('button', { name: 'Export Animation' }).query()).toBeNull();
+		expect(page.getByText('Includi audio').query()).toBeNull();
+		expect(page.getByText('Esporta PNG (caleidoscopio)').query()).toBeNull();
+		expect(page.getByText('Esporta SVG (caleidoscopio)').query()).toBeNull();
 	});
 
-	it('uses the shared animation duration for export, with no separate export-duration field', async () => {
+	it('export reads the shared animation duration (no separate export-duration field)', async () => {
 		setAnimationDurationSec(7);
 		render(PreviewCanvas);
-		// the old separate export-duration input is gone
 		expect(page.getByLabelText('Durata (s)', { exact: true }).query()).toBeNull();
-		// the shared duration is the single source export reads
 		expect(animationState.durationSec).toBe(7);
 	});
 

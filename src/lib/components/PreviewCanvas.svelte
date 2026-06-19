@@ -2,13 +2,11 @@
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { composition, getCompositionBackgroundColor } from '$lib/state/composition';
-	import { animationState, togglePlay, getExportAudioStream } from '$lib/state/animation';
+	import { animationState } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
-	import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
-	import { exportStatus as sharedExportStatus } from '$lib/state/export-status.svelte';
 	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
-	import { renderKaleidoscopeToCanvas, generateKaleidoscopeSVG } from '$lib/geometry/kaleidoscope';
+	import { renderKaleidoscopeToCanvas } from '$lib/geometry/kaleidoscope';
 	import { composeTileWithBackground } from '$lib/geometry/kaleidoscope-tile';
 
 	let scope: paper.PaperScope;
@@ -21,11 +19,6 @@
 	let tileCanvas: HTMLCanvasElement | undefined;
 	let staticTile: HTMLCanvasElement | undefined;
 	let kaleidoFrame: number | null = null;
-
-	let exportStatus = $state<'idle' | 'rendering'>('idle');
-	let exportProgress = $state(0);
-	let exportAudio = $state(false);
-	const animationExportSupported = isAnimationExportSupported();
 
 	// Rest mark fills this fraction of the frame, leaving headroom for petals to
 	// open toward the edge. Coupled with BASS_REACH (zones.ts).
@@ -96,34 +89,6 @@
 		URL.revokeObjectURL(url);
 	}
 
-	async function exportAnimation() {
-		if (exportStatus === 'rendering' || !canvasEl || !scope) return;
-		// Same empty-canvas no-op guard as Export SVG: nothing to record.
-		if (scope.project.activeLayer.children.length === 0) return;
-		if (!animationState.isPlaying) togglePlay();
-		const audio = exportAudio ? getExportAudioStream() : null;
-		exportStatus = 'rendering';
-		sharedExportStatus.rendering = true;
-		exportProgress = 0;
-		try {
-			await exportCanvasAnimation({
-				canvas: canvasEl,
-				durationSec: animationState.durationSec,
-				audioStream: audio?.stream ?? null,
-				onProgress: (p) => {
-					exportProgress = p;
-				}
-			});
-		} catch (err) {
-			console.error('Animation export failed', err);
-		} finally {
-			audio?.dispose();
-			exportStatus = 'idle';
-			sharedExportStatus.rendering = false;
-			exportProgress = 0;
-		}
-	}
-
 	function ensureTileScope() {
 		if (tileScope) return;
 		tileCanvas = document.createElement('canvas');
@@ -163,35 +128,6 @@
 			canvasEl.width,
 			canvasEl.height
 		);
-	}
-
-	function exportKaleidoscopePng() {
-		if (!canvasEl) return;
-		canvasEl.toBlob((blob) => {
-			if (!blob) return;
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = 'kaleidoscope.png';
-			a.click();
-			URL.revokeObjectURL(url);
-		}, 'image/png');
-	}
-
-	function exportKaleidoscopeSvg() {
-		ensureTileScope();
-		renderTile();
-		tileScope!.activate();
-		const tileSvg = tileScope!.project.exportSVG({ asString: true }) as string;
-		const size = canvasEl ? Math.min(canvasEl.width, canvasEl.height) : TILE_PX;
-		const svg = generateKaleidoscopeSVG(tileSvg, kaleidoscope, size);
-		const blob = new Blob([svg], { type: 'image/svg+xml' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'kaleidoscope.svg';
-		a.click();
-		URL.revokeObjectURL(url);
 	}
 
 	$effect(() => {
@@ -250,40 +186,4 @@
 	<canvas {@attach setupCanvas} width="600" height="600" class="rounded-lg border bg-white"
 	></canvas>
 	<Button variant="outline" onclick={exportSvg} class="w-full max-w-[600px]">Export SVG</Button>
-
-	{#if kaleidoscope.enabled}
-		<Button variant="outline" onclick={exportKaleidoscopePng} class="w-full max-w-[600px]">
-			Esporta PNG (caleidoscopio)
-		</Button>
-		<Button variant="outline" onclick={exportKaleidoscopeSvg} class="w-full max-w-[600px]">
-			Esporta SVG (caleidoscopio)
-		</Button>
-	{/if}
-
-	<div class="flex w-full max-w-[600px] flex-col gap-2">
-		<label class="flex items-center gap-2 text-xs">
-			<input
-				type="checkbox"
-				checked={exportAudio}
-				disabled={exportStatus === 'rendering'}
-				onchange={(e) => (exportAudio = (e.target as HTMLInputElement).checked)}
-			/>
-			Includi audio
-		</label>
-		{#if exportStatus === 'rendering'}
-			<div class="flex flex-col gap-1">
-				<div class="h-2 w-full overflow-hidden rounded bg-muted">
-					<div class="h-full bg-primary transition-[width]" style="width: {Math.round(exportProgress * 100)}%"></div>
-				</div>
-				<span class="text-center text-xs text-muted-foreground">Rendering… {Math.round(exportProgress * 100)}%</span>
-			</div>
-		{:else}
-			<Button variant="outline" onclick={exportAnimation} disabled={!animationExportSupported} class="w-full">
-				Export Animation
-			</Button>
-			{#if !animationExportSupported}
-				<span class="text-center text-[11px] text-muted-foreground">Export video non supportato dal browser</span>
-			{/if}
-		{/if}
-	</div>
 </div>
