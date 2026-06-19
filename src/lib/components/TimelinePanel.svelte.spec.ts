@@ -26,13 +26,22 @@ describe('TimelinePanel', () => {
 	it('starts collapsed and expands on toggle', async () => {
 		render(TimelinePanel);
 		expect(page.getByTestId('timeline-body').query()).toBeNull();
-		await userEvent.click(page.getByRole('button', { name: 'Timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
+	});
+
+	it('chevron toggles the panel open and closed', async () => {
+		render(TimelinePanel);
+		expect(page.getByTestId('timeline-body').query()).toBeNull();
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		expect(page.getByTestId('timeline-body').query()).toBeNull();
 	});
 
 	it('shows the empty-state hint when no param is armed', async () => {
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('timeline-empty')).toBeInTheDocument();
 	});
 
@@ -40,16 +49,20 @@ describe('TimelinePanel', () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('track-kaleidoscope.scale')).toBeInTheDocument();
 	});
 
-	it('toggles the graph editor mode (with a param armed)', async () => {
+	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await userEvent.click(page.getByRole('button', { name: 'Graph Editor' }));
 		await expect.element(page.getByTestId('timeline-graph')).toBeInTheDocument();
+		// The bug: pressing Timeline used to close the panel. It must return to tracks instead.
+		await userEvent.click(page.getByRole('button', { name: 'Timeline', exact: true }));
+		await expect.element(page.getByTestId('timeline-tracks')).toBeInTheDocument();
+		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
 	});
 });

@@ -8,7 +8,7 @@
 	import KeyframeGraphEditor from './KeyframeGraphEditor.svelte';
 
 	let open = $state(false);
-	let graphMode = $state(false);
+	let view = $state<'tracks' | 'graph'>('tracks');
 	let graphParamId = $state<string | null>(null);
 
 	const armedParams = $derived(KALEIDO_PARAMS.filter((p) => keyframes.tracks[p.id]?.enabled));
@@ -22,15 +22,32 @@
 {#if kaleidoscope.enabled}
 	<section data-testid="timeline-panel" class="w-full border-t bg-background">
 		<div class="flex items-center gap-2 p-2">
-			<Button variant="ghost" size="sm" onclick={() => (open = !open)}>Timeline</Button>
+			<button
+				type="button"
+				aria-label="Mostra/nascondi timeline"
+				class="flex items-center gap-1 text-sm font-medium text-foreground"
+				onclick={() => (open = !open)}
+			>
+				<span class="inline-block transition-transform {open ? 'rotate-90' : ''}">▸</span>
+				Timeline
+			</button>
 			{#if open}
-				<Button
-					variant={graphMode ? 'default' : 'ghost'}
-					size="sm"
-					onclick={() => (graphMode = !graphMode)}
-				>
-					Graph Editor
-				</Button>
+				<div class="flex items-center gap-1">
+					<Button
+						variant={view === 'tracks' ? 'default' : 'ghost'}
+						size="sm"
+						onclick={() => (view = 'tracks')}
+					>
+						Timeline
+					</Button>
+					<Button
+						variant={view === 'graph' ? 'default' : 'ghost'}
+						size="sm"
+						onclick={() => (view = 'graph')}
+					>
+						Graph Editor
+					</Button>
+				</div>
 			{/if}
 		</div>
 
@@ -40,7 +57,7 @@
 					<p data-testid="timeline-empty" class="p-2 text-xs text-muted-foreground">
 						Arma un cronometro ⏱ nella sidebar per animare un parametro.
 					</p>
-				{:else if graphMode}
+				{:else if view === 'graph'}
 					<div data-testid="timeline-graph" class="flex flex-col gap-2">
 						<select
 							aria-label="Parametro grafico"
