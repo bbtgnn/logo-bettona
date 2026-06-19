@@ -88,7 +88,7 @@ describe('AnimationSection', () => {
 		render(AnimationSection);
 
 		await expect.element(page.getByRole('button', { name: 'Animation' })).toBeInTheDocument();
-		await expect.element(page.getByLabelText('Animation mode')).toBeInTheDocument();
+		await expect.element(page.getByTestId('audio-reactivity-toggle')).toBeInTheDocument();
 		await expect.element(page.getByRole('button', { name: 'Play' })).toBeInTheDocument();
 		await expect.element(page.getByLabelText('Duration (s)')).toBeInTheDocument();
 		await expect.element(page.getByText('25%')).toBeInTheDocument();
@@ -104,42 +104,52 @@ describe('AnimationSection', () => {
 		expect(animationApi.setAnimationDurationSec).toHaveBeenLastCalledWith(4.5);
 	});
 
-	it('switches to Data Series mode', async () => {
+	it('switches the motion source to Data Series when audio reactivity is off', async () => {
+		animationApi.animationState.mode = null;
 		render(AnimationSection);
 
-		await userEvent.selectOptions(page.getByLabelText('Animation mode'), 'dataSeries');
+		await userEvent.selectOptions(page.getByLabelText('Sorgente movimento'), 'dataSeries');
 
 		expect(animationApi.setAnimationMode).toHaveBeenLastCalledWith('dataSeries');
 	});
 
-	it('shows Simple mode option and selects it when mode is simple', async () => {
+	it('shows the motion-source selector with Simple selected when mode is simple', async () => {
 		animationApi.animationState.mode = 'simple';
 		render(AnimationSection);
-		await expect.element(page.getByRole('option', { name: 'Simple' })).toBeInTheDocument();
-		const select = page.getByLabelText('Animation mode');
+		await expect.element(page.getByRole('option', { name: /Simple/ })).toBeInTheDocument();
+		const select = page.getByLabelText('Sorgente movimento');
 		await expect.element(select).toHaveValue('simple');
 	});
 
-	it('shows contextual copy for selected mode', async () => {
+	it('audio reactivity toggle is off and hidden audio-type selector when mode is non-audio', async () => {
+		animationApi.animationState.mode = 'simple';
 		render(AnimationSection);
+		await expect.element(page.getByTestId('audio-reactivity-toggle')).not.toBeChecked();
+		expect(page.getByLabelText('Tipo di reattività').query()).toBeNull();
+		await expect.element(page.getByLabelText('Sorgente movimento')).toBeInTheDocument();
+	});
 
-		await expect
-			.element(page.getByText('Data Series mode maps each ring to your configured series values.'))
-			.not.toBeInTheDocument();
-		await expect
-			.element(page.getByText('Audio Bars mode reacts to live frequency bands for each ring.'))
-			.not.toBeInTheDocument();
+	it('audio reactivity toggle is on and shows the audio-type selector in an audio mode', async () => {
+		animationApi.animationState.mode = 'audioBars';
+		render(AnimationSection);
+		await expect.element(page.getByTestId('audio-reactivity-toggle')).toBeChecked();
+		await expect.element(page.getByLabelText('Tipo di reattività')).toBeInTheDocument();
+		// the motion-source selector (Simple/Data Series) is not competing for the slot
+		expect(page.getByLabelText('Sorgente movimento').query()).toBeNull();
+	});
 
+	it('turning audio reactivity on selects an audio mode (timeline is independent)', async () => {
+		animationApi.animationState.mode = null;
+		render(AnimationSection);
+		await userEvent.click(page.getByTestId('audio-reactivity-toggle'));
+		expect(animationApi.setAnimationMode).toHaveBeenLastCalledWith('audioBars');
+	});
+
+	it('still shows the Data Series contextual copy when that motion source is active', async () => {
 		animationApi.animationState.mode = 'dataSeries';
 		render(AnimationSection);
 		await expect
 			.element(page.getByText('Data Series mode maps each ring to your configured series values.'))
-			.toBeInTheDocument();
-
-		animationApi.animationState.mode = 'audioBars';
-		render(AnimationSection);
-		await expect
-			.element(page.getByText('Audio Bars mode reacts to live frequency bands for each ring.'))
 			.toBeInTheDocument();
 	});
 

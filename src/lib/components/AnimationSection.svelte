@@ -20,6 +20,36 @@
 	import AudioFilePanel from './AudioFilePanel.svelte';
 	import type { WaveConfig } from '$lib/types';
 
+	type AudioMode = 'audioBars' | 'audioZones';
+	type MotionMode = 'simple' | 'dataSeries' | null;
+
+	// Audio reactivity is a trait of the mark that rides the same clock as the
+	// kaleidoscope timeline — not an animation that excludes it. The UI presents it
+	// as an always-available toggle rather than one entry in an exclusive dropdown.
+	// The underlying animationState.mode is still a single value, so the toggle and
+	// the motion-source selector each remember their last pick to restore it.
+	const audioReactive = $derived(
+		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+	);
+	let lastAudioMode = $state<AudioMode>(
+		animationState.mode === 'audioZones' ? 'audioZones' : 'audioBars'
+	);
+	let lastMotionMode = $state<MotionMode>(animationState.mode === 'dataSeries' ? 'dataSeries' : 'simple');
+
+	function selectAudioMode(mode: AudioMode) {
+		lastAudioMode = mode;
+		setAnimationMode(mode);
+	}
+
+	function selectMotionMode(mode: MotionMode) {
+		lastMotionMode = mode;
+		setAnimationMode(mode);
+	}
+
+	function toggleAudioReactivity(on: boolean) {
+		setAnimationMode(on ? lastAudioMode : lastMotionMode);
+	}
+
 	const globalWaveDefault = $derived<WaveConfig>({
 		crests: animationState.audioBars.waveCrests,
 		amplitudeGain: animationState.audioBars.waveAmplitudeGain,
@@ -92,35 +122,56 @@
 				</p>
 			{/if}
 
-			<div class="flex flex-col gap-1">
-				<Label for="animation-mode" class="text-xs">Animation mode</Label>
-				<select
-					id="animation-mode"
-					class="h-9 rounded-md border border-input bg-background px-3 text-xs"
-					value={animationState.mode ?? ''}
-					onchange={(e) => {
-						const mode = (e.target as HTMLSelectElement).value;
-						setAnimationMode(mode === '' ? null : (mode as 'simple' | 'audioBars' | 'audioZones' | 'dataSeries'));
-					}}
-				>
-					<option value="simple">Simple</option>
-					<option value="audioBars">Audio Bars</option>
-					<option value="audioZones">Audio Zones</option>
-					<option value="dataSeries">Data Series</option>
-					<option value="">None</option>
-				</select>
-				{#if animationState.mode === 'dataSeries'}
-					<p class="text-[11px] text-muted-foreground">
-						Data Series mode maps each ring to your configured series values.
-					</p>
-				{:else if animationState.mode === 'audioBars'}
-					<p class="text-[11px] text-muted-foreground">
-						Audio Bars mode reacts to live frequency bands for each ring.
-					</p>
-				{:else if animationState.mode === 'audioZones'}
-					<p class="text-[11px] text-muted-foreground">
-						Audio Zones mode deforms each ring's shape across three frequency bands.
-					</p>
+			<div class="flex flex-col gap-2">
+				<label class="flex items-center gap-2 text-xs font-medium">
+					<input
+						type="checkbox"
+						data-testid="audio-reactivity-toggle"
+						checked={audioReactive}
+						onchange={(e) => toggleAudioReactivity((e.target as HTMLInputElement).checked)}
+					/>
+					Reattività audio
+				</label>
+				<p class="text-[11px] text-muted-foreground">
+					I petali reagiscono al suono. Resta attiva insieme alla timeline.
+				</p>
+
+				{#if audioReactive}
+					<div class="flex flex-col gap-1">
+						<Label for="audio-mode" class="text-xs">Tipo di reattività</Label>
+						<select
+							id="audio-mode"
+							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+							value={animationState.mode}
+							onchange={(e) =>
+								selectAudioMode((e.target as HTMLSelectElement).value as AudioMode)}
+						>
+							<option value="audioBars">Audio Bars · onda per anello</option>
+							<option value="audioZones">Audio Zones · deforma per banda</option>
+						</select>
+					</div>
+				{:else}
+					<div class="flex flex-col gap-1">
+						<Label for="motion-source" class="text-xs">Sorgente movimento</Label>
+						<select
+							id="motion-source"
+							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+							value={animationState.mode ?? ''}
+							onchange={(e) => {
+								const v = (e.target as HTMLSelectElement).value;
+								selectMotionMode(v === '' ? null : (v as MotionMode));
+							}}
+						>
+							<option value="simple">Simple · morph tra forme</option>
+							<option value="dataSeries">Data Series · valori per anello</option>
+							<option value="">Nessuna</option>
+						</select>
+						{#if animationState.mode === 'dataSeries'}
+							<p class="text-[11px] text-muted-foreground">
+								Data Series mode maps each ring to your configured series values.
+							</p>
+						{/if}
+					</div>
 				{/if}
 			</div>
 
