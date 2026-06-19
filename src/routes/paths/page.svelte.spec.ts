@@ -46,6 +46,20 @@ describe('Paths page', () => {
 		expect(page.getByTestId('paths-card-a').element().getAttribute('aria-current')).not.toBe('true');
 	});
 
+	it('re-renders the preview canvas when the selection changes', async () => {
+		render(PathsPage);
+		const first = page.getByTestId('ring-preview-canvas').element();
+		await userEvent.click(page.getByTestId('paths-card-b'));
+		const second = page.getByTestId('ring-preview-canvas').element();
+		expect(second).not.toBe(first);
+	});
+
+	it('does not show a "secondary" badge on cards', async () => {
+		pathLibrary.entries = [entry('a', 'Forma A', true)];
+		render(PathsPage);
+		expect(page.getByText('secondary').query()).toBeNull();
+	});
+
 	it('shows the empty state when the library has no entries', async () => {
 		pathLibrary.entries = [];
 		render(PathsPage);

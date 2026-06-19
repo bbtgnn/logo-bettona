@@ -57,9 +57,6 @@
 									{new Date(item.createdAt).toLocaleDateString()}
 								</span>
 							</div>
-							{#if item.secondaryPath}
-								<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">secondary</span>
-							{/if}
 						</button>
 					{/each}
 				</div>
@@ -69,13 +66,17 @@
 		<main class="flex flex-1 flex-col items-center justify-center gap-4 p-8">
 			{#if selected}
 				<div data-testid="paths-preview">
-					<RingPreview
-						path={selected.path}
-						secondaryPath={selected.secondaryPath}
-						baseRadius={composition.baseRadius}
-						ringIncrement={composition.ringIncrement}
-						size={360}
-					/>
+					<!-- Key on the entry id: RingPreview renders once on mount and does not
+					     react to prop changes, so remount it when the selection changes. -->
+					{#key selected.id}
+						<RingPreview
+							path={selected.path}
+							secondaryPath={selected.secondaryPath}
+							baseRadius={composition.baseRadius}
+							ringIncrement={composition.ringIncrement}
+							size={360}
+						/>
+					{/key}
 				</div>
 				<p class="text-sm font-medium">{selected.name}</p>
 				<Button
