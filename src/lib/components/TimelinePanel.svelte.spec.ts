@@ -80,6 +80,37 @@ describe('TimelinePanel', () => {
 		expect(ruler.querySelector('[data-testid="playhead"]')).toBeNull();
 	});
 
+	it('shows no contextual bar until a keyframe is selected', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		render(TimelinePanel);
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
+	});
+
+	it('selecting a keyframe reveals the contextual bar and edits interp', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
+		render(TimelinePanel);
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await userEvent.click(page.getByTestId(`kf-${id}`));
+		await userEvent.selectOptions(page.getByLabelText('Interpolazione keyframe'), 'hold');
+		expect(keyframes.tracks['kaleidoscope.scale'].keyframes[0].interp).toBe('hold');
+	});
+
+	it('deletes the selected keyframe from the contextual bar', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
+		render(TimelinePanel);
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await userEvent.click(page.getByTestId(`kf-${id}`));
+		await userEvent.click(page.getByRole('button', { name: 'Elimina keyframe' }));
+		expect(keyframes.tracks['kaleidoscope.scale'].keyframes).toHaveLength(0);
+		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
+	});
+
 	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);

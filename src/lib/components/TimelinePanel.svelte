@@ -3,8 +3,9 @@
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
-	import { animationState } from '$lib/state/animation';
+	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
 	import { xFromTime } from '$lib/animation/timeline-geometry';
+	import type { Interp } from '$lib/animation/keyframes';
 	import TimelineRuler from './TimelineRuler.svelte';
 	import TimelineTrack from './TimelineTrack.svelte';
 	import KeyframeGraphEditor from './KeyframeGraphEditor.svelte';
@@ -14,8 +15,39 @@
 	let graphParamId = $state<string | null>(null);
 
 	let laneColEl = $state<HTMLDivElement>();
+	let selection = $state<{ paramId: string; keyframeId: string } | null>(null);
 
 	const armedParams = $derived(KALEIDO_PARAMS.filter((p) => keyframes.tracks[p.id]?.enabled));
+
+	// The selected keyframe, resolved against live state (null once it's deleted).
+	const selectedKf = $derived(
+		selection
+			? (keyframes.tracks[selection.paramId]?.keyframes.find(
+					(k) => k.id === selection!.keyframeId
+				) ?? null)
+			: null
+	);
+
+	function reapplyIfPaused() {
+		if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
+	}
+
+	function selectKeyframe(paramId: string, keyframeId: string | null) {
+		selection = keyframeId ? { paramId, keyframeId } : null;
+	}
+
+	function setSelectedInterp(value: string) {
+		if (!selection) return;
+		keyframes.setKeyframeInterp(selection.paramId, selection.keyframeId, value as Interp);
+		reapplyIfPaused();
+	}
+
+	function deleteSelected() {
+		if (!selection) return;
+		keyframes.deleteKeyframe(selection.paramId, selection.keyframeId);
+		selection = null;
+		reapplyIfPaused();
+	}
 
 	// One continuous playhead overlaid across ruler + lanes: the lane column is
 	// measured at runtime so the line needs no hardcoded gutter width.
@@ -96,13 +128,33 @@
 							</div>
 						</div>
 						{#each armedParams as p (p.id)}
-							<TimelineTrack paramId={p.id} label={p.label} />
+							<TimelineTrack
+								paramId={p.id}
+								label={p.label}
+								selectedId={selection?.paramId === p.id ? selection.keyframeId : null}
+								onselect={(id) => selectKeyframe(p.id, id)}
+							/>
 						{/each}
 						<div
 							data-testid="playhead"
 							class="pointer-events-none absolute top-0 bottom-0 w-px bg-primary"
 							style="left: {playheadLeft}px"
 						></div>
+						{#if selectedKf}
+							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-1">
+								<select
+									aria-label="Interpolazione keyframe"
+									class="h-7 rounded border bg-background text-xs"
+									value={selectedKf.interp}
+									onchange={(e) => setSelectedInterp((e.target as HTMLSelectElement).value)}
+								>
+									<option value="linear">Lineare</option>
+									<option value="bezier">Bezier</option>
+									<option value="hold">Hold</option>
+								</select>
+								<Button variant="ghost" size="sm" onclick={deleteSelected}>Elimina keyframe</Button>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			</div>

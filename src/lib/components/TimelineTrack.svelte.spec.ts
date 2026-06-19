@@ -23,19 +23,24 @@ describe('TimelineTrack', () => {
 		await expect.element(page.getByTestId(`kf-${id}`)).toBeInTheDocument();
 	});
 
-	it('adds a keyframe at the playhead via the "+ Keyframe" button', async () => {
+	it('adds a keyframe at the playhead via the "Aggiungi keyframe" button', async () => {
 		animationState.progress = 0.4;
 		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
-		await userEvent.click(page.getByRole('button', { name: '+ Keyframe' }));
+		await userEvent.click(page.getByRole('button', { name: 'Aggiungi keyframe' }));
 		expect(keyframes.tracks[ROT].keyframes).toHaveLength(1);
 		expect(keyframes.tracks[ROT].keyframes[0].time).toBeCloseTo(0.4, 6);
 	});
 
-	it('enables the interpolation dropdown after adding via the button', async () => {
-		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
-		await userEvent.click(page.getByRole('button', { name: '+ Keyframe' }));
-		const select = page.getByLabelText('Interpolazione keyframe').element() as HTMLSelectElement;
-		expect(select.disabled).toBe(false);
+	it('calls onselect with the keyframe id when a diamond is clicked', async () => {
+		const id = keyframes.addKeyframe(ROT, { time: 0.5, value: 10 });
+		let picked: string | null = null;
+		render(TimelineTrack, {
+			paramId: ROT,
+			label: 'Rotazione',
+			onselect: (kid: string | null) => (picked = kid)
+		});
+		await userEvent.click(page.getByTestId(`kf-${id}`));
+		expect(picked).toBe(id);
 	});
 
 	it('adds a keyframe on double-click of the empty row', async () => {
@@ -47,22 +52,6 @@ describe('TimelineTrack', () => {
 		);
 		expect(keyframes.tracks[ROT].keyframes).toHaveLength(1);
 		expect(keyframes.tracks[ROT].keyframes[0].time).toBeCloseTo(0.5, 1);
-	});
-
-	it('selects a diamond then deletes it', async () => {
-		const id = keyframes.addKeyframe(ROT, { time: 0.5, value: 10 });
-		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
-		await userEvent.click(page.getByTestId(`kf-${id}`));
-		await userEvent.click(page.getByRole('button', { name: 'Elimina keyframe' }));
-		expect(keyframes.tracks[ROT].keyframes).toHaveLength(0);
-	});
-
-	it('sets interpolation of the selected keyframe', async () => {
-		const id = keyframes.addKeyframe(ROT, { time: 0.5, value: 10 });
-		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
-		await userEvent.click(page.getByTestId(`kf-${id}`));
-		await userEvent.selectOptions(page.getByLabelText('Interpolazione keyframe'), 'hold');
-		expect(keyframes.tracks[ROT].keyframes[0].interp).toBe('hold');
 	});
 
 	it('refreshes the paused preview when adding a keyframe on an enabled track', async () => {
