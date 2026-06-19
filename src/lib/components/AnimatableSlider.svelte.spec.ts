@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import AnimatableSlider from './AnimatableSlider.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
@@ -19,6 +19,12 @@ describe('AnimatableSlider', () => {
 	beforeEach(() => {
 		keyframes.tracks[param.id] = { paramId: param.id, enabled: false, keyframes: [] };
 		kaleidoscope.scale = 1;
+	});
+
+	// The keyframes store is a shared singleton across the browser test project; disarm any
+	// track this file enabled so it does not pollute other specs (e.g. hasEnabledTracks).
+	afterEach(() => {
+		for (const id of Object.keys(keyframes.tracks)) keyframes.setTrackEnabled(id, false);
 	});
 
 	it('arms the track when the stopwatch is toggled on', async () => {

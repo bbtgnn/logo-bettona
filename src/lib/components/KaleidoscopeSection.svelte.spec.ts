@@ -1,5 +1,5 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import KaleidoscopeSection from './KaleidoscopeSection.svelte';
 import {
@@ -15,6 +15,12 @@ import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.
 describe('KaleidoscopeSection', () => {
 	beforeEach(() => setKaleidoscopeEnabled(false));
 
+	// Shared keyframes singleton: disarm tracks this file enabled so it does not pollute
+	// other specs in the browser project (e.g. keyframes hasEnabledTracks).
+	afterEach(() => {
+		for (const id of Object.keys(keyframes.tracks)) keyframes.setTrackEnabled(id, false);
+	});
+
 	it('toggles kaleidoscope mode through the enable checkbox', async () => {
 		render(KaleidoscopeSection);
 		await userEvent.click(page.getByLabelText('Modalità caleidoscopio'));
@@ -23,7 +29,7 @@ describe('KaleidoscopeSection', () => {
 
 	it('updates sectors from the range input', async () => {
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Settori'), '12');
+		await userEvent.fill(page.getByLabelText('Settori', { exact: true }), '12');
 		expect(kaleidoscope.sectors).toBe(12);
 	});
 
@@ -42,10 +48,18 @@ describe('KaleidoscopeSection', () => {
 	for (const [label, value, get] of rangeCases) {
 		it(`wires the "${label}" slider to its setter`, async () => {
 			render(KaleidoscopeSection);
-			await userEvent.fill(page.getByLabelText(label), value);
+			await userEvent.fill(page.getByLabelText(label, { exact: true }), value);
 			expect(get()).toBe(Number(value));
 		});
 	}
+
+	it('arms the sectors track via its stopwatch', async () => {
+		keyframes.ensureTrack('kaleidoscope.sectors');
+		keyframes.setTrackEnabled('kaleidoscope.sectors', false);
+		render(KaleidoscopeSection);
+		await userEvent.click(page.getByLabelText('Anima Settori'));
+		expect(keyframes.tracks['kaleidoscope.sectors'].enabled).toBe(true);
+	});
 
 	it('wires the circular-mask, live-tile and tile-background checkboxes', async () => {
 		setCircularMask(true);
@@ -85,9 +99,9 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		animationState.progress = 0;
 	});
 
-	it('enables the rotation track via the stopwatch checkbox', async () => {
+	it('enables the rotation track via the stopwatch', async () => {
 		render(KaleidoscopeSection);
-		await userEvent.click(page.getByLabelText('Anima rotazione'));
+		await userEvent.click(page.getByLabelText('Anima Rotazione globale'));
 		expect(keyframes.tracks[ROT].enabled).toBe(true);
 	});
 
@@ -95,7 +109,7 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		keyframes.setTrackEnabled(ROT, true);
 		animationState.progress = 0.5;
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Rotazione globale'), '120');
+		await userEvent.fill(page.getByLabelText('Rotazione globale', { exact: true }), '120');
 		const kf = keyframes.tracks[ROT].keyframes.find((k) => Math.abs(k.time - 0.5) < 1e-3);
 		expect(kf?.value).toBe(120);
 	});
@@ -105,7 +119,7 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		animationState.progress = 0.5;
 		animationState.isPlaying = false;
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Rotazione globale'), '210');
+		await userEvent.fill(page.getByLabelText('Rotazione globale', { exact: true }), '210');
 		expect(kaleidoscope.globalRotation).toBeCloseTo(210, 4);
 	});
 });
