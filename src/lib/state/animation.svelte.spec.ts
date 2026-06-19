@@ -534,4 +534,26 @@ describe('kaleidoscope keyframe application', () => {
 		expect(kaleidoscope.sectors).toBe(10);
 		expect(kaleidoscope.sectors % 2).toBe(0);
 	});
+
+	// Characterization (locks the invariant the restructure relies on): audio
+	// reactivity is NOT exclusive with the kaleidoscope timeline. Keyframes ride
+	// the same clock regardless of the driver mode, so an armed track must still
+	// sample and apply even while an audio mode is selected.
+	it('applies kaleidoscope keyframes even when the driver mode is audioBars', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+
+		animation.animationState.mode = 'audioBars';
+		animation.applyKaleidoscopeKeyframes(0.5);
+
+		// Track still samples (not nulled out by the audio mode)...
+		expect(keyframes.sampleParam(SCALE, 0.5)).toBeCloseTo(2, 5);
+		// ...and the sampled value was applied to the live kaleidoscope param.
+		expect(kaleidoscope.scale).toBeCloseTo(2, 5);
+	});
 });
