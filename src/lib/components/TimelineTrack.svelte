@@ -75,7 +75,7 @@
 </script>
 
 <div class="flex items-center gap-2">
-	<span class="w-28 shrink-0 truncate text-xs">{label}</span>
+	<span class="w-28 shrink-0 truncate text-xs text-muted-foreground">{label}</span>
 	<Button variant="outline" size="sm" aria-label="Aggiungi keyframe" onclick={addAtPlayhead}>
 		+
 	</Button>
@@ -83,7 +83,7 @@
 	<div
 		bind:this={rowEl}
 		data-testid="track-{paramId}"
-		class="relative h-7 flex-1 rounded bg-muted/60"
+		class="relative h-8 flex-1 rounded-md bg-muted/40"
 		ondblclick={onDblClick}
 	>
 		{#each kfs as kf (kf.id)}

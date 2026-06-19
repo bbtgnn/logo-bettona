@@ -63,18 +63,20 @@
 
 {#if kaleidoscope.enabled}
 	<section data-testid="timeline-panel" class="w-full border-t bg-background">
-		<div class="flex items-center gap-2 p-2">
+		<div class="flex items-center gap-3 p-3">
 			<button
 				type="button"
 				aria-label="Mostra/nascondi timeline"
-				class="flex items-center gap-1 text-sm font-medium text-foreground"
+				class="flex items-center gap-1.5 text-sm font-medium text-foreground"
 				onclick={() => (open = !open)}
 			>
-				<span class="inline-block transition-transform {open ? 'rotate-90' : ''}">▸</span>
+				<span class="inline-block text-muted-foreground transition-transform {open ? 'rotate-90' : ''}">
+					▸
+				</span>
 				Timeline
 			</button>
 			{#if open}
-				<div class="flex items-center gap-1">
+				<div class="flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5">
 					<Button
 						variant={view === 'tracks' ? 'default' : 'ghost'}
 						size="sm"
@@ -94,7 +96,7 @@
 		</div>
 
 		{#if open}
-			<div data-testid="timeline-body" class="flex flex-col gap-1 p-2">
+			<div data-testid="timeline-body" class="flex flex-col gap-2 px-3 pb-3">
 				{#if armedParams.length === 0}
 					<p data-testid="timeline-empty" class="p-2 text-xs text-muted-foreground">
 						Arma un cronometro ⏱ nella sidebar per animare un parametro.
@@ -120,7 +122,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div data-testid="timeline-tracks" class="relative flex flex-col gap-1">
+					<div data-testid="timeline-tracks" class="relative flex flex-col gap-1.5">
 						<div class="flex items-center gap-2">
 							<span class="w-28 shrink-0"></span>
 							<div bind:this={laneColEl} class="flex-1">
@@ -141,7 +143,7 @@
 							style="left: {playheadLeft}px"
 						></div>
 						{#if selectedKf}
-							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-1">
+							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-2">
 								<select
 									aria-label="Interpolazione keyframe"
 									class="h-7 rounded border bg-background text-xs"
