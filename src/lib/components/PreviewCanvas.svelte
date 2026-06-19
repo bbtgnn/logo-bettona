@@ -1,7 +1,6 @@
 <script lang="ts">
 	import paper from 'paper';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
-	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { composition, getCompositionBackgroundColor } from '$lib/state/composition';
 	import { animationState, togglePlay, getExportAudioStream } from '$lib/state/animation';
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
@@ -25,7 +24,6 @@
 
 	let exportStatus = $state<'idle' | 'rendering'>('idle');
 	let exportProgress = $state(0);
-	let exportDurationSec = $state(5);
 	let exportAudio = $state(false);
 	const animationExportSupported = isAnimationExportSupported();
 
@@ -110,7 +108,7 @@
 		try {
 			await exportCanvasAnimation({
 				canvas: canvasEl,
-				durationSec: exportDurationSec,
+				durationSec: animationState.durationSec,
 				audioStream: audio?.stream ?? null,
 				onProgress: (p) => {
 					exportProgress = p;
@@ -263,20 +261,6 @@
 	{/if}
 
 	<div class="flex w-full max-w-[600px] flex-col gap-2">
-		<div class="flex items-center gap-2">
-			<Label for="export-duration" class="text-xs">Durata (s)</Label>
-			<input
-				id="export-duration"
-				type="number"
-				min="1"
-				step="1"
-				class="h-9 w-20 rounded-md border border-input bg-background px-3 text-xs"
-				value={exportDurationSec}
-				disabled={exportStatus === 'rendering'}
-				oninput={(e) =>
-					(exportDurationSec = Math.max(1, Number((e.target as HTMLInputElement).value) || 1))}
-			/>
-		</div>
 		<label class="flex items-center gap-2 text-xs">
 			<input
 				type="checkbox"

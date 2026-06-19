@@ -5,6 +5,7 @@ import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition } from '$lib/state/composition';
 import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
+import { animationState, setAnimationDurationSec } from '$lib/state/animation';
 
 let lastRenderedScope: paper.PaperScope | undefined;
 let lastRenderInput: RenderInput | undefined;
@@ -139,6 +140,15 @@ describe('PreviewCanvas.svelte', () => {
 		} finally {
 			setKaleidoscopeEnabled(false);
 		}
+	});
+
+	it('uses the shared animation duration for export, with no separate export-duration field', async () => {
+		setAnimationDurationSec(7);
+		render(PreviewCanvas);
+		// the old separate export-duration input is gone
+		expect(page.getByLabelText('Durata (s)', { exact: true }).query()).toBeNull();
+		// the shared duration is the single source export reads
+		expect(animationState.durationSec).toBe(7);
 	});
 
 });
