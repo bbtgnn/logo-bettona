@@ -1,14 +1,21 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
-	import { keyframes, KALEIDO_GLOBAL_ROTATION } from '$lib/state/keyframes.svelte';
+	import { keyframes } from '$lib/state/keyframes.svelte';
+	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
 	import TimelineRuler from './TimelineRuler.svelte';
 	import TimelineTrack from './TimelineTrack.svelte';
 	import KeyframeGraphEditor from './KeyframeGraphEditor.svelte';
 
-	keyframes.ensureTrack(KALEIDO_GLOBAL_ROTATION);
-
 	let open = $state(false);
 	let graphMode = $state(false);
+	let graphParamId = $state<string | null>(null);
+
+	const armedParams = $derived(KALEIDO_PARAMS.filter((p) => keyframes.tracks[p.id]?.enabled));
+
+	// Keep the graph selection valid: default to / fall back to the first armed param.
+	const graphParam = $derived(
+		armedParams.find((p) => p.id === graphParamId) ?? armedParams[0] ?? null
+	);
 </script>
 
 <section data-testid="timeline-panel" class="w-full border-t bg-background">
@@ -27,14 +34,32 @@
 
 	{#if open}
 		<div data-testid="timeline-body" class="flex flex-col gap-1 p-2">
-			{#if graphMode}
-				<div data-testid="timeline-graph" class="w-full">
-					<KeyframeGraphEditor paramId={KALEIDO_GLOBAL_ROTATION} min={0} max={360} />
+			{#if armedParams.length === 0}
+				<p data-testid="timeline-empty" class="p-2 text-xs text-muted-foreground">
+					Arma un cronometro ⏱ nella sidebar per animare un parametro.
+				</p>
+			{:else if graphMode}
+				<div data-testid="timeline-graph" class="flex flex-col gap-2">
+					<select
+						aria-label="Parametro grafico"
+						class="h-7 w-fit rounded border bg-background text-xs"
+						value={graphParam?.id ?? ''}
+						onchange={(e) => (graphParamId = (e.target as HTMLSelectElement).value)}
+					>
+						{#each armedParams as p (p.id)}
+							<option value={p.id}>{p.label}</option>
+						{/each}
+					</select>
+					{#if graphParam}
+						<KeyframeGraphEditor paramId={graphParam.id} min={graphParam.min} max={graphParam.max} />
+					{/if}
 				</div>
 			{:else}
 				<div data-testid="timeline-tracks" class="flex flex-col gap-1">
 					<TimelineRuler />
-					<TimelineTrack paramId={KALEIDO_GLOBAL_ROTATION} label="Rotazione globale" />
+					{#each armedParams as p (p.id)}
+						<TimelineTrack paramId={p.id} label={p.label} />
+					{/each}
 				</div>
 			{/if}
 		</div>
