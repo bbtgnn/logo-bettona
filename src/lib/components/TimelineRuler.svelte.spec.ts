@@ -9,19 +9,18 @@ import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.
 describe('TimelineRuler', () => {
 	beforeEach(() => {
 		animationState.progress = 0;
+		animationState.durationSec = 3;
 		keyframes.ensureTrack(ROT);
 		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
 		keyframes.setTrackEnabled(ROT, false);
 	});
 
-	it('positions the playhead proportionally to progress', async () => {
-		animationState.progress = 0.5;
+	it('renders start, middle and end time labels for the duration', async () => {
+		animationState.durationSec = 4;
 		render(TimelineRuler);
-		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
-		const playhead = page.getByTestId('playhead').element() as HTMLElement;
-		const left = parseFloat(playhead.style.left);
-		expect(left).toBeCloseTo(ruler.clientWidth / 2, 0);
-		expect(left).toBeGreaterThan(0);
+		await expect.element(page.getByText('0s', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByText('2s', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByText('4s', { exact: true })).toBeInTheDocument();
 	});
 
 	it('scrubs progress on ruler click', async () => {

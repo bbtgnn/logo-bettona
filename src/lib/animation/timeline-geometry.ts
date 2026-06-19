@@ -20,3 +20,8 @@ export function valueFromY(y: number, min: number, max: number, height: number):
 	const frac = 1 - clamp01(y / height);
 	return min + frac * (max - min);
 }
+
+export function formatSeconds(sec: number): string {
+	const r = Math.round(sec * 10) / 10;
+	return (Number.isInteger(r) ? String(r) : r.toFixed(1)) + 's';
+}

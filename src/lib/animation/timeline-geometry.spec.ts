@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { xFromTime, timeFromX, yFromValue, valueFromY } from './timeline-geometry';
+import { xFromTime, timeFromX, yFromValue, valueFromY, formatSeconds } from './timeline-geometry';
 
 describe('timeline geometry', () => {
 	it('maps time to x and back', () => {
@@ -27,5 +27,18 @@ describe('timeline geometry', () => {
 		expect(valueFromY(100, 0, 360, 100)).toBeCloseTo(0, 6);
 		expect(valueFromY(-50, 0, 360, 100)).toBe(360);
 		expect(valueFromY(150, 0, 360, 100)).toBe(0);
+	});
+});
+
+describe('formatSeconds', () => {
+	it('drops the decimal for whole seconds', () => {
+		expect(formatSeconds(3)).toBe('3s');
+		expect(formatSeconds(0)).toBe('0s');
+	});
+	it('keeps one decimal for fractional seconds', () => {
+		expect(formatSeconds(1.5)).toBe('1.5s');
+	});
+	it('rounds to one decimal', () => {
+		expect(formatSeconds(1.234)).toBe('1.2s');
 	});
 });

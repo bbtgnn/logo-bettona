@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
-	import { timeFromX, xFromTime } from '$lib/animation/timeline-geometry';
+	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
 
 	let rulerEl = $state<HTMLDivElement>();
+
+	// Minor ticks at quarter fractions; labelled ticks at start / middle / end.
+	const TICK_FRACS = [0, 0.25, 0.5, 0.75, 1];
+	const LABEL_FRACS = [0, 0.5, 1];
 
 	function scrubFromEvent(clientX: number) {
 		if (!rulerEl) return;
@@ -36,11 +40,25 @@
 <div
 	bind:this={rulerEl}
 	data-testid="timeline-ruler"
-	class="relative h-6 w-full cursor-col-resize rounded bg-muted select-none"
+	class="relative h-7 w-full cursor-col-resize rounded bg-muted select-none"
 	onpointerdown={onPointerDown}
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
 >
+	{#each TICK_FRACS as f (f)}
+		<div
+			class="pointer-events-none absolute top-0 h-2 w-px bg-border"
+			style="left: {xFromTime(f, rulerEl?.clientWidth ?? 0)}px"
+		></div>
+	{/each}
+	{#each LABEL_FRACS as f (f)}
+		<span
+			class="pointer-events-none absolute bottom-0 -translate-x-1/2 text-[10px] leading-none text-muted-foreground"
+			style="left: {xFromTime(f, rulerEl?.clientWidth ?? 0)}px"
+		>
+			{formatSeconds(f * animationState.durationSec)}
+		</span>
+	{/each}
 	<div
 		data-testid="playhead"
 		class="absolute top-0 h-full w-0.5 bg-primary"
