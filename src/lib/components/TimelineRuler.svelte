@@ -59,9 +59,4 @@
 			{formatSeconds(f * animationState.durationSec)}
 		</span>
 	{/each}
-	<div
-		data-testid="playhead"
-		class="absolute top-0 h-full w-0.5 bg-primary"
-		style="left: {xFromTime(animationState.progress, rulerEl?.clientWidth ?? 0)}px"
-	></div>
 </div>

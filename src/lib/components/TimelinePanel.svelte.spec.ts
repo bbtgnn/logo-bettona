@@ -1,14 +1,20 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelinePanel from './TimelinePanel.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
+import { animationState } from '$lib/state/animation';
 
 describe('TimelinePanel', () => {
 	beforeEach(() => {
 		for (const id of Object.keys(keyframes.tracks)) delete keyframes.tracks[id];
 		kaleidoscope.enabled = true;
+		animationState.progress = 0;
+	});
+
+	afterEach(() => {
+		for (const id of Object.keys(keyframes.tracks)) keyframes.setTrackEnabled(id, false);
 	});
 
 	it('renders nothing when kaleidoscope mode is off', async () => {
@@ -51,6 +57,27 @@ describe('TimelinePanel', () => {
 		render(TimelinePanel);
 		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('track-kaleidoscope.scale')).toBeInTheDocument();
+	});
+
+	it('renders a single panel-level playhead overlay, not one inside the ruler', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.progress = 0.5;
+		render(TimelinePanel);
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		const heads = page.getByTestId('playhead');
+		await expect.element(heads).toBeInTheDocument();
+		expect(heads.all()).toHaveLength(1); // exactly one playhead, not one-per-row
+		const el = heads.element() as HTMLElement;
+		expect(parseFloat(el.style.left)).toBeGreaterThan(0);
+		// The playhead is a continuous overlay on the tracks stage, NOT a child of
+		// the ruler (Tailwind isn't loaded in the test DOM, so assert structure,
+		// not pixel height).
+		const stage = page.getByTestId('timeline-tracks').element() as HTMLElement;
+		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
+		expect(stage.contains(el)).toBe(true);
+		expect(ruler.contains(el)).toBe(false);
+		expect(ruler.querySelector('[data-testid="playhead"]')).toBeNull();
 	});
 
 	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {

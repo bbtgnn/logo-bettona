@@ -3,6 +3,8 @@
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
+	import { animationState } from '$lib/state/animation';
+	import { xFromTime } from '$lib/animation/timeline-geometry';
 	import TimelineRuler from './TimelineRuler.svelte';
 	import TimelineTrack from './TimelineTrack.svelte';
 	import KeyframeGraphEditor from './KeyframeGraphEditor.svelte';
@@ -11,7 +13,15 @@
 	let view = $state<'tracks' | 'graph'>('tracks');
 	let graphParamId = $state<string | null>(null);
 
+	let laneColEl = $state<HTMLDivElement>();
+
 	const armedParams = $derived(KALEIDO_PARAMS.filter((p) => keyframes.tracks[p.id]?.enabled));
+
+	// One continuous playhead overlaid across ruler + lanes: the lane column is
+	// measured at runtime so the line needs no hardcoded gutter width.
+	const playheadLeft = $derived(
+		(laneColEl?.offsetLeft ?? 0) + xFromTime(animationState.progress, laneColEl?.clientWidth ?? 0)
+	);
 
 	// Keep the graph selection valid: default to / fall back to the first armed param.
 	const graphParam = $derived(
@@ -78,11 +88,21 @@
 						{/if}
 					</div>
 				{:else}
-					<div data-testid="timeline-tracks" class="flex flex-col gap-1">
-						<TimelineRuler />
+					<div data-testid="timeline-tracks" class="relative flex flex-col gap-1">
+						<div class="flex items-center gap-2">
+							<span class="w-28 shrink-0"></span>
+							<div bind:this={laneColEl} class="flex-1">
+								<TimelineRuler />
+							</div>
+						</div>
 						{#each armedParams as p (p.id)}
 							<TimelineTrack paramId={p.id} label={p.label} />
 						{/each}
+						<div
+							data-testid="playhead"
+							class="pointer-events-none absolute top-0 bottom-0 w-px bg-primary"
+							style="left: {playheadLeft}px"
+						></div>
 					</div>
 				{/if}
 			</div>
