@@ -1,0 +1,46 @@
+import { page } from 'vitest/browser';
+import { describe, expect, it, beforeEach } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import AnimatableSlider from './AnimatableSlider.svelte';
+import { keyframes } from '$lib/state/keyframes.svelte';
+import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
+
+const param = {
+	id: 'kaleidoscope.scale',
+	label: 'Scala globale',
+	min: 0.3,
+	max: 3,
+	step: 0.05,
+	get: () => kaleidoscope.scale,
+	set: (v: number) => (kaleidoscope.scale = v)
+};
+
+describe('AnimatableSlider', () => {
+	beforeEach(() => {
+		keyframes.tracks[param.id] = { paramId: param.id, enabled: false, keyframes: [] };
+		kaleidoscope.scale = 1;
+	});
+
+	it('arms the track when the stopwatch is toggled on', async () => {
+		render(AnimatableSlider, { param });
+		const stopwatch = page.getByLabelText('Anima Scala globale');
+		await stopwatch.click();
+		expect(keyframes.tracks[param.id].enabled).toBe(true);
+	});
+
+	it('unarmed slider input sets the value directly (no keyframe)', async () => {
+		render(AnimatableSlider, { param });
+		const slider = page.getByLabelText('Scala globale', { exact: true });
+		await slider.fill('2');
+		expect(kaleidoscope.scale).toBe(2);
+		expect(keyframes.tracks[param.id].keyframes).toHaveLength(0);
+	});
+
+	it('armed slider input upserts a keyframe instead of setting directly', async () => {
+		keyframes.tracks[param.id].enabled = true;
+		render(AnimatableSlider, { param });
+		const slider = page.getByLabelText('Scala globale', { exact: true });
+		await slider.fill('2');
+		expect(keyframes.tracks[param.id].keyframes.length).toBeGreaterThan(0);
+	});
+});
