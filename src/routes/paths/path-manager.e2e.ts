@@ -36,6 +36,14 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 	await expect(page).toHaveURL(/\/paths$/);
 	await expect(page.getByTestId('paths-list').getByRole('button')).toHaveCount(1);
 
+	// Apply the saved shape onto a ring from Paths (select card → Apply → confirm).
+	await page.getByTestId('paths-list').getByRole('button').first().click();
+	await page.getByTestId('paths-apply').click();
+	await page.getByTestId('apply-confirm').click();
+	await expect(page.getByRole('heading', { name: 'Applica al marchio' })).toBeHidden({
+		timeout: 2000
+	});
+
 	// Go back to the editor.
 	await page.getByTestId('nav-editor').click();
 	await expect(page).toHaveURL(/\/editor$/);

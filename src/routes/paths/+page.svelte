@@ -1,17 +1,28 @@
 <script lang="ts">
+	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
 	import RingPreview from '$lib/components/RingPreview.svelte';
-	import { pathLibrary } from '$lib/state/path-library';
+	import ApplyToRingSheet from '$lib/components/ApplyToRingSheet.svelte';
+	import { pathLibrary, applyEntryToRing } from '$lib/state/path-library';
+	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
 
 	let selectedId = $state<string | null>(pathLibrary.entries[0]?.id ?? null);
+	let applyOpen = $state(false);
 
 	// Resolve against live state: fall back to the first entry if the pick is stale
 	// (e.g. the library hydrated after mount, or the selected entry was removed).
 	const selected = $derived(
 		pathLibrary.entries.find((e) => e.id === selectedId) ?? pathLibrary.entries[0] ?? null
 	);
+
+	const canApply = $derived(selected !== null && composition.rings.length > 0);
+
+	function applyToRing(ringIndex: number, slot: ApplySlot) {
+		if (!selected) return;
+		applyEntryToRing(composition.rings[ringIndex], selected, slot);
+	}
 </script>
 
 <svelte:head><title>Path Library — logo-bettona</title></svelte:head>
@@ -67,9 +78,22 @@
 					/>
 				</div>
 				<p class="text-sm font-medium">{selected.name}</p>
+				<Button
+					size="sm"
+					data-testid="paths-apply"
+					disabled={!canApply}
+					onclick={() => (applyOpen = true)}
+				>
+					Applica al marchio
+				</Button>
+				{#if composition.rings.length === 0}
+					<p class="text-[11px] text-muted-foreground">Aggiungi un anello in Editor per applicare.</p>
+				{/if}
 			{:else}
 				<p class="text-sm text-muted-foreground">Nessuna forma da mostrare.</p>
 			{/if}
 		</main>
 	</div>
 </div>
+
+<ApplyToRingSheet bind:open={applyOpen} entry={selected} rings={composition.rings} onapply={applyToRing} />

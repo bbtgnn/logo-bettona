@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import PathsPage from './+page.svelte';
 import { pathLibrary } from '$lib/state/path-library';
+import { composition } from '$lib/state/composition';
 import type { Path, PathLibraryEntry } from '$lib/types';
 
 const PATH: Path = { cmds: ['M', 'L', 'L', 'L', 'Z'], crds: [0, 0, 100, 0, 100, 50, 0, 50] };
@@ -23,6 +24,7 @@ describe('Paths page', () => {
 	});
 	afterEach(() => {
 		pathLibrary.entries = [];
+		composition.rings = [];
 	});
 
 	it('renders a card per saved entry in a vertical list', async () => {
@@ -48,5 +50,26 @@ describe('Paths page', () => {
 		pathLibrary.entries = [];
 		render(PathsPage);
 		await expect.element(page.getByTestId('paths-empty-state')).toBeInTheDocument();
+	});
+
+	it('enables Apply when an entry is selected and the mark has rings', async () => {
+		composition.rings = [
+			{
+				copies: 8,
+				color: '#000',
+				templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
+				secondaryTemplatePath: null,
+				morphT: 0,
+				ringHeight: 0.25
+			}
+		];
+		render(PathsPage);
+		await expect.element(page.getByTestId('paths-apply')).toBeEnabled();
+	});
+
+	it('disables Apply when the mark has no rings', async () => {
+		composition.rings = [];
+		render(PathsPage);
+		await expect.element(page.getByTestId('paths-apply')).toBeDisabled();
 	});
 });
