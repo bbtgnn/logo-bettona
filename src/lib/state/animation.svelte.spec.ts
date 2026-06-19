@@ -487,4 +487,47 @@ describe('kaleidoscope keyframe application', () => {
 		animation.applyKaleidoscopeKeyframes(0.5);
 		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 4);
 	});
+
+	it('applies multiple armed params at the same progress', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		const TILEROT = 'kaleidoscope.tileRotation';
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+		keyframes.addKeyframe(TILEROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(TILEROT, { time: 1, value: 100 });
+		keyframes.setTrackEnabled(TILEROT, true);
+		animation.applyKaleidoscopeKeyframes(0.5);
+		expect(kaleidoscope.scale).toBeCloseTo(2, 4);
+		expect(kaleidoscope.tileRotation).toBeCloseTo(50, 4);
+	});
+
+	it('leaves an unarmed param at its static value while another is armed', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope, setOffsetDistance } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		setOffsetDistance(0.25); // unarmed
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+		animation.applyKaleidoscopeKeyframes(0.5);
+		expect(kaleidoscope.offsetDistance).toBe(0.25);
+	});
+
+	it('rounds a discrete (sectors) sample to a valid even value', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SECTORS = 'kaleidoscope.sectors';
+		keyframes.addKeyframe(SECTORS, { time: 0, value: 8 });
+		keyframes.addKeyframe(SECTORS, { time: 1, value: 12 });
+		keyframes.setTrackEnabled(SECTORS, true);
+		animation.applyKaleidoscopeKeyframes(0.5); // sample ~10
+		expect(kaleidoscope.sectors).toBe(10);
+		expect(kaleidoscope.sectors % 2).toBe(0);
+	});
 });

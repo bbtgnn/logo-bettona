@@ -13,8 +13,8 @@ import type {
 	DataSeriesConfig
 } from './animation-drivers/types';
 import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
-import { keyframes, KALEIDO_GLOBAL_ROTATION } from './keyframes.svelte';
-import { setGlobalRotation } from './kaleidoscope.svelte';
+import { keyframes } from './keyframes.svelte';
+import { KALEIDO_PARAMS } from './kaleidoscope-params';
 
 export type AnimationMode = AnimationDriverType | null;
 
@@ -202,13 +202,16 @@ function hasEnabledKeyframeTracks(): boolean {
 }
 
 /**
- * Applies the kaleidoscope keyframe tracks at the given normalized progress.
- * Block 2 wires only globalRotation; Block 3 extends this to the other params.
- * A disabled/empty track returns null and leaves the static slider value in place.
+ * Applies every armed kaleidoscope keyframe track at the given normalized progress.
+ * Each registry param samples its track; a disabled/empty track returns null and leaves
+ * the static slider value in place. Discrete params (sectors/repeat) are rounded/clamped
+ * by their setters.
  */
 export function applyKaleidoscopeKeyframes(progress: number): void {
-	const rotation = keyframes.sampleParam(KALEIDO_GLOBAL_ROTATION, progress);
-	if (rotation !== null) setGlobalRotation(rotation);
+	for (const p of KALEIDO_PARAMS) {
+		const v = keyframes.sampleParam(p.id, progress);
+		if (v !== null) p.set(v);
+	}
 }
 
 function getProgressFromElapsed(elapsedMs: number): number {
