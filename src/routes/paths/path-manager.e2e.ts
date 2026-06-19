@@ -34,7 +34,7 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 	// Navigate to /paths and verify one entry.
 	await page.getByTestId('nav-paths').click();
 	await expect(page).toHaveURL(/\/paths$/);
-	await expect(page.getByTestId('paths-grid').locator('li')).toHaveCount(1);
+	await expect(page.getByTestId('paths-list').getByRole('button')).toHaveCount(1);
 
 	// Go back to the editor.
 	await page.getByTestId('nav-editor').click();
