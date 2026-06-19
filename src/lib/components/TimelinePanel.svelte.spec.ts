@@ -9,7 +9,6 @@ import { animationState } from '$lib/state/animation';
 describe('TimelinePanel', () => {
 	beforeEach(() => {
 		for (const id of Object.keys(keyframes.tracks)) delete keyframes.tracks[id];
-		kaleidoscope.enabled = true;
 		animationState.progress = 0;
 	});
 
@@ -17,37 +16,28 @@ describe('TimelinePanel', () => {
 		for (const id of Object.keys(keyframes.tracks)) keyframes.setTrackEnabled(id, false);
 	});
 
-	it('renders nothing when kaleidoscope mode is off', async () => {
+	it('renders the panel even when kaleidoscope mode is off (Animate owns the timeline now)', async () => {
 		kaleidoscope.enabled = false;
-		render(TimelinePanel);
-		expect(page.getByTestId('timeline-panel').query()).toBeNull();
-	});
-
-	it('renders the panel when kaleidoscope mode is on', async () => {
-		kaleidoscope.enabled = true;
 		render(TimelinePanel);
 		await expect.element(page.getByTestId('timeline-panel')).toBeInTheDocument();
 	});
 
-	it('starts collapsed and expands on toggle', async () => {
+	it('is expanded by default (timeline body visible without clicking the chevron)', async () => {
 		render(TimelinePanel);
-		expect(page.getByTestId('timeline-body').query()).toBeNull();
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
 	});
 
-	it('chevron toggles the panel open and closed', async () => {
+	it('chevron collapses the open panel and re-expands it', async () => {
 		render(TimelinePanel);
-		expect(page.getByTestId('timeline-body').query()).toBeNull();
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
 		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		expect(page.getByTestId('timeline-body').query()).toBeNull();
+		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
 	});
 
 	it('shows the empty-state hint when no param is armed', async () => {
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('timeline-empty')).toBeInTheDocument();
 	});
 
@@ -55,7 +45,6 @@ describe('TimelinePanel', () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await expect.element(page.getByTestId('track-kaleidoscope.scale')).toBeInTheDocument();
 	});
 
@@ -64,7 +53,6 @@ describe('TimelinePanel', () => {
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		animationState.progress = 0.5;
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		const heads = page.getByTestId('playhead');
 		await expect.element(heads).toBeInTheDocument();
 		expect(heads.all()).toHaveLength(1); // exactly one playhead, not one-per-row
@@ -84,7 +72,6 @@ describe('TimelinePanel', () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
 	});
 
@@ -93,7 +80,6 @@ describe('TimelinePanel', () => {
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await userEvent.click(page.getByTestId(`kf-${id}`));
 		await userEvent.selectOptions(page.getByLabelText('Interpolazione keyframe'), 'hold');
 		expect(keyframes.tracks['kaleidoscope.scale'].keyframes[0].interp).toBe('hold');
@@ -104,7 +90,6 @@ describe('TimelinePanel', () => {
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await userEvent.click(page.getByTestId(`kf-${id}`));
 		await userEvent.click(page.getByRole('button', { name: 'Elimina keyframe' }));
 		expect(keyframes.tracks['kaleidoscope.scale'].keyframes).toHaveLength(0);
@@ -115,7 +100,6 @@ describe('TimelinePanel', () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
 		await userEvent.click(page.getByRole('button', { name: 'Graph Editor' }));
 		await expect.element(page.getByTestId('timeline-graph')).toBeInTheDocument();
 		// The bug: pressing Timeline used to close the panel. It must return to tracks instead.
