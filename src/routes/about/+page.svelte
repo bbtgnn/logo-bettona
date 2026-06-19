@@ -8,7 +8,7 @@
 	<header class="border-b">
 		<div class="mx-auto flex max-w-[1100px] items-center px-6 py-3">
 			<a
-				href="/"
+				href="/editor"
 				class="text-sm text-muted-foreground hover:text-foreground"
 				data-testid="about-back-link"
 			>
