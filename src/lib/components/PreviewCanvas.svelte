@@ -155,7 +155,16 @@
 		if (!ctx) return;
 		const tile = kaleidoscope.liveTile ? renderTile() : (staticTile ??= renderTile());
 		const size = Math.min(canvasEl.width, canvasEl.height);
-		renderKaleidoscopeToCanvas(ctx, tile, tile.width, tile.height, kaleidoscope, size);
+		renderKaleidoscopeToCanvas(
+			ctx,
+			tile,
+			tile.width,
+			tile.height,
+			kaleidoscope,
+			size,
+			canvasEl.width,
+			canvasEl.height
+		);
 	}
 
 	function exportKaleidoscopePng() {
@@ -219,6 +228,23 @@
 		void kaleidoscope.refreshNonce;
 		void kaleidoscope.tileBackground;
 		if (kaleidoscope.enabled && !kaleidoscope.liveTile) refreshTile();
+	});
+
+	$effect(() => {
+		// In kaleidoscope mode the composition no longer renders to the visible canvas
+		// (gated above to avoid flicker), so the canvas size and the static tile would
+		// otherwise stay frozen. Keep the canvas sized to the aspect ratio and re-snapshot
+		// the static tile whenever the composition or aspect changes. The tile renders to
+		// the OFFSCREEN scope, so the kaleidoscope rAF loop stays the only writer of the
+		// visible canvas (no flicker).
+		if (!kaleidoscope.enabled) return;
+		void $state.snapshot(composition); // deep-track composition edits
+		const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE);
+		if (canvasEl && (canvasEl.width !== width || canvasEl.height !== height)) {
+			canvasEl.width = width;
+			canvasEl.height = height;
+		}
+		if (!kaleidoscope.liveTile) refreshTile();
 	});
 </script>
 

@@ -57,22 +57,26 @@ export function renderKaleidoscopeToCanvas(
 	tileW: number,
 	tileH: number,
 	params: KaleidoscopeParams,
-	size: number
+	size: number,
+	canvasWidth: number = size,
+	canvasHeight: number = size
 ): void {
 	const sectors = clampSectors(params.sectors);
 	const wedge = wedgeAngle(sectors);
-	const cx = size / 2;
-	const cy = size / 2;
+	// Center the kaleidoscope in the (possibly non-square) canvas; `size` is only its
+	// diameter. Without this the disc sits in the top-left size×size square.
+	const cx = canvasWidth / 2;
+	const cy = canvasHeight / 2;
 	const maxSide = Math.max(tileW, tileH) || 1;
 	const drawW = size * params.tileSize * (tileW / maxSide);
 	const drawH = size * params.tileSize * (tileH / maxSide);
 	const offsetPx = params.offsetDistance * size;
 	const clipRadius = size * 1.5;
 
-	ctx.clearRect(0, 0, size, size);
+	ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 	if (params.drawBackground) {
 		ctx.fillStyle = params.backgroundColor;
-		ctx.fillRect(0, 0, size, size);
+		ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 	}
 
 	ctx.save();

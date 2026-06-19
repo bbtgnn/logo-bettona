@@ -110,6 +110,67 @@ describe('renderKaleidoscopeToCanvas', () => {
 		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, circularMask: true }, 600);
 		expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
 	});
+
+	it('centers on the canvas (not the size square) and clears the whole canvas', () => {
+		const translates: Array<[number, number]> = [];
+		const clears: Array<[number, number, number, number]> = [];
+		const ctx = {
+			fillStyle: '',
+			globalCompositeOperation: 'source-over',
+			save() {},
+			restore() {},
+			translate(x: number, y: number) {
+				translates.push([x, y]);
+			},
+			rotate() {},
+			scale() {},
+			beginPath() {},
+			moveTo() {},
+			arc() {},
+			closePath() {},
+			clip() {},
+			fill() {},
+			fillRect() {},
+			clearRect(x: number, y: number, w: number, h: number) {
+				clears.push([x, y, w, h]);
+			},
+			drawImage() {}
+		} as unknown as CanvasRenderingContext2D;
+
+		// Non-square canvas 800x300, kaleidoscope diameter 300.
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, 300, 800, 300);
+
+		// First per-sector translate must be the canvas center, not (150,150).
+		expect(translates[0]).toEqual([400, 150]);
+		// The clear covers the entire canvas, not just the 300x300 square.
+		expect(clears[0]).toEqual([0, 0, 800, 300]);
+	});
+
+	it('defaults canvas dimensions to size (square) when omitted', () => {
+		const translates: Array<[number, number]> = [];
+		const ctx = {
+			fillStyle: '',
+			globalCompositeOperation: 'source-over',
+			save() {},
+			restore() {},
+			translate(x: number, y: number) {
+				translates.push([x, y]);
+			},
+			rotate() {},
+			scale() {},
+			beginPath() {},
+			moveTo() {},
+			arc() {},
+			closePath() {},
+			clip() {},
+			fill() {},
+			fillRect() {},
+			clearRect() {},
+			drawImage() {}
+		} as unknown as CanvasRenderingContext2D;
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, 600);
+		expect(translates[0]).toEqual([300, 300]);
+	});
 });
 
 import { extractSvgParts, generateKaleidoscopeSVG } from './kaleidoscope';

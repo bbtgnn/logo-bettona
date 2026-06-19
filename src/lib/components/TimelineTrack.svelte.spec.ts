@@ -23,6 +23,21 @@ describe('TimelineTrack', () => {
 		await expect.element(page.getByTestId(`kf-${id}`)).toBeInTheDocument();
 	});
 
+	it('adds a keyframe at the playhead via the "+ Keyframe" button', async () => {
+		animationState.progress = 0.4;
+		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
+		await userEvent.click(page.getByRole('button', { name: '+ Keyframe' }));
+		expect(keyframes.tracks[ROT].keyframes).toHaveLength(1);
+		expect(keyframes.tracks[ROT].keyframes[0].time).toBeCloseTo(0.4, 6);
+	});
+
+	it('enables the interpolation dropdown after adding via the button', async () => {
+		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
+		await userEvent.click(page.getByRole('button', { name: '+ Keyframe' }));
+		const select = page.getByLabelText('Interpolazione keyframe').element() as HTMLSelectElement;
+		expect(select.disabled).toBe(false);
+	});
+
 	it('adds a keyframe on double-click of the empty row', async () => {
 		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
 		const row = page.getByTestId(`track-${ROT}`).element() as HTMLElement;

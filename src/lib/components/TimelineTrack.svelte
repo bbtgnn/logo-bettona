@@ -31,6 +31,12 @@
 		reapplyIfPaused();
 	}
 
+	// Discoverable alternative to double-clicking the row: add a keyframe at the playhead.
+	function addAtPlayhead() {
+		selectedId = keyframes.addKeyframe(paramId, { time: animationState.progress, value: 0 });
+		reapplyIfPaused();
+	}
+
 	function onDiamondDown(e: PointerEvent, id: string) {
 		e.stopPropagation();
 		selectedId = id;
@@ -75,6 +81,7 @@
 
 <div class="flex items-center gap-2">
 	<span class="w-28 shrink-0 truncate text-xs">{label}</span>
+	<Button variant="outline" size="sm" onclick={addAtPlayhead}>+ Keyframe</Button>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={rowEl}
