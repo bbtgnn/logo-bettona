@@ -204,9 +204,9 @@
 			}
 			return;
 		}
-		// Touch reactive params so the loop restarts when they change.
-		void kaleidoscope.sectors;
-		void kaleidoscope.repeat;
+		// Restart only when the tile SOURCE changes (live vs static). sectors/repeat are read
+		// live inside drawKaleidoscope every frame, so they must NOT be dependencies here —
+		// keyframing them would otherwise tear down and rebuild the rAF loop every frame.
 		void kaleidoscope.liveTile;
 		staticTile = undefined;
 		const loop = () => {
