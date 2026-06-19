@@ -12,6 +12,17 @@ function reset() {
 describe('KeyframeGraphEditor', () => {
 	beforeEach(reset);
 
+	it('shows an empty-state hint (and no curve) when the track has no keyframes', async () => {
+		render(KeyframeGraphEditor, { paramId: ROT, min: 0, max: 360 });
+		await expect.element(page.getByTestId('graph-empty')).toBeInTheDocument();
+		expect(page.getByTestId('graph-curve').query()).toBeNull();
+	});
+
+	it('always shows a help caption explaining what the graph does', async () => {
+		render(KeyframeGraphEditor, { paramId: ROT, min: 0, max: 360 });
+		await expect.element(page.getByTestId('graph-help')).toBeInTheDocument();
+	});
+
 	it('draws the curve and a point per keyframe', async () => {
 		const id = keyframes.addKeyframe(ROT, { time: 0, value: 0 });
 		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
