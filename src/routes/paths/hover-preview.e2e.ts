@@ -16,7 +16,7 @@ test('hovering a library card shows a ring preview popover', async ({ page }) =>
 	await expect(page.getByTestId('ring-save-status-0')).toContainText(/Salvato come 'Path 1'/);
 
 	// Navigate to /paths.
-	await page.getByTestId('header-paths-link').click();
+	await page.getByTestId('nav-paths').click();
 	await expect(page).toHaveURL(/\/paths$/);
 
 	const firstCard = page.getByTestId('paths-grid').locator('li').first();

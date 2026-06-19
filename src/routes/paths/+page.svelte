@@ -3,6 +3,7 @@
 	import { composition } from '$lib/state/composition';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
 	import RingPreview from '$lib/components/RingPreview.svelte';
+	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
 
 	let hoveredId = $state<string | null>(null);
 </script>
@@ -12,13 +13,7 @@
 <div class="min-h-screen w-full bg-background text-foreground">
 	<header class="border-b">
 		<div class="mx-auto flex max-w-[1100px] items-center px-6 py-3">
-			<a
-				href="/"
-				class="text-sm text-muted-foreground hover:text-foreground"
-				data-testid="paths-back-link"
-			>
-				← Back
-			</a>
+			<WorkspaceNav />
 			<span class="ml-4 text-sm font-semibold">Path Library</span>
 			<span class="ml-2 text-xs text-muted-foreground">
 				({pathLibrary.entries.length})

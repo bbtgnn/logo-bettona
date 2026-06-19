@@ -32,13 +32,13 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 	await expect(page.getByTestId('ring-save-status-0')).toContainText(/Salvato come 'Path 1'/);
 
 	// Navigate to /paths and verify one entry.
-	await page.getByTestId('header-paths-link').click();
+	await page.getByTestId('nav-paths').click();
 	await expect(page).toHaveURL(/\/paths$/);
 	await expect(page.getByTestId('paths-grid').locator('li')).toHaveCount(1);
 
 	// Go back to the editor.
-	await page.getByTestId('paths-back-link').click();
-	await expect(page).toHaveURL(/\/$/);
+	await page.getByTestId('nav-editor').click();
+	await expect(page).toHaveURL(/\/editor$/);
 
 	// Ensure Ring 1 is expanded (open it only if the save button is not visible).
 	const saveBtn = page.getByTestId('ring-save-to-library-0');
