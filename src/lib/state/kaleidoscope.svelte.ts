@@ -1,6 +1,9 @@
 import { clampSectors, clampRepeat, type KaleidoscopeParams } from '$lib/geometry/kaleidoscope';
 
-export type KaleidoscopeState = KaleidoscopeParams & {
+// backgroundColor is omitted from the live state: the carpet background is sourced from
+// the composition palette at render time (see preview-presenter `kaleidoParams`), not
+// stored here. It stays on KaleidoscopeParams because the render layer still needs it.
+export type KaleidoscopeState = Omit<KaleidoscopeParams, 'backgroundColor'> & {
 	enabled: boolean;
 	liveTile: boolean;
 	tileBackground: boolean;
@@ -18,7 +21,6 @@ export const kaleidoscope = $state<KaleidoscopeState>({
 	carpetRotation: 0,
 	globalRotation: 0,
 	circularMask: true,
-	backgroundColor: '#ffffff',
 	liveTile: false,
 	tileBackground: false,
 	refreshNonce: 0,
@@ -66,9 +68,6 @@ export function setLiveTile(v: boolean) {
 export function setTileBackground(v: boolean) {
 	// drawBackground follows automatically (derived getter) — no second field to sync.
 	kaleidoscope.tileBackground = v;
-}
-export function setKaleidoscopeBackgroundColor(c: string) {
-	kaleidoscope.backgroundColor = c;
 }
 // Bumped to ask PreviewCanvas for a fresh static-tile snapshot (live tile off).
 export function requestTileRefresh() {

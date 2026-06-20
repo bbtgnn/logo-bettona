@@ -61,12 +61,19 @@ export function createPreviewPresenter() {
 		staticTile = renderTile();
 	}
 
+	// Kaleidoscope render params with the carpet background sourced from the palette
+	// (no longer a stored kaleidoscope field). The drawBackground getter is evaluated
+	// into the spread, so the render layer reads a plain boolean.
+	function kaleidoParams() {
+		return { ...kaleidoscope, backgroundColor: getCompositionBackgroundColor() };
+	}
+
 	function drawKaleidoscope() {
 		if (!canvasEl) return;
 		const ctx = canvasEl.getContext('2d');
 		if (!ctx) return;
 		const tile = kaleidoscope.liveTile ? renderTile() : (staticTile ??= renderTile());
-		renderKaleidoscopeToCanvas(ctx, tile, tile.width, tile.height, kaleidoscope, {
+		renderKaleidoscopeToCanvas(ctx, tile, tile.width, tile.height, kaleidoParams(), {
 			width: canvasEl.width,
 			height: canvasEl.height
 		});
@@ -90,7 +97,7 @@ export function createPreviewPresenter() {
 		const frame = canvasEl
 			? { width: canvasEl.width, height: canvasEl.height }
 			: { width: TILE_PX, height: TILE_PX };
-		downloadSvg(generateKaleidoscopeSVG(tileSvg, kaleidoscope, frame), 'kaleidoscope.svg');
+		downloadSvg(generateKaleidoscopeSVG(tileSvg, kaleidoParams(), frame), 'kaleidoscope.svg');
 	}
 
 	function exportSvg() {

@@ -4,8 +4,7 @@ import {
 	setKaleidoscopeEnabled,
 	setSectors,
 	setRepeat,
-	setTileBackground,
-	setKaleidoscopeBackgroundColor
+	setTileBackground
 } from './kaleidoscope.svelte';
 
 describe('kaleidoscope state', () => {
@@ -33,11 +32,9 @@ describe('kaleidoscope state', () => {
 		expect(kaleidoscope.repeat).toBe(10);
 	});
 
-	it('stores background color and tile-background flag', () => {
+	it('stores the tile-background flag', () => {
 		setTileBackground(true);
-		setKaleidoscopeBackgroundColor('#123456');
 		expect(kaleidoscope.tileBackground).toBe(true);
-		expect(kaleidoscope.backgroundColor).toBe('#123456');
 	});
 
 	it('mirrors drawBackground as the inverse of tileBackground', () => {

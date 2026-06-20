@@ -84,12 +84,6 @@ describe('KaleidoscopeSection', () => {
 		await expect.element(page.getByText('Aggiorna istantanea')).toBeInTheDocument();
 	});
 
-	it('shows the kaleidoscope background color input only when tile background is off', async () => {
-		setTileBackground(false);
-		render(KaleidoscopeSection);
-		await expect.element(page.getByLabelText('Sfondo caleidoscopio')).toBeInTheDocument();
-	});
-
 	it('hides the stopwatches when not animatable but keeps the sliders working', async () => {
 		render(KaleidoscopeSection, { animatable: false });
 		expect(page.getByLabelText('Anima Settori').query()).toBeNull();
