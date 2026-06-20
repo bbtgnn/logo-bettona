@@ -51,47 +51,101 @@ export function carpetTileOffsets(repeat: number, tileW: number, tileH: number):
 	return offsets;
 }
 
+/** Output frame in pixels; the disc diameter is the shorter side. */
+export type KaleidoscopeFrame = { width: number; height: number };
+/** Intrinsic size of the source tile — bitmap pixels (canvas) or viewBox units (SVG). */
+export type TileAspect = { width: number; height: number };
+
+/**
+ * Everything a renderer must know to paint the kaleidoscope, computed once so the
+ * canvas and SVG adapters can never drift on the geometry. Rotations are kept in the
+ * unit each adapter consumes most naturally: sector rotation in radians (canvas arc),
+ * tile/carpet/global rotation in degrees (the params' own unit). Adapters only emit
+ * primitives from these numbers — they do no geometry of their own.
+ */
+export type KaleidoscopeLayout = {
+	width: number;
+	height: number;
+	background: string | null;
+	globalRotationDeg: number;
+	center: { x: number; y: number };
+	wedgeAngleRad: number;
+	clipRadius: number;
+	sectors: { rotationRad: number; mirror: boolean }[];
+	inner: { offsetPx: number; tileRotationDeg: number; scale: number };
+	tile: { drawW: number; drawH: number };
+	carpet: TileOffset[];
+	carpetRotationDeg: number;
+	circularMask: { x: number; y: number; r: number } | null;
+};
+
+export function kaleidoscopeLayout(
+	params: KaleidoscopeParams,
+	frame: KaleidoscopeFrame,
+	tile: TileAspect
+): KaleidoscopeLayout {
+	const sectorCount = clampSectors(params.sectors);
+	const wedge = wedgeAngle(sectorCount);
+	// The disc fills the shorter side; it is centered in the (possibly non-square) frame
+	// so the export matches the on-screen render instead of cropping to a square.
+	const size = Math.min(frame.width, frame.height);
+	const cx = frame.width / 2;
+	const cy = frame.height / 2;
+	const maxSide = Math.max(tile.width, tile.height) || 1;
+	const drawW = size * params.tileSize * (tile.width / maxSide);
+	const drawH = size * params.tileSize * (tile.height / maxSide);
+
+	const sectors = [];
+	for (let i = 0; i < sectorCount; i++) {
+		sectors.push({ rotationRad: i * wedge, mirror: isSectorMirrored(i) });
+	}
+
+	return {
+		width: frame.width,
+		height: frame.height,
+		background: params.drawBackground ? params.backgroundColor : null,
+		globalRotationDeg: params.globalRotation,
+		center: { x: cx, y: cy },
+		wedgeAngleRad: wedge,
+		clipRadius: size * 1.5,
+		sectors,
+		inner: { offsetPx: params.offsetDistance * size, tileRotationDeg: params.tileRotation, scale: params.scale },
+		tile: { drawW, drawH },
+		carpet: carpetTileOffsets(params.repeat, drawW, drawH),
+		carpetRotationDeg: params.carpetRotation,
+		circularMask: params.circularMask ? { x: cx, y: cy, r: size / 2 } : null
+	};
+}
+
 export function renderKaleidoscopeToCanvas(
 	ctx: CanvasRenderingContext2D,
 	tile: CanvasImageSource,
 	tileW: number,
 	tileH: number,
 	params: KaleidoscopeParams,
-	size: number,
-	canvasWidth: number = size,
-	canvasHeight: number = size
+	frame: KaleidoscopeFrame
 ): void {
-	const sectors = clampSectors(params.sectors);
-	const wedge = wedgeAngle(sectors);
-	// Center the kaleidoscope in the (possibly non-square) canvas; `size` is only its
-	// diameter. Without this the disc sits in the top-left size×size square.
-	const cx = canvasWidth / 2;
-	const cy = canvasHeight / 2;
-	const maxSide = Math.max(tileW, tileH) || 1;
-	const drawW = size * params.tileSize * (tileW / maxSide);
-	const drawH = size * params.tileSize * (tileH / maxSide);
-	const offsetPx = params.offsetDistance * size;
-	const clipRadius = size * 1.5;
+	const layout = kaleidoscopeLayout(params, frame, { width: tileW, height: tileH });
+	const { center, wedgeAngleRad: wedge, clipRadius, inner, tile: tileBox } = layout;
+	const { drawW, drawH } = tileBox;
 
-	ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-	if (params.drawBackground) {
-		ctx.fillStyle = params.backgroundColor;
-		ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+	ctx.clearRect(0, 0, layout.width, layout.height);
+	if (layout.background !== null) {
+		ctx.fillStyle = layout.background;
+		ctx.fillRect(0, 0, layout.width, layout.height);
 	}
 
 	ctx.save();
-	if (params.globalRotation) {
-		ctx.translate(cx, cy);
-		ctx.rotate(degToRad(params.globalRotation));
-		ctx.translate(-cx, -cy);
+	if (layout.globalRotationDeg) {
+		ctx.translate(center.x, center.y);
+		ctx.rotate(degToRad(layout.globalRotationDeg));
+		ctx.translate(-center.x, -center.y);
 	}
 
-	const offsets = carpetTileOffsets(params.repeat, drawW, drawH);
-
-	for (let i = 0; i < sectors; i++) {
+	for (const sector of layout.sectors) {
 		ctx.save();
-		ctx.translate(cx, cy);
-		ctx.rotate(i * wedge);
+		ctx.translate(center.x, center.y);
+		ctx.rotate(sector.rotationRad);
 
 		ctx.beginPath();
 		ctx.moveTo(0, 0);
@@ -99,15 +153,15 @@ export function renderKaleidoscopeToCanvas(
 		ctx.closePath();
 		ctx.clip();
 
-		if (isSectorMirrored(i)) ctx.scale(-1, 1);
-		ctx.translate(offsetPx, 0);
-		ctx.rotate(degToRad(params.tileRotation));
-		ctx.scale(params.scale, params.scale);
+		if (sector.mirror) ctx.scale(-1, 1);
+		ctx.translate(inner.offsetPx, 0);
+		ctx.rotate(degToRad(inner.tileRotationDeg));
+		ctx.scale(inner.scale, inner.scale);
 
-		for (const off of offsets) {
+		for (const off of layout.carpet) {
 			ctx.save();
 			ctx.translate(off.x, off.y);
-			if (params.carpetRotation) ctx.rotate(degToRad(params.carpetRotation));
+			if (layout.carpetRotationDeg) ctx.rotate(degToRad(layout.carpetRotationDeg));
 			ctx.drawImage(tile, -drawW / 2, -drawH / 2, drawW, drawH);
 			ctx.restore();
 		}
@@ -117,11 +171,11 @@ export function renderKaleidoscopeToCanvas(
 
 	ctx.restore();
 
-	if (params.circularMask) {
+	if (layout.circularMask) {
 		ctx.save();
 		ctx.globalCompositeOperation = 'destination-in';
 		ctx.beginPath();
-		ctx.arc(cx, cy, size / 2, 0, 2 * Math.PI);
+		ctx.arc(layout.circularMask.x, layout.circularMask.y, layout.circularMask.r, 0, 2 * Math.PI);
 		ctx.closePath();
 		ctx.fillStyle = '#000000';
 		ctx.fill();
@@ -155,23 +209,20 @@ export function extractSvgParts(svg: string): { inner: string; viewBox: string }
 export function generateKaleidoscopeSVG(
 	tileSvg: string,
 	params: KaleidoscopeParams,
-	size: number
+	frame: KaleidoscopeFrame
 ): string {
 	const { inner, viewBox } = extractSvgParts(tileSvg);
 	// viewBox values may be separated by any whitespace and/or commas (both SVG-valid).
 	const [, , vbWStr, vbHStr] = viewBox.trim().split(/[\s,]+/);
 	const vbW = Number(vbWStr) || 1;
 	const vbH = Number(vbHStr) || 1;
-	const sectors = clampSectors(params.sectors);
-	const wedgeDeg = 360 / sectors;
-	const wedgeRad = wedgeAngle(sectors);
-	const cx = size / 2;
-	const cy = size / 2;
-	const maxSide = Math.max(vbW, vbH) || 1;
-	const drawW = size * params.tileSize * (vbW / maxSide);
-	const drawH = size * params.tileSize * (vbH / maxSide);
-	const offsetPx = params.offsetDistance * size;
-	const clipR = size * 1.5;
+	const layout = kaleidoscopeLayout(params, frame, { width: vbW, height: vbH });
+	const { center, clipRadius: clipR, inner: innerBox, tile: tileBox } = layout;
+	const { drawW, drawH } = tileBox;
+	const cx = center.x;
+	const cy = center.y;
+	const wedgeRad = layout.wedgeAngleRad;
+	const radToDeg = (rad: number) => (rad * 180) / Math.PI;
 	const f = (n: number) => n.toFixed(4);
 
 	// Wedge clip path (centered at origin, the per-sector group translates to center).
@@ -181,10 +232,9 @@ export function generateKaleidoscopeSVG(
 	const y1 = clipR * Math.sin(wedgeRad / 2);
 	const largeArc = wedgeRad > Math.PI ? 1 : 0;
 
-	const offsets = carpetTileOffsets(params.repeat, drawW, drawH);
-	const carpet = offsets
+	const carpet = layout.carpet
 		.map((off) => {
-			const rot = params.carpetRotation ? ` rotate(${f(params.carpetRotation)})` : '';
+			const rot = layout.carpetRotationDeg ? ` rotate(${f(layout.carpetRotationDeg)})` : '';
 			return (
 				`<g transform="translate(${f(off.x)},${f(off.y)})${rot}">` +
 				`<use href="#kaleido-tile" x="${f(-drawW / 2)}" y="${f(-drawH / 2)}" width="${f(drawW)}" height="${f(drawH)}"/>` +
@@ -194,13 +244,13 @@ export function generateKaleidoscopeSVG(
 		.join('');
 
 	let sectorsSvg = '';
-	for (let i = 0; i < sectors; i++) {
-		const mirror = isSectorMirrored(i) ? '<g transform="scale(-1,1)">' : '<g>';
+	for (const sector of layout.sectors) {
+		const mirror = sector.mirror ? '<g transform="scale(-1,1)">' : '<g>';
 		sectorsSvg +=
-			`<g transform="translate(${f(cx)},${f(cy)}) rotate(${f(i * wedgeDeg)})">` +
+			`<g transform="translate(${f(cx)},${f(cy)}) rotate(${f(radToDeg(sector.rotationRad))})">` +
 			`<g clip-path="url(#kaleido-wedge)">` +
 			mirror +
-			`<g transform="translate(${f(offsetPx)},0) rotate(${f(params.tileRotation)}) scale(${f(params.scale)})">` +
+			`<g transform="translate(${f(innerBox.offsetPx)},0) rotate(${f(innerBox.tileRotationDeg)}) scale(${f(innerBox.scale)})">` +
 			carpet +
 			`</g></g></g></g>`;
 	}
@@ -209,22 +259,22 @@ export function generateKaleidoscopeSVG(
 		`<defs>` +
 		`<symbol id="kaleido-tile" viewBox="${viewBox}" overflow="visible">${inner}</symbol>` +
 		`<clipPath id="kaleido-wedge"><path d="M 0,0 L ${f(x0)},${f(y0)} A ${f(clipR)},${f(clipR)} 0 ${largeArc} 1 ${f(x1)},${f(y1)} Z"/></clipPath>` +
-		(params.circularMask
-			? `<clipPath id="kaleido-outer"><circle cx="${f(cx)}" cy="${f(cy)}" r="${f(size / 2)}"/></clipPath>`
+		(layout.circularMask
+			? `<clipPath id="kaleido-outer"><circle cx="${f(layout.circularMask.x)}" cy="${f(layout.circularMask.y)}" r="${f(layout.circularMask.r)}"/></clipPath>`
 			: '') +
 		`</defs>`;
 
-	const bg = params.drawBackground
-		? `<rect width="${size}" height="${size}" fill="${escapeAttr(params.backgroundColor)}"/>`
+	const bg = layout.background
+		? `<rect width="${layout.width}" height="${layout.height}" fill="${escapeAttr(layout.background)}"/>`
 		: '';
 
-	const globalOpen = params.globalRotation
-		? `<g transform="translate(${f(cx)},${f(cy)}) rotate(${f(params.globalRotation)}) translate(${f(-cx)},${f(-cy)})">`
+	const globalOpen = layout.globalRotationDeg
+		? `<g transform="translate(${f(cx)},${f(cy)}) rotate(${f(layout.globalRotationDeg)}) translate(${f(-cx)},${f(-cy)})">`
 		: '<g>';
-	const maskOpen = params.circularMask ? '<g clip-path="url(#kaleido-outer)">' : '<g>';
+	const maskOpen = layout.circularMask ? '<g clip-path="url(#kaleido-outer)">' : '<g>';
 
 	return (
-		`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">` +
+		`<svg width="${layout.width}" height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}" xmlns="http://www.w3.org/2000/svg">` +
 		defs +
 		bg +
 		globalOpen +

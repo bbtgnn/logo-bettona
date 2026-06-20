@@ -47,7 +47,7 @@ describe('kaleidoscope geometry helpers', () => {
 	});
 });
 
-import { renderKaleidoscopeToCanvas } from './kaleidoscope';
+import { renderKaleidoscopeToCanvas, kaleidoscopeLayout } from './kaleidoscope';
 import type { KaleidoscopeParams } from './kaleidoscope';
 
 function makeRecordingCtx() {
@@ -89,11 +89,50 @@ const baseParams: KaleidoscopeParams = {
 	drawBackground: false
 };
 
+describe('kaleidoscopeLayout', () => {
+	it('centers the disc in a non-square frame and sizes it to the shorter side', () => {
+		const layout = kaleidoscopeLayout(baseParams, { width: 800, height: 300 }, { width: 100, height: 100 });
+		expect(layout.center).toEqual({ x: 400, y: 150 });
+		// disc diameter = min(800,300) = 300 → clipRadius = 300 * 1.5
+		expect(layout.clipRadius).toBe(450);
+		// offsetDistance 0.1 * size 300 = 30
+		expect(layout.inner.offsetPx).toBeCloseTo(30, 10);
+	});
+
+	it('derives one sector per clamped count, mirroring even indices', () => {
+		const layout = kaleidoscopeLayout({ ...baseParams, sectors: 7 }, { width: 600, height: 600 }, { width: 1, height: 1 });
+		expect(layout.sectors).toHaveLength(6);
+		expect(layout.sectors[0].mirror).toBe(true);
+		expect(layout.sectors[1].mirror).toBe(false);
+		expect(layout.sectors[1].rotationRad).toBeCloseTo(wedgeAngle(6), 10);
+	});
+
+	it('scales the tile by its aspect against the shorter side', () => {
+		// vbW=100 vbH=50, tileSize 0.5, size 600, maxSide 100 → drawW=300, drawH=150
+		const layout = kaleidoscopeLayout(baseParams, { width: 600, height: 600 }, { width: 100, height: 50 });
+		expect(layout.tile.drawW).toBeCloseTo(300, 10);
+		expect(layout.tile.drawH).toBeCloseTo(150, 10);
+	});
+
+	it('emits background and mask only when enabled', () => {
+		const off = kaleidoscopeLayout(baseParams, { width: 600, height: 600 }, { width: 1, height: 1 });
+		expect(off.background).toBeNull();
+		expect(off.circularMask).toBeNull();
+		const on = kaleidoscopeLayout(
+			{ ...baseParams, drawBackground: true, circularMask: true, backgroundColor: '#abc' },
+			{ width: 600, height: 600 },
+			{ width: 1, height: 1 }
+		);
+		expect(on.background).toBe('#abc');
+		expect(on.circularMask).toEqual({ x: 300, y: 300, r: 300 });
+	});
+});
+
 describe('renderKaleidoscopeToCanvas', () => {
 	it('clips once per sector and draws repeat² tiles per sector', () => {
 		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
 		const tile = {} as CanvasImageSource;
-		renderKaleidoscopeToCanvas(ctx, tile, 100, 100, baseParams, 600);
+		renderKaleidoscopeToCanvas(ctx, tile, 100, 100, baseParams, { width: 600, height: 600 });
 		expect(ctx.calls.clip).toBe(6);
 		expect(ctx.calls.drawImage).toBe(6 * 4);
 		expect(ctx.calls.save).toBe(ctx.calls.restore);
@@ -101,13 +140,13 @@ describe('renderKaleidoscopeToCanvas', () => {
 
 	it('paints background when drawBackground is true', () => {
 		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
-		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, drawBackground: true }, 600);
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, drawBackground: true }, { width: 600, height: 600 });
 		expect(ctx.calls.fillRect).toBe(1);
 	});
 
 	it('applies the circular mask when enabled', () => {
 		const ctx = makeRecordingCtx() as ReturnType<typeof makeRecordingCtx>;
-		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, circularMask: true }, 600);
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, { ...baseParams, circularMask: true }, { width: 600, height: 600 });
 		expect(ctx.calls.fill).toBeGreaterThanOrEqual(1);
 	});
 
@@ -138,7 +177,7 @@ describe('renderKaleidoscopeToCanvas', () => {
 		} as unknown as CanvasRenderingContext2D;
 
 		// Non-square canvas 800x300, kaleidoscope diameter 300.
-		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, 300, 800, 300);
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, { width: 800, height: 300 });
 
 		// First per-sector translate must be the canvas center, not (150,150).
 		expect(translates[0]).toEqual([400, 150]);
@@ -146,7 +185,7 @@ describe('renderKaleidoscopeToCanvas', () => {
 		expect(clears[0]).toEqual([0, 0, 800, 300]);
 	});
 
-	it('defaults canvas dimensions to size (square) when omitted', () => {
+	it('centers a square frame at its midpoint', () => {
 		const translates: Array<[number, number]> = [];
 		const ctx = {
 			fillStyle: '',
@@ -168,7 +207,7 @@ describe('renderKaleidoscopeToCanvas', () => {
 			clearRect() {},
 			drawImage() {}
 		} as unknown as CanvasRenderingContext2D;
-		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, 600);
+		renderKaleidoscopeToCanvas(ctx, {} as CanvasImageSource, 100, 100, baseParams, { width: 600, height: 600 });
 		expect(translates[0]).toEqual([300, 300]);
 	});
 });
@@ -188,7 +227,7 @@ describe('extractSvgParts', () => {
 
 describe('generateKaleidoscopeSVG', () => {
 	it('emits one wedge clip use per sector and repeat² tile uses each', () => {
-		const out = generateKaleidoscopeSVG(tileSvg, baseParams, 600);
+		const out = generateKaleidoscopeSVG(tileSvg, baseParams, { width: 600, height: 600 });
 		expect((out.match(/clip-path="url\(#kaleido-wedge\)"/g) ?? [])).toHaveLength(6);
 		expect((out.match(/<use href="#kaleido-tile"/g) ?? [])).toHaveLength(6 * 4);
 	});
@@ -197,7 +236,7 @@ describe('generateKaleidoscopeSVG', () => {
 		const out = generateKaleidoscopeSVG(
 			tileSvg,
 			{ ...baseParams, drawBackground: true, circularMask: true },
-			600
+			{ width: 600, height: 600 }
 		);
 		expect(out).toContain('scale(-1,1)');
 		expect(out).toContain('<rect');
@@ -210,17 +249,24 @@ describe('generateKaleidoscopeSVG', () => {
 			'<svg viewBox="0,0,100,50" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="50" fill="#0f0"/></svg>';
 		const spacedTile =
 			'<svg viewBox="0  0   100   50" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="50" fill="#0f0"/></svg>';
-		expect(generateKaleidoscopeSVG(commaTile, baseParams, 600)).toContain('height="150.0000"');
-		expect(generateKaleidoscopeSVG(spacedTile, baseParams, 600)).toContain('height="150.0000"');
+		expect(generateKaleidoscopeSVG(commaTile, baseParams, { width: 600, height: 600 })).toContain('height="150.0000"');
+		expect(generateKaleidoscopeSVG(spacedTile, baseParams, { width: 600, height: 600 })).toContain('height="150.0000"');
 	});
 
 	it('escapes the background color before interpolating into the fill attribute', () => {
 		const out = generateKaleidoscopeSVG(
 			tileSvg,
 			{ ...baseParams, drawBackground: true, backgroundColor: '"><script>x' },
-			600
+			{ width: 600, height: 600 }
 		);
 		expect(out).not.toContain('"><script>');
 		expect(out).toContain('&quot;&gt;&lt;script&gt;x');
+	});
+
+	it('matches the on-screen frame for a non-square export (disc centered, not square-cropped)', () => {
+		// Frame 800x300 → viewBox is the full rectangle and sectors translate to its center.
+		const out = generateKaleidoscopeSVG(tileSvg, baseParams, { width: 800, height: 300 });
+		expect(out).toContain('width="800" height="300" viewBox="0 0 800 300"');
+		expect(out).toContain('translate(400.0000,150.0000)');
 	});
 });
