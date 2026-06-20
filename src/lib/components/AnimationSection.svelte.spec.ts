@@ -84,24 +84,17 @@ describe('AnimationSection', () => {
 		];
 	});
 
-	it('renders playback controls and progress', async () => {
+	it('renders the section header and audio-reactivity toggle', async () => {
 		render(AnimationSection);
 
 		await expect.element(page.getByRole('button', { name: 'Animation' })).toBeInTheDocument();
 		await expect.element(page.getByTestId('audio-reactivity-toggle')).toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Play' })).toBeInTheDocument();
-		await expect.element(page.getByLabelText('Duration (s)')).toBeInTheDocument();
-		await expect.element(page.getByText('25%')).toBeInTheDocument();
 	});
 
-	it('wires basic controls to animation state actions', async () => {
+	it('no longer renders the duration input or play control (moved to the timeline)', async () => {
 		render(AnimationSection);
-
-		await userEvent.click(page.getByRole('button', { name: 'Play' }));
-		expect(animationApi.togglePlay).toHaveBeenCalledOnce();
-
-		await userEvent.fill(page.getByLabelText('Duration (s)'), '4.5');
-		expect(animationApi.setAnimationDurationSec).toHaveBeenLastCalledWith(4.5);
+		await expect.element(page.getByLabelText('Duration (s)')).not.toBeInTheDocument();
+		expect(page.getByRole('button', { name: 'Play' }).query()).toBeNull();
 	});
 
 	it('switches the motion source to Data Series when audio reactivity is off', async () => {
@@ -153,7 +146,7 @@ describe('AnimationSection', () => {
 			.toBeInTheDocument();
 	});
 
-	it('shows warning and disables Play when no rings have secondary paths', async () => {
+	it('shows the warning when no rings have secondary paths', async () => {
 		compositionApi.composition.rings = [
 			{ secondaryTemplatePath: null, morphT: 0 },
 			{ secondaryTemplatePath: null, morphT: 0.2 }
@@ -163,10 +156,9 @@ describe('AnimationSection', () => {
 		await expect
 			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
 			.toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Play' })).toBeDisabled();
 	});
 
-	it('hides warning and enables Play when at least one ring has a secondary path', async () => {
+	it('hides the warning when at least one ring has a secondary path', async () => {
 		compositionApi.composition.rings = [
 			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
 			{ secondaryTemplatePath: null, morphT: 0.2 }
@@ -176,7 +168,6 @@ describe('AnimationSection', () => {
 		await expect
 			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
 			.not.toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Play' })).toBeEnabled();
 	});
 
 	it('checks composition safety when rendered', async () => {
@@ -218,7 +209,7 @@ describe('AnimationSection', () => {
 		expect(animationApi.setAudioBarsConfig).toHaveBeenLastCalledWith({ wavePhaseSpeed: 4 });
 	});
 
-	it('enables Play in audioBars mode even with no secondary paths', async () => {
+	it('shows no warning in audioBars mode even with no secondary paths', async () => {
 		animationApi.animationState.mode = 'audioBars';
 		compositionApi.composition.rings = [
 			{ secondaryTemplatePath: null, morphT: 0 },
@@ -229,7 +220,6 @@ describe('AnimationSection', () => {
 		await expect
 			.element(page.getByText('Animation won’t run until at least one ring has a secondary path.'))
 			.not.toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Play' })).toBeEnabled();
 	});
 
 	it('renders AudioFilePanel (not the old file controls) when source is file in audioBars mode', async () => {
@@ -241,34 +231,6 @@ describe('AnimationSection', () => {
 		await expect.element(page.getByText('Pause file')).not.toBeInTheDocument();
 		// AudioFilePanel renders its drop zone (no file loaded in mock)
 		await expect.element(page.getByText(/drop audio file|browse/i)).toBeInTheDocument();
-	});
-
-	it('hides the global progress bar in audioBars + file mode', async () => {
-		animationApi.animationState.mode = 'audioBars';
-		animationApi.animationState.audioSource = 'file';
-		render(AnimationSection);
-		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
-	});
-
-	it('shows elapsed counter and no progress bar in audioBars + mic mode', async () => {
-		animationApi.animationState.mode = 'audioBars';
-		animationApi.animationState.audioSource = 'mic';
-		animationApi.animationState.elapsedMs = 0;
-		render(AnimationSection);
-		await expect.element(page.getByLabelText('Elapsed time')).toBeInTheDocument();
-		await expect.element(page.getByText('0:00')).toBeInTheDocument();
-		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
-		await expect.element(page.getByLabelText('Duration (s)')).not.toBeInTheDocument();
-	});
-
-	it('formats elapsed time correctly in audioBars + demo mode', async () => {
-		animationApi.animationState.mode = 'audioBars';
-		animationApi.animationState.audioSource = 'demo';
-		animationApi.animationState.elapsedMs = 65000; // 1 min 5 s
-		render(AnimationSection);
-		await expect.element(page.getByText('1:05')).toBeInTheDocument();
-		await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument();
-		await expect.element(page.getByLabelText('Duration (s)')).not.toBeInTheDocument();
 	});
 
 	it('shows "Listening" indicator in mic mode', async () => {
