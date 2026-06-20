@@ -19,10 +19,15 @@ export const kaleidoscope = $state<KaleidoscopeState>({
 	globalRotation: 0,
 	circularMask: true,
 	backgroundColor: '#ffffff',
-	drawBackground: true, // mirrors !tileBackground; see setTileBackground
 	liveTile: false,
 	tileBackground: false,
-	refreshNonce: 0
+	refreshNonce: 0,
+	// Derived, not stored: the kaleidoscope paints its own background only when the tile
+	// doesn't carry one. A getter so it can never drift from tileBackground (the render
+	// layout reads params.drawBackground straight off this object).
+	get drawBackground() {
+		return !this.tileBackground;
+	}
 });
 
 export function setKaleidoscopeEnabled(v: boolean) {
@@ -59,9 +64,8 @@ export function setLiveTile(v: boolean) {
 	kaleidoscope.liveTile = v;
 }
 export function setTileBackground(v: boolean) {
+	// drawBackground follows automatically (derived getter) — no second field to sync.
 	kaleidoscope.tileBackground = v;
-	// When the tile carries its own background, the kaleidoscope must NOT paint its own.
-	kaleidoscope.drawBackground = !v;
 }
 export function setKaleidoscopeBackgroundColor(c: string) {
 	kaleidoscope.backgroundColor = c;
