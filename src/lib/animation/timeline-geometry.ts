@@ -21,6 +21,17 @@ export function valueFromY(y: number, min: number, max: number, height: number):
 	return min + frac * (max - min);
 }
 
+/**
+ * Snaps a normalized playhead progress to the nearest frame boundary for the given
+ * duration and frame rate. Frames span the whole duration (`fps * durationSec`); the
+ * result is re-normalized to 0..1. Used for Shift-scrubbing on the ruler.
+ */
+export function snapProgressToFps(progress: number, durationSec: number, fps: number): number {
+	const frames = Math.max(1, Math.round(fps * Math.max(0.1, durationSec)));
+	const snappedFrame = Math.round(clamp01(progress) * frames);
+	return clamp01(snappedFrame / frames);
+}
+
 export function formatSeconds(sec: number): string {
 	const r = Math.round(sec * 10) / 10;
 	return (Number.isInteger(r) ? String(r) : r.toFixed(1)) + 's';
