@@ -21,6 +21,26 @@ function stripTransients(composition: Composition): Composition {
 	};
 }
 
+type LegacyMono = { main?: string; bg?: string };
+
+/**
+ * Migrates persisted monochrome palettes from the legacy `{main,bg}` shape to
+ * `{primary,secondary,background}`. Idempotent: already-migrated entries pass through.
+ * Mapping secondary+background both to the old `bg` preserves the previous look exactly.
+ */
+export function normalizeComposition(c: Composition): Composition {
+	const palettes = c.monochromePalettes?.map((p) => {
+		const legacy = p as LegacyMono;
+		if (legacy.main !== undefined || legacy.bg !== undefined) {
+			const primary = legacy.main ?? '#000000';
+			const bg = legacy.bg ?? '#ffffff';
+			return { primary, secondary: bg, background: bg };
+		}
+		return p;
+	});
+	return palettes ? { ...c, monochromePalettes: palettes } : c;
+}
+
 /**
  * Creates a `$state` composition synced to localStorage via the genuine
  * `localStorageSync` driver, but with the dirty-check gated on the wave-stripped
@@ -39,7 +59,7 @@ export function createPersistedComposition(key: string, initial: Composition): C
 
 		untrack(() => {
 			const saved = localStorageSync.read<Composition>(key);
-			if (saved) Object.assign(state, saved);
+			if (saved && !(saved instanceof Promise)) Object.assign(state, normalizeComposition(saved));
 			lastSavedStripped = JSON.stringify(stripTransients($state.snapshot(state) as Composition));
 		});
 
@@ -49,7 +69,7 @@ export function createPersistedComposition(key: string, initial: Composition): C
 		if (localStorageSync.subscribe) {
 			localStorageSync.subscribe<Composition>(key, (remote) => {
 				untrack(() => {
-					Object.assign(state, remote);
+					Object.assign(state, normalizeComposition(remote));
 					lastSavedStripped = JSON.stringify(stripTransients($state.snapshot(state) as Composition));
 				});
 			});

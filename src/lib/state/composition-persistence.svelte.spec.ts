@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { flushSync } from 'svelte';
 import type { Composition } from '$lib/types';
-import { createPersistedComposition } from './composition-persistence.svelte';
+import { createPersistedComposition, normalizeComposition } from './composition-persistence.svelte';
+import { DEFAULT_COMPOSITION } from './default';
 
 function makeComposition(): Composition {
 	return {
@@ -181,5 +182,25 @@ describe('createPersistedComposition', () => {
 		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
 		expect(stored.rings[0].zoneDrive).toBeUndefined();
 		expect(stored.rings[0].zoneConfig).toEqual({ bass: 0.9, mid: 0.5, treble: 0.1 });
+	});
+});
+
+describe('normalizeComposition', () => {
+	it('migrates a legacy {main,bg} palette to primary/secondary/background', () => {
+		const legacy = {
+			...DEFAULT_COMPOSITION,
+			monochromePalettes: [{ main: '#123456', bg: '#abcdef' }]
+		} as unknown as Parameters<typeof normalizeComposition>[0];
+		const out = normalizeComposition(legacy);
+		expect(out.monochromePalettes[0]).toEqual({
+			primary: '#123456',
+			secondary: '#abcdef',
+			background: '#abcdef'
+		});
+	});
+
+	it('leaves already-migrated palettes unchanged (idempotent)', () => {
+		const out = normalizeComposition(DEFAULT_COMPOSITION);
+		expect(out.monochromePalettes[0]).toEqual(DEFAULT_COMPOSITION.monochromePalettes[0]);
 	});
 });
