@@ -128,6 +128,24 @@ describe('TimelinePanel', () => {
 		await expect.element(page.getByLabelText('Frame rate')).toBeInTheDocument();
 	});
 
+	it('shows the zoom readout at 100% in the tracks view', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		render(TimelinePanel);
+		await expect.element(page.getByTestId('timeline-zoom')).toHaveTextContent('100%');
+	});
+
+	it('zooms the tracks stage wider when Zoom avanti is pressed', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		render(TimelinePanel);
+		const before = (page.getByTestId('timeline-tracks').element() as HTMLElement).style.width;
+		expect(before).toBe('100%');
+		await userEvent.click(page.getByRole('button', { name: 'Zoom avanti' }));
+		const after = (page.getByTestId('timeline-tracks').element() as HTMLElement).style.width;
+		expect(after).not.toBe('100%');
+	});
+
 	it('toggles play on spacebar (audio mode → playback not blocked)', async () => {
 		animationState.mode = 'audioBars';
 		animationState.isPlaying = false;

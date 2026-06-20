@@ -32,6 +32,20 @@
 	const hasMorphRings = $derived(composition.rings.some((r) => r.secondaryTemplatePath !== null));
 	const blockPlayback = $derived(!isAudioMode && !hasMorphRings);
 
+	// Horizontal zoom of the tracks stage. The stage width is zoom×100% inside a scroll
+	// container, so the ruler, keyframes and playhead all scale (they measure their own
+	// width) and frame ticks pass their density threshold as zoom grows.
+	const ZOOM_MIN = 1;
+	const ZOOM_MAX = 8;
+	let zoom = $state(1);
+	const zoomPercent = $derived(Math.round(zoom * 100));
+	function zoomIn() {
+		zoom = Math.min(ZOOM_MAX, zoom * 1.5);
+	}
+	function zoomOut() {
+		zoom = Math.max(ZOOM_MIN, zoom / 1.5);
+	}
+
 	function formatElapsed(ms: number): string {
 		const totalSec = Math.floor(ms / 1000);
 		const m = Math.floor(totalSec / 60);
@@ -111,7 +125,9 @@
 			class="flex items-center gap-1.5 text-sm font-medium text-foreground"
 			onclick={() => (open = !open)}
 		>
-			<span class="inline-block text-muted-foreground transition-transform {open ? 'rotate-90' : ''}">
+			<span
+				class="inline-block text-muted-foreground transition-transform {open ? 'rotate-90' : ''}"
+			>
 				▸
 			</span>
 			Timeline
@@ -129,7 +145,7 @@
 				<Button onclick={() => stopAnimation(true)} variant="ghost" size="sm">Stop</Button>
 
 				{#if isAudioMode}
-					<span class="tabular-nums text-xs text-muted-foreground" aria-label="Elapsed time">
+					<span class="text-xs text-muted-foreground tabular-nums" aria-label="Elapsed time">
 						{formatElapsed(animationState.elapsedMs)}
 					</span>
 				{:else}
@@ -178,6 +194,35 @@
 					Graph Editor
 				</Button>
 			</div>
+
+			{#if view === 'tracks' && armedParams.length > 0}
+				<div class="flex items-center gap-1">
+					<Button
+						variant="ghost"
+						size="sm"
+						aria-label="Zoom indietro"
+						onclick={zoomOut}
+						disabled={zoom <= ZOOM_MIN}
+					>
+						−
+					</Button>
+					<span
+						data-testid="timeline-zoom"
+						class="w-10 text-center text-xs text-muted-foreground tabular-nums"
+					>
+						{zoomPercent}%
+					</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						aria-label="Zoom avanti"
+						onclick={zoomIn}
+						disabled={zoom >= ZOOM_MAX}
+					>
+						+
+					</Button>
+				</div>
+			{/if}
 		{/if}
 	</div>
 
@@ -208,41 +253,47 @@
 					{/if}
 				</div>
 			{:else}
-				<div data-testid="timeline-tracks" class="relative flex flex-col gap-1.5">
-					<div class="flex items-center gap-2">
-						<span class="w-28 shrink-0"></span>
-						<div bind:this={laneColEl} class="flex-1">
-							<TimelineRuler />
-						</div>
-					</div>
-					{#each armedParams as p (p.id)}
-						<TimelineTrack
-							paramId={p.id}
-							label={p.label}
-							selectedId={selection?.paramId === p.id ? selection.keyframeId : null}
-							onselect={(id) => selectKeyframe(p.id, id)}
-						/>
-					{/each}
+				<div class="overflow-x-auto">
 					<div
-						data-testid="playhead"
-						class="pointer-events-none absolute top-0 bottom-0 w-px bg-primary"
-						style="left: {playheadLeft}px"
-					></div>
-					{#if selectedKf}
-						<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-2">
-							<select
-								aria-label="Interpolazione keyframe"
-								class="h-7 rounded border bg-background text-xs"
-								value={selectedKf.interp}
-								onchange={(e) => setSelectedInterp((e.target as HTMLSelectElement).value)}
-							>
-								<option value="linear">Lineare</option>
-								<option value="bezier">Bezier</option>
-								<option value="hold">Hold</option>
-							</select>
-							<Button variant="ghost" size="sm" onclick={deleteSelected}>Elimina keyframe</Button>
+						data-testid="timeline-tracks"
+						class="relative flex flex-col gap-1.5"
+						style="width: {zoom * 100}%"
+					>
+						<div class="flex items-center gap-2">
+							<span class="w-28 shrink-0"></span>
+							<div bind:this={laneColEl} class="flex-1">
+								<TimelineRuler />
+							</div>
 						</div>
-					{/if}
+						{#each armedParams as p (p.id)}
+							<TimelineTrack
+								paramId={p.id}
+								label={p.label}
+								selectedId={selection?.paramId === p.id ? selection.keyframeId : null}
+								onselect={(id) => selectKeyframe(p.id, id)}
+							/>
+						{/each}
+						<div
+							data-testid="playhead"
+							class="pointer-events-none absolute top-0 bottom-0 w-px bg-primary"
+							style="left: {playheadLeft}px"
+						></div>
+						{#if selectedKf}
+							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-2">
+								<select
+									aria-label="Interpolazione keyframe"
+									class="h-7 rounded border bg-background text-xs"
+									value={selectedKf.interp}
+									onchange={(e) => setSelectedInterp((e.target as HTMLSelectElement).value)}
+								>
+									<option value="linear">Lineare</option>
+									<option value="bezier">Bezier</option>
+									<option value="hold">Hold</option>
+								</select>
+								<Button variant="ghost" size="sm" onclick={deleteSelected}>Elimina keyframe</Button>
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/if}
 		</div>
