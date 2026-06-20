@@ -30,7 +30,7 @@
 			</a>
 		</header>
 		<main class="flex flex-1 items-center justify-center p-8" data-testid="app-canvas">
-			<PreviewCanvas />
+			<PreviewCanvas animate={isAnimate} />
 		</main>
 		{#if isAnimate}
 			<TimelinePanel />

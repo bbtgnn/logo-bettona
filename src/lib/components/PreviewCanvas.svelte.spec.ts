@@ -127,13 +127,19 @@ describe('PreviewCanvas.svelte', () => {
 		expect(disposeCallCount).toBe(1);
 	});
 
-	it('exposes only Export SVG — no animation/audio export controls', async () => {
+	it('off the animate surface, exposes only Export SVG', async () => {
 		render(PreviewCanvas);
 		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
-		expect(page.getByRole('button', { name: 'Export Animation' }).query()).toBeNull();
+		expect(page.getByRole('button', { name: 'Export animation' }).query()).toBeNull();
 		expect(page.getByText('Includi audio').query()).toBeNull();
 		expect(page.getByText('Esporta PNG (caleidoscopio)').query()).toBeNull();
 		expect(page.getByText('Esporta SVG (caleidoscopio)').query()).toBeNull();
+	});
+
+	it('on the animate surface, shows the Export animation button next to Export SVG', async () => {
+		render(PreviewCanvas, { animate: true });
+		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Export animation' })).toBeInTheDocument();
 	});
 
 	it('Export SVG downloads the kaleidoscope SVG when kaleidoscope mode is on', async () => {
