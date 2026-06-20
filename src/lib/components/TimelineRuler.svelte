@@ -76,14 +76,14 @@
 	{#each frameIndices as f (f)}
 		<div
 			data-testid="frame-tick"
-			class="pointer-events-none absolute top-0 h-1 w-px bg-border/50"
+			class="pointer-events-none absolute top-0 h-1.5 w-px bg-muted-foreground/50"
 			style="left: {xFromTime(f / totalFrames, rulerWidth)}px"
 		></div>
 	{/each}
 	{#each secondMarks as s (s)}
 		{@const frac = s / Math.max(0.1, animationState.durationSec)}
 		<div
-			class="pointer-events-none absolute top-0 h-2 w-px bg-border"
+			class="pointer-events-none absolute top-0 h-3 w-px bg-foreground/70"
 			style="left: {xFromTime(frac, rulerWidth)}px"
 		></div>
 		<span
