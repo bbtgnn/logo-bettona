@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import TimelinePanel from './TimelinePanel.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
-import { animationState } from '$lib/state/animation';
+import { animationState, stopAnimation } from '$lib/state/animation';
 
 describe('TimelinePanel', () => {
 	beforeEach(() => {
@@ -120,5 +120,21 @@ describe('TimelinePanel', () => {
 		await userEvent.click(page.getByRole('button', { name: 'Timeline', exact: true }));
 		await expect.element(page.getByTestId('timeline-tracks')).toBeInTheDocument();
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
+	});
+
+	it('renders the transport play button and fps selector', async () => {
+		render(TimelinePanel);
+		await expect.element(page.getByRole('button', { name: /Play|Pause/ })).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Frame rate')).toBeInTheDocument();
+	});
+
+	it('toggles play on spacebar (audio mode → playback not blocked)', async () => {
+		animationState.mode = 'audioBars';
+		animationState.isPlaying = false;
+		render(TimelinePanel);
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+		expect(animationState.isPlaying).toBe(true);
+		stopAnimation(true);
+		animationState.mode = 'simple';
 	});
 });

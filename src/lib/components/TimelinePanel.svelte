@@ -1,8 +1,17 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
+	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
-	import { animationState, refreshPreview } from '$lib/state/animation';
+	import {
+		animationState,
+		refreshPreview,
+		togglePlay,
+		stopAnimation,
+		setAnimationDurationSec,
+		setAnimationFps
+	} from '$lib/state/animation';
+	import { composition } from '$lib/state/composition';
 	import { xFromTime } from '$lib/animation/timeline-geometry';
 	import type { Interp } from '$lib/animation/keyframes';
 	import TimelineRuler from './TimelineRuler.svelte';
@@ -12,6 +21,39 @@
 	let open = $state(true);
 	let view = $state<'tracks' | 'graph'>('tracks');
 	let graphParamId = $state<string | null>(null);
+
+	const FPS_OPTIONS = [25, 30, 50, 60];
+
+	// Audio modes run off a live clock with no fixed duration → show elapsed instead of a
+	// duration field. blockPlayback mirrors the morph requirement for timed modes.
+	const isAudioMode = $derived(
+		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+	);
+	const hasMorphRings = $derived(composition.rings.some((r) => r.secondaryTemplatePath !== null));
+	const blockPlayback = $derived(!isAudioMode && !hasMorphRings);
+
+	function formatElapsed(ms: number): string {
+		const totalSec = Math.floor(ms / 1000);
+		const m = Math.floor(totalSec / 60);
+		const s = totalSec % 60;
+		return `${m}:${String(s).padStart(2, '0')}`;
+	}
+
+	// Spacebar toggles play, except while typing in a field. Window-level so the
+	// timeline panel owns the shortcut without needing canvas focus.
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key !== ' ' && e.code !== 'Space') return;
+		const t = e.target as HTMLElement | null;
+		const tag = t?.tagName;
+		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t?.isContentEditable) return;
+		e.preventDefault();
+		if (!blockPlayback) togglePlay();
+	}
+
+	$effect(() => {
+		window.addEventListener('keydown', onKeydown);
+		return () => window.removeEventListener('keydown', onKeydown);
+	});
 
 	let laneColEl = $state<HTMLDivElement>();
 	let selection = $state<{ paramId: string; keyframeId: string } | null>(null);
@@ -75,6 +117,51 @@
 			Timeline
 		</button>
 		{#if open}
+			<div class="flex items-center gap-2">
+				<Button
+					onclick={togglePlay}
+					aria-pressed={animationState.isPlaying}
+					disabled={blockPlayback}
+					size="sm"
+				>
+					{animationState.isPlaying ? 'Pause' : 'Play'}
+				</Button>
+				<Button onclick={() => stopAnimation(true)} variant="ghost" size="sm">Stop</Button>
+
+				{#if isAudioMode}
+					<span class="tabular-nums text-xs text-muted-foreground" aria-label="Elapsed time">
+						{formatElapsed(animationState.elapsedMs)}
+					</span>
+				{:else}
+					<label class="flex items-center gap-1 text-xs text-muted-foreground">
+						Dur
+						<Input
+							type="number"
+							min="0.1"
+							step="0.1"
+							aria-label="Duration seconds"
+							value={animationState.durationSec}
+							oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
+							class="h-7 w-16 text-xs"
+						/>
+						s
+					</label>
+				{/if}
+
+				<label class="flex items-center gap-1 text-xs text-muted-foreground">
+					fps
+					<select
+						aria-label="Frame rate"
+						class="h-7 rounded border bg-background text-xs"
+						value={animationState.fps}
+						onchange={(e) => setAnimationFps(Number((e.target as HTMLSelectElement).value))}
+					>
+						{#each FPS_OPTIONS as f (f)}
+							<option value={f}>{f}</option>
+						{/each}
+					</select>
+				</label>
+			</div>
 			<div class="flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5">
 				<Button
 					variant={view === 'tracks' ? 'default' : 'ghost'}
@@ -95,7 +182,7 @@
 	</div>
 
 	{#if open}
-		<div data-testid="timeline-body" class="flex flex-col gap-2 px-3 pb-3">
+		<div data-testid="timeline-body" class="flex min-h-[220px] flex-col gap-2 px-3 pb-3">
 			{#if armedParams.length === 0}
 				<p data-testid="timeline-empty" class="p-2 text-xs text-muted-foreground">
 					Arma un cronometro ⏱ nella sidebar per animare un parametro.
