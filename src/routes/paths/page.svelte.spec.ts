@@ -19,7 +19,10 @@ function entry(id: string, name: string, withSecondary = false): PathLibraryEntr
 }
 
 describe('Paths page', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
+		// Desktop width so the shadcn Sidebar renders its inline (non-Sheet) variant and
+		// the path list is present in the DOM (below 768px it becomes a closed mobile sheet).
+		await page.viewport(1280, 800);
 		pathLibrary.entries = [entry('a', 'Forma A'), entry('b', 'Forma B')];
 	});
 	afterEach(() => {
@@ -87,10 +90,27 @@ describe('Paths page', () => {
 		await expect.element(page.getByTestId('paths-apply')).toBeDisabled();
 	});
 
-	it('indents the header so the nav aligns with the app pages', async () => {
+	it('puts the workspace nav behind a collapsible sidebar trigger (no hard indent)', async () => {
 		render(PathsPage);
+		await expect.element(page.getByRole('button', { name: 'Toggle Sidebar' })).toBeInTheDocument();
 		const header = page.getByTestId('paths-header').element() as HTMLElement;
-		expect(header.classList.contains('pl-72')).toBe(true);
+		expect(header.classList.contains('pl-72')).toBe(false);
+	});
+
+	it('deletes a path only after confirming', async () => {
+		render(PathsPage);
+		await userEvent.click(page.getByRole('button', { name: 'Elimina Forma A' }));
+		// Nothing removed until the confirmation is pressed.
+		expect(pathLibrary.entries).toHaveLength(2);
+		await userEvent.click(page.getByRole('button', { name: 'Conferma eliminazione' }));
+		expect(pathLibrary.entries.map((e) => e.id)).toEqual(['b']);
+	});
+
+	it('cancels a pending deletion', async () => {
+		render(PathsPage);
+		await userEvent.click(page.getByRole('button', { name: 'Elimina Forma A' }));
+		await userEvent.click(page.getByRole('button', { name: 'Annulla eliminazione' }));
+		expect(pathLibrary.entries).toHaveLength(2);
 	});
 
 	it('switches to the Anim Library placeholder and hides the path list', async () => {
