@@ -28,6 +28,7 @@ export type AnimationState = {
 	audioSource: 'demo' | 'mic' | 'file' | 'off';
 	dataSeries: DataSeriesConfig;
 	durationSec: number;
+	fps: number;
 	loop: boolean;
 	alternate: boolean;
 	elapsedMs: number;
@@ -63,6 +64,7 @@ export const animationState = $state<AnimationState>({
 	audioSource: 'demo',
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
+	fps: 30,
 	loop: false,
 	alternate: false,
 	elapsedMs: 0
@@ -328,6 +330,12 @@ function reconfigureCurrentAnimation() {
 export function setAnimationDurationSec(value: number) {
 	animationState.durationSec = Number.isFinite(value) ? Math.max(0.1, value) : 3;
 	reconfigureCurrentAnimation();
+}
+
+const ALLOWED_FPS = [25, 30, 50, 60] as const;
+
+export function setAnimationFps(value: number) {
+	animationState.fps = (ALLOWED_FPS as readonly number[]).includes(value) ? value : 30;
 }
 
 export function setAnimationLoop(value: boolean) {

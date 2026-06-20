@@ -557,3 +557,17 @@ describe('kaleidoscope keyframe application', () => {
 		expect(kaleidoscope.scale).toBeCloseTo(2, 5);
 	});
 });
+
+describe('setAnimationFps', () => {
+	it('accepts an allowed frame rate', async () => {
+		const animation = await import('./animation');
+		animation.setAnimationFps(50);
+		expect(animation.animationState.fps).toBe(50);
+	});
+
+	it('falls back to 30 for a value outside the allowed set', async () => {
+		const animation = await import('./animation');
+		animation.setAnimationFps(42);
+		expect(animation.animationState.fps).toBe(30);
+	});
+});
