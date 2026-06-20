@@ -25,12 +25,17 @@
 			<div class="flex gap-1 flex-1">
 				<div
 					class="h-5 w-5 rounded-sm border border-border flex-shrink-0"
-					style="background-color: {palette.main}"
-					title="Main"
+					style="background-color: {palette.primary}"
+					title="Primary"
 				></div>
 				<div
 					class="h-5 w-5 rounded-sm border border-border flex-shrink-0"
-					style="background-color: {palette.bg}"
+					style="background-color: {palette.secondary}"
+					title="Secondary"
+				></div>
+				<div
+					class="h-5 w-5 rounded-sm border border-border flex-shrink-0"
+					style="background-color: {palette.background}"
 					title="Background"
 				></div>
 			</div>
@@ -52,11 +57,20 @@
 		<div class="flex flex-col gap-2 pt-1">
 			<div class="flex gap-3">
 				<div class="flex flex-col gap-1">
-					<Label class="text-xs">Main</Label>
+					<Label class="text-xs">Primary</Label>
 					<input
 						type="color"
-						value={active.main}
-						oninput={(e) => updateMonochromePalette(colorMode.palette, { main: (e.target as HTMLInputElement).value })}
+						value={active.primary}
+						oninput={(e) => updateMonochromePalette(colorMode.palette, { primary: (e.target as HTMLInputElement).value })}
+						class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
+					/>
+				</div>
+				<div class="flex flex-col gap-1">
+					<Label class="text-xs">Secondary</Label>
+					<input
+						type="color"
+						value={active.secondary}
+						oninput={(e) => updateMonochromePalette(colorMode.palette, { secondary: (e.target as HTMLInputElement).value })}
 						class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
 					/>
 				</div>
@@ -64,8 +78,8 @@
 					<Label class="text-xs">Background</Label>
 					<input
 						type="color"
-						value={active.bg}
-						oninput={(e) => updateMonochromePalette(colorMode.palette, { bg: (e.target as HTMLInputElement).value })}
+						value={active.background}
+						oninput={(e) => updateMonochromePalette(colorMode.palette, { background: (e.target as HTMLInputElement).value })}
 						class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
 					/>
 				</div>

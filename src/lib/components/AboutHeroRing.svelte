@@ -47,7 +47,7 @@
 				ringHeight: 0.12
 			}
 		],
-		monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+		monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
 		fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
 	};
 

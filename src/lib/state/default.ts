@@ -96,8 +96,9 @@ export const DEFAULT_COMPOSITION: Composition = {
 	],
 	monochromePalettes: [
 		{
-			main: '#000000',
-			bg: '#ffffff'
+			primary: '#000000',
+			secondary: '#ffffff',
+			background: '#ffffff'
 		}
 	],
 	fullPalettes: [

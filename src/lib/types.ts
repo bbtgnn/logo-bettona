@@ -41,8 +41,9 @@ export type Ring = {
 };
 
 export type MonochromePalette = {
-	main: string;
-	bg: string;
+	primary: string;
+	secondary: string;
+	background: string;
 };
 
 export type FullPalette = {

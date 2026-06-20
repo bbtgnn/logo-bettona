@@ -81,7 +81,7 @@ export function setActivePalette(index: number) {
 }
 
 export function addMonochromePalette(
-	palette: MonochromePalette = { main: '#000000', bg: '#ffffff' }
+	palette: MonochromePalette = { primary: '#000000', secondary: '#ffffff', background: '#ffffff' }
 ) {
 	composition.monochromePalettes = [...composition.monochromePalettes, palette];
 	colorMode.palette = composition.monochromePalettes.length - 1;
@@ -249,7 +249,7 @@ export function setAspectRatio(ratio: AspectRatio) {
 
 export function getCompositionBackgroundColor(): string {
 	const mono = composition.monochromePalettes[colorMode.palette];
-	return mono?.bg ?? '#ffffff';
+	return mono?.background ?? '#ffffff';
 }
 
 export function setRingExpanded(index: number, expanded: boolean) {

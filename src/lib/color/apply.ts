@@ -11,9 +11,9 @@ export function parseHexColors(input: string): string[] {
 export function applyMonochrome(palette: MonochromePalette, ringCount: number): string[] {
 	const result: string[] = new Array(ringCount);
 	for (let i = 0; i < ringCount; i++) {
-		// outermost = last index = main; alternate inward
+		// outermost = last index = primary; alternate inward to secondary
 		const distFromOuter = ringCount - 1 - i;
-		result[i] = distFromOuter % 2 === 0 ? palette.main : palette.bg;
+		result[i] = distFromOuter % 2 === 0 ? palette.primary : palette.secondary;
 	}
 	return result;
 }
@@ -45,7 +45,7 @@ export function applyColors(
 	switch (mode) {
 		case 'monochrome':
 			return applyMonochrome(
-				monochromePalette ?? { main: '#000000', bg: '#ffffff' },
+				monochromePalette ?? { primary: '#000000', secondary: '#ffffff', background: '#ffffff' },
 				ringCount
 			);
 		case 'palette':

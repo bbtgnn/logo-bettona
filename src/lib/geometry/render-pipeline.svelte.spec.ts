@@ -56,7 +56,7 @@ const composition: Composition = {
 			ringHeight: 0.4
 		}
 	],
-	monochromePalettes: [{ main: '#000', bg: '#fff' }],
+	monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 	fullPalettes: [{ colors: ['#000', '#fff'] }]
 };
 
@@ -419,7 +419,7 @@ describe('createRenderPipeline().render', () => {
 				ringHeight: 0.4,
 				zoneDrive: drive
 			}],
-			monochromePalettes: [{ main: '#000', bg: '#fff' }],
+			monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 			fullPalettes: [{ colors: ['#000', '#fff'] }]
 		};
 		// Should render without throwing and produce 1 rendered ring

@@ -18,7 +18,7 @@ function makeComposition(): Composition {
 				ringHeight: 0.4
 			}
 		],
-		monochromePalettes: [{ main: '#000', bg: '#fff' }],
+		monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 		fullPalettes: [{ colors: ['#000', '#fff'] }]
 	};
 }
