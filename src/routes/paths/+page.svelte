@@ -28,7 +28,7 @@
 <svelte:head><title>Path Library — logo-bettona</title></svelte:head>
 
 <div class="flex min-h-screen flex-col bg-background text-foreground">
-	<header class="flex items-center gap-2 border-b p-4">
+	<header data-testid="paths-header" class="flex items-center gap-2 border-b p-4 pl-72">
 		<WorkspaceNav />
 		<span class="ml-2 text-sm font-semibold">Path Library</span>
 		<span class="text-xs text-muted-foreground">({pathLibrary.entries.length})</span>

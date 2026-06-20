@@ -86,4 +86,10 @@ describe('Paths page', () => {
 		render(PathsPage);
 		await expect.element(page.getByTestId('paths-apply')).toBeDisabled();
 	});
+
+	it('indents the header so the nav aligns with the app pages', async () => {
+		render(PathsPage);
+		const header = page.getByTestId('paths-header').element() as HTMLElement;
+		expect(header.classList.contains('pl-72')).toBe(true);
+	});
 });
