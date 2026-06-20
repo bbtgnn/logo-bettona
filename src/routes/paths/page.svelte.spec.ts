@@ -113,6 +113,14 @@ describe('Paths page', () => {
 		expect(pathLibrary.entries).toHaveLength(2);
 	});
 
+	it('renames a path inline after confirming', async () => {
+		render(PathsPage);
+		await userEvent.click(page.getByRole('button', { name: 'Rinomina Forma A' }));
+		await userEvent.fill(page.getByLabelText('Nuovo nome'), 'Logo tondo');
+		await userEvent.click(page.getByRole('button', { name: 'Conferma rinomina' }));
+		expect(pathLibrary.entries.find((e) => e.id === 'a')?.name).toBe('Logo tondo');
+	});
+
 	it('switches to the Anim Library placeholder and hides the path list', async () => {
 		render(PathsPage);
 		await expect.element(page.getByTestId('paths-list')).toBeInTheDocument();

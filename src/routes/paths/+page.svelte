@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
-	import { Trash } from 'phosphor-svelte';
+	import { Trash, PencilSimple } from 'phosphor-svelte';
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
 	import RingPreview from '$lib/components/RingPreview.svelte';
 	import ApplyToRingSheet from '$lib/components/ApplyToRingSheet.svelte';
-	import { pathLibrary, applyEntryToRing, removeEntry } from '$lib/state/path-library';
+	import { pathLibrary, applyEntryToRing, removeEntry, renameEntry } from '$lib/state/path-library';
 	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
 
@@ -18,6 +18,9 @@
 	// Two-step delete: the trash button arms a per-entry confirmation rather than
 	// removing immediately, since saved paths are user data.
 	let pendingDeleteId = $state<string | null>(null);
+	// Inline rename: the pencil arms an edit field seeded with the current name.
+	let editingId = $state<string | null>(null);
+	let editDraft = $state('');
 
 	// Resolve against live state: fall back to the first entry if the pick is stale
 	// (e.g. the library hydrated after mount, or the selected entry was removed).
@@ -37,6 +40,17 @@
 		if (selectedId === id) selectedId = pathLibrary.entries[0]?.id ?? null;
 		pendingDeleteId = null;
 	}
+
+	function startRename(id: string, name: string) {
+		editingId = id;
+		editDraft = name;
+		pendingDeleteId = null;
+	}
+
+	function commitRename() {
+		if (editingId) renameEntry(editingId, editDraft);
+		editingId = null;
+	}
 </script>
 
 <svelte:head><title>Path Library — logo-bettona</title></svelte:head>
@@ -53,51 +67,89 @@
 					{:else}
 						<div class="flex flex-col gap-1">
 							{#each pathLibrary.entries as item (item.id)}
-								<div class="flex items-center gap-1">
-									<button
-										type="button"
-										data-testid="paths-card-{item.id}"
-										aria-current={selected?.id === item.id ? 'true' : undefined}
-										class="flex flex-1 items-center gap-2 rounded-md border p-2 text-left hover:bg-muted aria-[current=true]:border-primary aria-[current=true]:bg-muted"
-										onclick={() => (selectedId = item.id)}
-									>
-										<PathThumbnail path={item.path} secondaryPath={item.secondaryPath} size={48} />
-										<div class="flex min-w-0 flex-1 flex-col">
-											<span class="truncate text-xs font-medium">{item.name}</span>
-											<span class="text-[10px] text-muted-foreground">
-												{new Date(item.createdAt).toLocaleDateString()}
-											</span>
-										</div>
-									</button>
-									{#if pendingDeleteId === item.id}
-										<Button
-											variant="destructive"
-											size="sm"
-											aria-label="Conferma eliminazione"
-											onclick={() => confirmDelete(item.id)}
+								{#if editingId === item.id}
+									<div class="flex items-center gap-1">
+										<input
+											aria-label="Nuovo nome"
+											class="h-8 flex-1 rounded border bg-background px-2 text-xs"
+											bind:value={editDraft}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') commitRename();
+												else if (e.key === 'Escape') editingId = null;
+											}}
+										/>
+										<Button size="sm" aria-label="Conferma rinomina" onclick={commitRename}
+											>OK</Button
 										>
-											Elimina
-										</Button>
 										<Button
 											variant="ghost"
 											size="sm"
-											aria-label="Annulla eliminazione"
-											onclick={() => (pendingDeleteId = null)}
+											aria-label="Annulla rinomina"
+											onclick={() => (editingId = null)}
 										>
 											Annulla
 										</Button>
-									{:else if !item.builtin}
-										<Button
-											variant="ghost"
-											size="icon"
-											class="text-muted-foreground hover:text-destructive"
-											aria-label="Elimina {item.name}"
-											onclick={() => (pendingDeleteId = item.id)}
+									</div>
+								{:else}
+									<div class="flex items-center gap-1">
+										<button
+											type="button"
+											data-testid="paths-card-{item.id}"
+											aria-current={selected?.id === item.id ? 'true' : undefined}
+											class="flex flex-1 items-center gap-2 rounded-md border p-2 text-left hover:bg-muted aria-[current=true]:border-primary aria-[current=true]:bg-muted"
+											onclick={() => (selectedId = item.id)}
 										>
-											<Trash size={14} />
-										</Button>
-									{/if}
-								</div>
+											<PathThumbnail
+												path={item.path}
+												secondaryPath={item.secondaryPath}
+												size={48}
+											/>
+											<div class="flex min-w-0 flex-1 flex-col">
+												<span class="truncate text-xs font-medium">{item.name}</span>
+												<span class="text-[10px] text-muted-foreground">
+													{new Date(item.createdAt).toLocaleDateString()}
+												</span>
+											</div>
+										</button>
+										{#if pendingDeleteId === item.id}
+											<Button
+												variant="destructive"
+												size="sm"
+												aria-label="Conferma eliminazione"
+												onclick={() => confirmDelete(item.id)}
+											>
+												Elimina
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												aria-label="Annulla eliminazione"
+												onclick={() => (pendingDeleteId = null)}
+											>
+												Annulla
+											</Button>
+										{:else if !item.builtin}
+											<Button
+												variant="ghost"
+												size="icon"
+												class="text-muted-foreground hover:text-foreground"
+												aria-label="Rinomina {item.name}"
+												onclick={() => startRename(item.id, item.name)}
+											>
+												<PencilSimple size={14} />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												class="text-muted-foreground hover:text-destructive"
+												aria-label="Elimina {item.name}"
+												onclick={() => (pendingDeleteId = item.id)}
+											>
+												<Trash size={14} />
+											</Button>
+										{/if}
+									</div>
+								{/if}
 							{/each}
 						</div>
 					{/if}
