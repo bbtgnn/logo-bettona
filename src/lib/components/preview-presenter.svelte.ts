@@ -1,11 +1,13 @@
 import paper from 'paper';
 import { composition, getCompositionBackgroundColor } from '$lib/state/composition';
-import { animationState } from '$lib/state/animation';
+import { animationState, getExportAudioStream } from '$lib/state/animation';
 import { createRenderPipeline } from '$lib/geometry/render-pipeline';
 import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 import { renderKaleidoscopeToCanvas, generateKaleidoscopeSVG } from '$lib/geometry/kaleidoscope';
 import { composeTileWithBackground } from '$lib/geometry/kaleidoscope-tile';
+import { exportCanvasAnimation, isAnimationExportSupported } from '$lib/export/canvas-export';
+import { exportStatus } from '$lib/state/export-status.svelte';
 
 // Offscreen square tile rendered as the kaleidoscope source.
 const TILE_PX = 600;
@@ -34,6 +36,7 @@ export function createPreviewPresenter() {
 	let tileCanvas: HTMLCanvasElement | undefined;
 	let staticTile: HTMLCanvasElement | undefined;
 	let kaleidoFrame: number | null = null;
+	let exportProgress = $state(0);
 
 	function ensureTileScope() {
 		if (tileScope) return;
@@ -98,6 +101,28 @@ export function createPreviewPresenter() {
 			? { width: canvasEl.width, height: canvasEl.height }
 			: { width: TILE_PX, height: TILE_PX };
 		downloadSvg(generateKaleidoscopeSVG(tileSvg, kaleidoParams(), frame), 'kaleidoscope.svg');
+	}
+
+	// Records the live canvas to a WebM video for the configured duration/fps, taps the
+	// audio source when one is live, and surfaces 0..1 progress while exportStatus.rendering
+	// gates other controls.
+	async function exportAnimation() {
+		if (!canvasEl || exportStatus.rendering) return;
+		const audio = getExportAudioStream();
+		exportStatus.rendering = true;
+		exportProgress = 0;
+		try {
+			await exportCanvasAnimation({
+				canvas: canvasEl,
+				durationSec: animationState.durationSec,
+				fps: animationState.fps,
+				audioStream: audio?.stream ?? null,
+				onProgress: (p) => (exportProgress = p)
+			});
+		} finally {
+			audio?.dispose();
+			exportStatus.rendering = false;
+		}
 	}
 
 	function exportSvg() {
@@ -201,5 +226,13 @@ export function createPreviewPresenter() {
 		};
 	}
 
-	return { attach, exportSvg };
+	return {
+		attach,
+		exportSvg,
+		exportAnimation,
+		get exportProgress() {
+			return exportProgress;
+		},
+		animationExportSupported: isAnimationExportSupported()
+	};
 }
