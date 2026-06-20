@@ -1,5 +1,5 @@
 import { page } from 'vitest/browser';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelineRuler from './TimelineRuler.svelte';
 import { animationState } from '$lib/state/animation';
@@ -10,6 +10,7 @@ describe('TimelineRuler', () => {
 	beforeEach(() => {
 		animationState.progress = 0;
 		animationState.durationSec = 3;
+		animationState.fps = 30;
 		keyframes.ensureTrack(ROT);
 		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
 		keyframes.setTrackEnabled(ROT, false);
@@ -35,6 +36,43 @@ describe('TimelineRuler', () => {
 			})
 		);
 		expect(animationState.progress).toBeCloseTo(0.5, 1);
+	});
+
+	it('snaps the scrub to the nearest frame while Shift is held', async () => {
+		animationState.durationSec = 3;
+		animationState.fps = 30; // 90 frames over the duration
+		render(TimelineRuler);
+		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
+		const rect = ruler.getBoundingClientRect();
+		const raw = 0.32; // not on a frame boundary
+		ruler.dispatchEvent(
+			new PointerEvent('pointerdown', {
+				bubbles: true,
+				clientX: rect.left + rect.width * raw,
+				shiftKey: true
+			})
+		);
+		const frames = 90;
+		const expected = Math.round(raw * frames) / frames; // 29/90 = 0.3222…
+		expect(animationState.progress).toBeCloseTo(expected, 4);
+		expect(animationState.progress).not.toBeCloseTo(raw, 4);
+	});
+
+	it('renders frame ticks when frames are spaced far enough apart', async () => {
+		animationState.durationSec = 1;
+		animationState.fps = 25; // 25 frames across the full ruler width
+		render(TimelineRuler);
+		await vi.waitFor(() => {
+			expect(page.getByTestId('frame-tick').all().length).toBeGreaterThan(0);
+		});
+	});
+
+	it('hides frame ticks when they would be too dense (visual cap)', async () => {
+		animationState.durationSec = 10;
+		animationState.fps = 60; // 600 frames → well below the per-frame pixel threshold
+		render(TimelineRuler);
+		// Density is below threshold both before and after measurement → never rendered.
+		expect(page.getByTestId('frame-tick').all().length).toBe(0);
 	});
 
 	it('applies the keyframe rotation while scrubbing a paused timeline', async () => {
