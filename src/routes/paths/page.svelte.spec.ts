@@ -92,4 +92,12 @@ describe('Paths page', () => {
 		const header = page.getByTestId('paths-header').element() as HTMLElement;
 		expect(header.classList.contains('pl-72')).toBe(true);
 	});
+
+	it('switches to the Anim Library placeholder and hides the path list', async () => {
+		render(PathsPage);
+		await expect.element(page.getByTestId('paths-list')).toBeInTheDocument();
+		await userEvent.selectOptions(page.getByLabelText('Library'), 'anim');
+		await expect.element(page.getByTestId('anim-library-placeholder')).toBeInTheDocument();
+		expect(page.getByTestId('paths-list').query()).toBeNull();
+	});
 });
