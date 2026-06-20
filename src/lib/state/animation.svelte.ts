@@ -214,6 +214,25 @@ export function applyKaleidoscopeKeyframes(progress: number): void {
 	}
 }
 
+/**
+ * Move the playhead to a normalized position and drive the preview to it. This is the
+ * scrubbing entry point; tick() does the same continuously while playing.
+ */
+export function scrubTo(progress: number): void {
+	animationState.progress = clamp01(progress);
+	applyKaleidoscopeKeyframes(animationState.progress);
+}
+
+/**
+ * Re-drive the kaleidoscope preview from the current playhead after a keyframe edit.
+ * No-op while playing — tick() already applies every frame. Owns the "only when paused"
+ * rule so the keyframe-editing UI never has to repeat it.
+ */
+export function refreshPreview(): void {
+	if (animationState.isPlaying) return;
+	applyKaleidoscopeKeyframes(animationState.progress);
+}
+
 function getProgressFromElapsed(elapsedMs: number): number {
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);

@@ -2,7 +2,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
-	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
+	import { animationState, refreshPreview } from '$lib/state/animation';
 	import { xFromTime } from '$lib/animation/timeline-geometry';
 	import type { Interp } from '$lib/animation/keyframes';
 	import TimelineRuler from './TimelineRuler.svelte';
@@ -27,10 +27,6 @@
 			: null
 	);
 
-	function reapplyIfPaused() {
-		if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
-	}
-
 	function selectKeyframe(paramId: string, keyframeId: string | null) {
 		selection = keyframeId ? { paramId, keyframeId } : null;
 	}
@@ -38,14 +34,14 @@
 	function setSelectedInterp(value: string) {
 		if (!selection) return;
 		keyframes.setKeyframeInterp(selection.paramId, selection.keyframeId, value as Interp);
-		reapplyIfPaused();
+		refreshPreview();
 	}
 
 	function deleteSelected() {
 		if (!selection) return;
 		keyframes.deleteKeyframe(selection.paramId, selection.keyframeId);
 		selection = null;
-		reapplyIfPaused();
+		refreshPreview();
 	}
 
 	// One continuous playhead overlaid across ruler + lanes: the lane column is

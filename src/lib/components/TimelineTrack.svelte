@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
-	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
+	import { animationState, refreshPreview } from '$lib/state/animation';
 	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
 
 	let {
@@ -15,11 +15,6 @@
 		selectedId?: string | null;
 		onselect?: (keyframeId: string | null) => void;
 	} = $props();
-
-	// Editing a keyframe should refresh the paused preview; tick only applies while playing.
-	function reapplyIfPaused() {
-		if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
-	}
 
 	let rowEl = $state<HTMLDivElement>();
 	let draggingId: string | null = null;
@@ -37,14 +32,14 @@
 		const time = timeFromX(e.clientX - rect.left, rect.width);
 		const id = keyframes.addKeyframe(paramId, { time, value: 0 });
 		onselect?.(id);
-		reapplyIfPaused();
+		refreshPreview();
 	}
 
 	// Discoverable alternative to double-clicking the row: add a keyframe at the playhead.
 	function addAtPlayhead() {
 		const id = keyframes.addKeyframe(paramId, { time: animationState.progress, value: 0 });
 		onselect?.(id);
-		reapplyIfPaused();
+		refreshPreview();
 	}
 
 	function onDiamondDown(e: PointerEvent, id: string) {
@@ -64,7 +59,7 @@
 		keyframes.moveKeyframe(paramId, draggingId, {
 			time: timeFromX(e.clientX - rect.left, rect.width)
 		});
-		reapplyIfPaused();
+		refreshPreview();
 	}
 
 	function onDiamondUp(e: PointerEvent) {

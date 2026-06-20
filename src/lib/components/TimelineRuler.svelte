@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
+	import { animationState, scrubTo } from '$lib/state/animation';
 	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
 
 	let rulerEl = $state<HTMLDivElement>();
@@ -11,10 +11,9 @@
 	function scrubFromEvent(clientX: number) {
 		if (!rulerEl) return;
 		const rect = rulerEl.getBoundingClientRect();
-		animationState.progress = timeFromX(clientX - rect.left, rect.width);
-		// tick() only runs while playing; re-apply here so scrubbing a paused
-		// timeline still drives the kaleidoscope to the playhead's value.
-		applyKaleidoscopeKeyframes(animationState.progress);
+		// scrubTo moves the playhead and drives the kaleidoscope to it; tick() does the
+		// same while playing, so a paused scrub still updates the preview.
+		scrubTo(timeFromX(clientX - rect.left, rect.width));
 	}
 
 	function onPointerDown(e: PointerEvent) {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { keyframes } from '$lib/state/keyframes.svelte';
-	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
+	import { animationState, refreshPreview } from '$lib/state/animation';
 	import type { KaleidoParam } from '$lib/state/kaleidoscope-params';
 
 	let { param, animatable = true }: { param: KaleidoParam; animatable?: boolean } = $props();
@@ -14,8 +14,7 @@
 		const value = Number((e.target as HTMLInputElement).value);
 		if (armed) {
 			keyframes.upsertKeyframeAtTime(param.id, animationState.progress, value);
-			// tick only applies while playing; refresh the paused preview immediately.
-			if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
+			refreshPreview();
 		} else {
 			param.set(value);
 		}

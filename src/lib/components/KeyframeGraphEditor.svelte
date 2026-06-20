@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { keyframes } from '$lib/state/keyframes.svelte';
-	import { animationState, applyKaleidoscopeKeyframes } from '$lib/state/animation';
+	import { refreshPreview } from '$lib/state/animation';
 	import { sampleTrack, type Track } from '$lib/animation/keyframes';
 	import { xFromTime, timeFromX, yFromValue, valueFromY } from '$lib/animation/timeline-geometry';
 
@@ -73,7 +73,7 @@
 			keyframes.setKeyframeHandle(paramId, dragId, 'out', { dx, dy });
 		}
 		// Reflect the edit in the paused preview; tick only applies while playing.
-		if (!animationState.isPlaying) applyKaleidoscopeKeyframes(animationState.progress);
+		refreshPreview();
 	}
 
 	function onUp(e: PointerEvent) {
