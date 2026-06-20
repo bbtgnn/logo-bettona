@@ -9,4 +9,10 @@ describe('Editor page', () => {
 		await expect.element(page.getByRole('button', { name: 'Add Ring' })).toBeInTheDocument();
 		await expect.element(page.getByText('Animation', { exact: true })).not.toBeInTheDocument();
 	});
+
+	it('shows the kaleidoscope section without stopwatches (static, not animatable)', async () => {
+		render(EditorPage);
+		await expect.element(page.getByLabelText('Modalità caleidoscopio')).toBeInTheDocument();
+		expect(page.getByLabelText('Anima Rotazione globale').query()).toBeNull();
+	});
 });

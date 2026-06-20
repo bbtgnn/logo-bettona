@@ -89,6 +89,14 @@ describe('KaleidoscopeSection', () => {
 		render(KaleidoscopeSection);
 		await expect.element(page.getByLabelText('Sfondo caleidoscopio')).toBeInTheDocument();
 	});
+
+	it('hides the stopwatches when not animatable but keeps the sliders working', async () => {
+		render(KaleidoscopeSection, { animatable: false });
+		expect(page.getByLabelText('Anima Settori').query()).toBeNull();
+		expect(page.getByLabelText('Anima Rotazione globale').query()).toBeNull();
+		await userEvent.fill(page.getByLabelText('Settori', { exact: true }), '12');
+		expect(kaleidoscope.sectors).toBe(12);
+	});
 });
 
 describe('KaleidoscopeSection rotation keyframing', () => {

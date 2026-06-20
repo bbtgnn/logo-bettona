@@ -34,7 +34,7 @@
 
 <SettingsSection />
 <CanvasSection />
-<KaleidoscopeSection />
+<KaleidoscopeSection animatable={false} />
 
 <SidebarCollapsible>
 	{#snippet trigger()}

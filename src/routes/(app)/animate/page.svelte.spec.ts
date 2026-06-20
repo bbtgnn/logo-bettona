@@ -8,4 +8,9 @@ describe('Animate page', () => {
 		render(AnimatePage);
 		await expect.element(page.getByText('Animation', { exact: true })).toBeInTheDocument();
 	});
+
+	it('shows the kaleidoscope section with stopwatches (animatable)', async () => {
+		render(AnimatePage);
+		await expect.element(page.getByLabelText('Anima Rotazione globale')).toBeInTheDocument();
+	});
 });

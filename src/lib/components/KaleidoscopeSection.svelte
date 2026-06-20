@@ -14,6 +14,10 @@
 	} from '$lib/state/kaleidoscope.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
 
+	// animatable=false → static sliders (no stopwatch), for the Editor where the
+	// kaleidoscope look is modelled but not keyframed. Animate uses the default.
+	let { animatable = true }: { animatable?: boolean } = $props();
+
 	const checked = (e: Event) => (e.target as HTMLInputElement).checked;
 </script>
 
@@ -35,7 +39,7 @@
 			</label>
 
 			{#each KALEIDO_PARAMS as param (param.id)}
-				<AnimatableSlider {param} />
+				<AnimatableSlider {param} {animatable} />
 			{/each}
 
 			<label class="flex items-center gap-2 text-xs">
