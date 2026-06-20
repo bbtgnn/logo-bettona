@@ -84,6 +84,45 @@ describe('removeEntry', () => {
 	});
 });
 
+describe('renameEntry', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('renames a user entry (trimmed)', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+
+		mod.renameEntry(a.id, '  Logo cerchio  ');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Logo cerchio');
+	});
+
+	it('ignores an empty/whitespace name', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+
+		mod.renameEntry(a.id, '   ');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Path 1');
+	});
+
+	it('never renames a builtin entry', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		mod.pathLibrary.entries = mod.pathLibrary.entries.map((e) =>
+			e.id === a.id ? { ...e, builtin: true } : e
+		);
+
+		mod.renameEntry(a.id, 'Cambiato');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Path 1');
+	});
+});
+
 describe('applyEntryToRing', () => {
 	beforeEach(() => {
 		vi.resetModules();
