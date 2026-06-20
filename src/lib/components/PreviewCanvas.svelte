@@ -6,7 +6,7 @@
 	import { createRenderPipeline, computeRestScale } from '$lib/geometry/render-pipeline';
 	import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
 	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
-	import { renderKaleidoscopeToCanvas } from '$lib/geometry/kaleidoscope';
+	import { renderKaleidoscopeToCanvas, generateKaleidoscopeSVG } from '$lib/geometry/kaleidoscope';
 	import { composeTileWithBackground } from '$lib/geometry/kaleidoscope-tile';
 
 	let scope: paper.PaperScope;
@@ -71,22 +71,40 @@
 		};
 	}
 
-	function exportSvg() {
-		if (!scope) return;
+	function downloadSvg(svgData: string, filename: string) {
+		const blob = new Blob([svgData], { type: 'image/svg+xml' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
 
+	function exportSvg() {
+		// In kaleidoscope mode the visible canvas IS the kaleidoscope, so Export SVG
+		// exports the kaleidoscope render; otherwise it exports the flat composition.
+		if (kaleidoscope.enabled) {
+			exportKaleidoscopeSvg();
+			return;
+		}
+
+		if (!scope) return;
 		const hasContent = scope.project.activeLayer.children.length > 0;
 		if (!hasContent) return;
 
 		scope.activate();
 		const svgData = scope.project.exportSVG({ asString: true }) as string;
-		const blob = new Blob([svgData], { type: 'image/svg+xml' });
-		const url = URL.createObjectURL(blob);
+		downloadSvg(svgData, 'composition.svg');
+	}
 
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'composition.svg';
-		a.click();
-		URL.revokeObjectURL(url);
+	function exportKaleidoscopeSvg() {
+		ensureTileScope();
+		renderTile();
+		tileScope!.activate();
+		const tileSvg = tileScope!.project.exportSVG({ asString: true }) as string;
+		const size = canvasEl ? Math.min(canvasEl.width, canvasEl.height) : TILE_PX;
+		downloadSvg(generateKaleidoscopeSVG(tileSvg, kaleidoscope, size), 'kaleidoscope.svg');
 	}
 
 	function ensureTileScope() {

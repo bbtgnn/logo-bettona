@@ -1,10 +1,11 @@
 import type paper from 'paper';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition } from '$lib/state/composition';
 import { animationState, setAnimationDurationSec } from '$lib/state/animation';
+import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
 
 let lastRenderedScope: paper.PaperScope | undefined;
 let lastRenderInput: RenderInput | undefined;
@@ -133,6 +134,24 @@ describe('PreviewCanvas.svelte', () => {
 		expect(page.getByText('Includi audio').query()).toBeNull();
 		expect(page.getByText('Esporta PNG (caleidoscopio)').query()).toBeNull();
 		expect(page.getByText('Esporta SVG (caleidoscopio)').query()).toBeNull();
+	});
+
+	it('Export SVG downloads the kaleidoscope SVG when kaleidoscope mode is on', async () => {
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		setKaleidoscopeEnabled(true);
+		try {
+			render(PreviewCanvas);
+			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
+			expect(downloads).toContain('kaleidoscope.svg');
+			expect(downloads).not.toContain('composition.svg');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+			setKaleidoscopeEnabled(false);
+		}
 	});
 
 	it('export reads the shared animation duration (no separate export-duration field)', async () => {
