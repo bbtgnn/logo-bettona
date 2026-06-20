@@ -29,6 +29,13 @@ export type RenderInput = {
 	fitScale?: number;
 	/** When true, skip zone deformation so the rest pose can be measured. */
 	ignoreZoneDrive?: boolean;
+	/**
+	 * When set, render twice: first measure the rest pose with zone drive ignored, then
+	 * render the deformed pose at a fixed scale that leaves `fraction` headroom for opening
+	 * petals. Hides the two-pass ordering behind the interface so every caller — the visible
+	 * canvas and the kaleidoscope tile alike — gets the same stable audioZones scale.
+	 */
+	restFit?: { fraction: number };
 };
 
 export type RenderResult = {
@@ -131,7 +138,7 @@ export function createRenderPipeline(): {
 		scope.project.activeLayer.position = scope.view.bounds.center;
 	}
 
-	function render(input: RenderInput): RenderResult {
+	function renderOnce(input: RenderInput): RenderResult {
 		const startedAt = performance.now();
 		try {
 			assertScope(input.scope);
@@ -239,6 +246,23 @@ export function createRenderPipeline(): {
 			renderDurationMs: performance.now() - startedAt,
 			boundSide
 		};
+	}
+
+	function render(input: RenderInput): RenderResult {
+		if (input.restFit && input.restFit.fraction > 0) {
+			// First pass: measure the rest pose (zone drive ignored, no fixed scale).
+			const rest = renderOnce({
+				...input,
+				ignoreZoneDrive: true,
+				fitScale: undefined,
+				restFit: undefined
+			});
+			// Second pass: render the deformed pose at the headroom-derived fixed scale so
+			// opening petals extend toward the reserved edge instead of being re-fitted away.
+			const fitScale = computeRestScale(rest.boundSide, input.viewport, input.restFit.fraction);
+			return renderOnce({ ...input, fitScale, restFit: undefined });
+		}
+		return renderOnce(input);
 	}
 
 	function dispose(): void {

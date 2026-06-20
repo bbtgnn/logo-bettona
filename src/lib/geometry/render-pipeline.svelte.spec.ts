@@ -515,4 +515,41 @@ describe('createRenderPipeline().render fixed scale', () => {
 		});
 		expect(ignored.boundSide).toBeLessThan(withDrive.boundSide);
 	});
+
+	it('restFit reproduces the manual measure-then-fix-scale two-pass', () => {
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const driven: Composition = {
+			...composition,
+			rings: composition.rings.map((r) => ({
+				...r,
+				templatePath: petalPath,
+				zoneDrive: { bassPush: 1, midPush: 1, trebleRetract: 1, trebleVibrate: 1 }
+			}))
+		};
+
+		// Manual two-pass: measure the rest pose, fix the scale with headroom, render deformed.
+		const manual = createRenderPipeline();
+		const rest = manual.render({ composition: driven, scope, ignoreZoneDrive: true, viewport });
+		const fitScale = computeRestScale(rest.boundSide, viewport, 0.45);
+		manual.render({ composition: driven, scope, fitScale, viewport });
+		const manualSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+
+		// restFit: the pipeline owns the two-pass.
+		const auto = createRenderPipeline();
+		auto.render({ composition: driven, scope, restFit: { fraction: 0.45 }, viewport });
+		const autoSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+
+		expect(autoSide).toBeCloseTo(manualSide, 4);
+	});
+
+	it('restFit with a non-positive fraction renders a single bounds-fit pass', () => {
+		const pipeline = createRenderPipeline();
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const plain = pipeline.render({ composition, scope, viewport });
+		const plainSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+		pipeline.render({ composition, scope, restFit: { fraction: 0 }, viewport });
+		const zeroSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+		expect(plain.boundSide).toBeGreaterThan(0);
+		expect(zeroSide).toBeCloseTo(plainSide, 4);
+	});
 });
