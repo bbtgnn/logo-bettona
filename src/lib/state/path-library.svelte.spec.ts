@@ -54,6 +54,36 @@ describe('saveEntry', () => {
 	});
 });
 
+describe('removeEntry', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('removes the entry with the given id', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		const b = mod.saveEntry({ cmds: ['M', 'L'], crds: [2, 2, 3, 3] }, null);
+
+		mod.removeEntry(a.id);
+
+		expect(mod.pathLibrary.entries.map((e) => e.id)).toEqual([b.id]);
+	});
+
+	it('never removes a builtin entry', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		mod.pathLibrary.entries = mod.pathLibrary.entries.map((e) =>
+			e.id === a.id ? { ...e, builtin: true } : e
+		);
+
+		mod.removeEntry(a.id);
+
+		expect(mod.pathLibrary.entries).toHaveLength(1);
+	});
+});
+
 describe('applyEntryToRing', () => {
 	beforeEach(() => {
 		vi.resetModules();

@@ -74,6 +74,8 @@ export type PathLibraryEntry = {
 	createdAt: number;
 	path: Path;
 	secondaryPath: Path | null;
+	// Built-in default curves are author-provided and cannot be deleted by the user.
+	builtin?: boolean;
 };
 
 export type PathLibrary = {
