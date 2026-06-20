@@ -4,9 +4,14 @@
 
 	let rulerEl = $state<HTMLDivElement>();
 
-	// Minor ticks at quarter fractions; labelled ticks at start / middle / end.
-	const TICK_FRACS = [0, 0.25, 0.5, 0.75, 1];
-	const LABEL_FRACS = [0, 0.5, 1];
+	// One tick + label per integer second across the duration (always include the end).
+	const secondMarks = $derived.by(() => {
+		const dur = Math.max(0.1, animationState.durationSec);
+		const marks: number[] = [];
+		for (let s = 0; s <= Math.floor(dur); s++) marks.push(s);
+		if (marks[marks.length - 1] !== dur) marks.push(dur);
+		return marks;
+	});
 
 	function scrubFromEvent(clientX: number) {
 		if (!rulerEl) return;
@@ -44,18 +49,17 @@
 	onpointermove={onPointerMove}
 	onpointerup={onPointerUp}
 >
-	{#each TICK_FRACS as f (f)}
+	{#each secondMarks as s (s)}
+		{@const frac = s / Math.max(0.1, animationState.durationSec)}
 		<div
 			class="pointer-events-none absolute top-0 h-2 w-px bg-border"
-			style="left: {xFromTime(f, rulerEl?.clientWidth ?? 0)}px"
+			style="left: {xFromTime(frac, rulerEl?.clientWidth ?? 0)}px"
 		></div>
-	{/each}
-	{#each LABEL_FRACS as f (f)}
 		<span
 			class="pointer-events-none absolute bottom-0 -translate-x-1/2 text-[10px] leading-none text-muted-foreground"
-			style="left: {xFromTime(f, rulerEl?.clientWidth ?? 0)}px"
+			style="left: {xFromTime(frac, rulerEl?.clientWidth ?? 0)}px"
 		>
-			{formatSeconds(f * animationState.durationSec)}
+			{formatSeconds(s)}
 		</span>
 	{/each}
 </div>

@@ -15,12 +15,13 @@ describe('TimelineRuler', () => {
 		keyframes.setTrackEnabled(ROT, false);
 	});
 
-	it('renders start, middle and end time labels for the duration', async () => {
-		animationState.durationSec = 4;
+	it('renders a label at each integer second of the duration', async () => {
+		animationState.durationSec = 3;
 		render(TimelineRuler);
 		await expect.element(page.getByText('0s', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByText('1s', { exact: true })).toBeInTheDocument();
 		await expect.element(page.getByText('2s', { exact: true })).toBeInTheDocument();
-		await expect.element(page.getByText('4s', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByText('3s', { exact: true })).toBeInTheDocument();
 	});
 
 	it('scrubs progress on ruler click', async () => {
