@@ -134,7 +134,9 @@ export function createPreviewPresenter() {
 		}
 
 		if (!scope) return;
-		const hasContent = scope.project.activeLayer.children.length > 0;
+		const hasContent = scope.project.activeLayer.children.some(
+			(child) => child.name !== 'preview-background'
+		);
 		if (!hasContent) return;
 
 		scope.activate();

@@ -16,7 +16,7 @@
 </script>
 
 <div class="flex shrink-0 flex-col items-center gap-3">
-	<canvas {@attach presenter.attach} width="600" height="600" class="rounded-lg border bg-white"
+	<canvas {@attach presenter.attach} width="600" height="600" class="rounded-lg border"
 	></canvas>
 
 	<div class="flex w-full max-w-[600px] flex-col gap-2">

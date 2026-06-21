@@ -216,4 +216,21 @@ describe('PreviewCanvas.svelte', () => {
 			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#445566');
 		});
 	});
+
+	it('flat Export SVG produces no download when there are no rings', async () => {
+		composition.rings = [];
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
+			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
+			expect(downloads).not.toContain('composition.svg');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+		}
+	});
 });
