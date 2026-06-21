@@ -109,7 +109,9 @@ describe('TimelinePanel', () => {
 		await userEvent.click(page.getByRole('button', { name: 'Graph Editor' }));
 		// scale comes first in the registry, but the graph should skip it for the
 		// param that actually has a curve.
-		await expect.element(page.getByLabelText('Graph parameter')).toHaveValue('kaleidoscope.sectors');
+		await expect
+			.element(page.getByLabelText('Graph parameter'))
+			.toHaveValue('kaleidoscope.sectors');
 	});
 
 	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {

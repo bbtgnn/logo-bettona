@@ -141,7 +141,9 @@ describe('PreviewCanvas.svelte', () => {
 	it('on the animate surface, shows the Export animation button next to Export SVG', async () => {
 		render(PreviewCanvas, { animate: true });
 		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
-		await expect.element(page.getByRole('button', { name: 'Export animation' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('button', { name: 'Export animation' }))
+			.toBeInTheDocument();
 	});
 
 	it('Export SVG downloads the kaleidoscope SVG when kaleidoscope mode is on', async () => {
@@ -168,5 +170,4 @@ describe('PreviewCanvas.svelte', () => {
 		expect(page.getByLabelText('Durata (s)', { exact: true }).query()).toBeNull();
 		expect(animationState.durationSec).toBe(7);
 	});
-
 });

@@ -48,7 +48,9 @@ describe('Paths page', () => {
 		render(PathsPage);
 		await userEvent.click(page.getByTestId('paths-card-b'));
 		await expect.element(page.getByTestId('paths-card-b')).toHaveAttribute('aria-current', 'true');
-		expect(page.getByTestId('paths-card-a').element().getAttribute('aria-current')).not.toBe('true');
+		expect(page.getByTestId('paths-card-a').element().getAttribute('aria-current')).not.toBe(
+			'true'
+		);
 	});
 
 	it('re-renders the preview canvas when the selection changes', async () => {

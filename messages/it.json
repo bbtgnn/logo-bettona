@@ -160,5 +160,11 @@
 	"about_how_title": "Come si usa",
 	"about_how_colors": "Imposta palette monocromatica o piena. Definisce colori anello e sfondo.",
 	"about_how_animation": "Anima percorsi anello. Scegli driver (es. anime.js) e parametri.",
-	"about_how_settings": "Geometria anello: raggio, spessore, segmenti."
+	"about_how_settings": "Geometria anello: raggio, spessore, segmenti.",
+	"colors_primary": "Primaria",
+	"colors_secondary": "Secondaria",
+	"colors_background": "Sfondo",
+	"colors_delete_palette": "Elimina tavolozza",
+	"colors_new_palette": "Nuova tavolozza",
+	"colors_reshuffle": "Rimescola colori"
 }

@@ -160,5 +160,11 @@
 	"about_how_title": "How to use it",
 	"about_how_colors": "Set a monochrome or full palette. Defines ring and background colours.",
 	"about_how_animation": "Animate ring paths. Choose a driver (e.g. anime.js) and parameters.",
-	"about_how_settings": "Ring geometry: radius, thickness, segments."
+	"about_how_settings": "Ring geometry: radius, thickness, segments.",
+	"colors_primary": "Primary",
+	"colors_secondary": "Secondary",
+	"colors_background": "Background",
+	"colors_delete_palette": "Delete palette",
+	"colors_new_palette": "New palette",
+	"colors_reshuffle": "Reshuffle colors"
 }
