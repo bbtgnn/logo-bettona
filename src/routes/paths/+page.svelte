@@ -3,6 +3,7 @@
 	import { Trash, PencilSimple } from 'phosphor-svelte';
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
 	import RingPreview from '$lib/components/RingPreview.svelte';
 	import ApplyToRingSheet from '$lib/components/ApplyToRingSheet.svelte';
@@ -10,6 +11,7 @@
 	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
 	import { m } from '$lib/paraglide/messages';
+	import { currentLocale } from '$lib/state/locale.svelte';
 
 	// Which library the page is showing. 'anim' (animation presets) is a placeholder
 	// for now — a future feature owns its content.
@@ -56,172 +58,184 @@
 
 <svelte:head><title>{m.paths_page_title()}</title></svelte:head>
 
-<SidebarUI.SidebarProvider>
-	<SidebarUI.Sidebar>
-		<SidebarUI.SidebarContent class="p-2">
-			{#if libraryKind === 'path'}
-				<div data-testid="paths-list">
-					{#if pathLibrary.entries.length === 0}
-						<p class="p-3 text-xs text-muted-foreground" data-testid="paths-empty-state">
-							{m.paths_empty_saved()}
-						</p>
-					{:else}
-						<div class="flex flex-col gap-1">
-							{#each pathLibrary.entries as item (item.id)}
-								{#if editingId === item.id}
-									<div class="flex items-center gap-1">
-										<input
-											aria-label={m.paths_new_name()}
-											class="h-8 flex-1 rounded border bg-background px-2 text-xs"
-											bind:value={editDraft}
-											onkeydown={(e) => {
-												if (e.key === 'Enter') commitRename();
-												else if (e.key === 'Escape') editingId = null;
-											}}
-										/>
-										<Button size="sm" aria-label={m.paths_confirm_rename()} onclick={commitRename}
-											>{m.common_ok()}</Button
-										>
-										<Button
-											variant="ghost"
-											size="sm"
-											aria-label={m.paths_cancel_rename()}
-											onclick={() => (editingId = null)}
-										>
-											{m.common_cancel()}
-										</Button>
-									</div>
-								{:else}
-									<div class="flex items-center gap-1">
-										<button
-											type="button"
-											data-testid="paths-card-{item.id}"
-											aria-current={selected?.id === item.id ? 'true' : undefined}
-											class="flex flex-1 items-center gap-2 rounded-md border p-2 text-left hover:bg-muted aria-[current=true]:border-primary aria-[current=true]:bg-muted"
-											onclick={() => (selectedId = item.id)}
-										>
-											<PathThumbnail
-												path={item.path}
-												secondaryPath={item.secondaryPath}
-												size={48}
+{#key currentLocale()}
+	<SidebarUI.SidebarProvider>
+		<SidebarUI.Sidebar>
+			<SidebarUI.SidebarContent class="p-2">
+				{#if libraryKind === 'path'}
+					<div data-testid="paths-list">
+						{#if pathLibrary.entries.length === 0}
+							<p class="p-3 text-xs text-muted-foreground" data-testid="paths-empty-state">
+								{m.paths_empty_saved()}
+							</p>
+						{:else}
+							<div class="flex flex-col gap-1">
+								{#each pathLibrary.entries as item (item.id)}
+									{#if editingId === item.id}
+										<div class="flex items-center gap-1">
+											<input
+												aria-label={m.paths_new_name()}
+												class="h-8 flex-1 rounded border bg-background px-2 text-xs"
+												bind:value={editDraft}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') commitRename();
+													else if (e.key === 'Escape') editingId = null;
+												}}
 											/>
-											<div class="flex min-w-0 flex-1 flex-col">
-												<span class="truncate text-xs font-medium">{item.name}</span>
-												<span class="text-[10px] text-muted-foreground">
-													{new Date(item.createdAt).toLocaleDateString()}
-												</span>
-											</div>
-										</button>
-										{#if pendingDeleteId === item.id}
-											<Button
-												variant="destructive"
-												size="sm"
-												aria-label={m.paths_confirm_delete()}
-												onclick={() => confirmDelete(item.id)}
+											<Button size="sm" aria-label={m.paths_confirm_rename()} onclick={commitRename}
+												>{m.common_ok()}</Button
 											>
-												{m.common_delete()}
-											</Button>
 											<Button
 												variant="ghost"
 												size="sm"
-												aria-label={m.paths_cancel_delete()}
-												onclick={() => (pendingDeleteId = null)}
+												aria-label={m.paths_cancel_rename()}
+												onclick={() => (editingId = null)}
 											>
 												{m.common_cancel()}
 											</Button>
-										{:else if !item.builtin}
-											<Button
-												variant="ghost"
-												size="icon"
-												class="text-muted-foreground hover:text-foreground"
-												aria-label={m.paths_rename_entry({ name: item.name })}
-												onclick={() => startRename(item.id, item.name)}
+										</div>
+									{:else}
+										<div class="flex items-center gap-1">
+											<button
+												type="button"
+												data-testid="paths-card-{item.id}"
+												aria-current={selected?.id === item.id ? 'true' : undefined}
+												class="flex flex-1 items-center gap-2 rounded-md border p-2 text-left hover:bg-muted aria-[current=true]:border-primary aria-[current=true]:bg-muted"
+												onclick={() => (selectedId = item.id)}
 											>
-												<PencilSimple size={14} />
-											</Button>
-											<Button
-												variant="ghost"
-												size="icon"
-												class="text-muted-foreground hover:text-destructive"
-												aria-label={m.paths_delete_entry({ name: item.name })}
-												onclick={() => (pendingDeleteId = item.id)}
-											>
-												<Trash size={14} />
-											</Button>
-										{/if}
-									</div>
-								{/if}
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/if}
-		</SidebarUI.SidebarContent>
-	</SidebarUI.Sidebar>
-
-	<SidebarUI.SidebarInset>
-		<header data-testid="paths-header" class="flex items-center gap-2 border-b p-4">
-			<SidebarUI.SidebarTrigger />
-			<WorkspaceNav />
-			<select
-				aria-label={m.paths_library_select()}
-				class="ml-2 h-7 rounded border bg-background text-sm font-semibold"
-				value={libraryKind}
-				onchange={(e) => (libraryKind = (e.target as HTMLSelectElement).value as 'path' | 'anim')}
-			>
-				<option value="path">{m.paths_library_path()}</option>
-				<option value="anim">{m.paths_library_anim()}</option>
-			</select>
-			{#if libraryKind === 'path'}
-				<span class="text-xs text-muted-foreground">({pathLibrary.entries.length})</span>
-			{/if}
-		</header>
-
-		<main class="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-			{#if libraryKind === 'path'}
-				{#if selected}
-					<div data-testid="paths-preview">
-						<!-- Key on the entry id: RingPreview renders once on mount and does not
-						     react to prop changes, so remount it when the selection changes. -->
-						{#key selected.id}
-							<RingPreview
-								path={selected.path}
-								secondaryPath={selected.secondaryPath}
-								baseRadius={composition.baseRadius}
-								ringIncrement={composition.ringIncrement}
-								size={360}
-							/>
-						{/key}
+												<PathThumbnail
+													path={item.path}
+													secondaryPath={item.secondaryPath}
+													size={48}
+												/>
+												<div class="flex min-w-0 flex-1 flex-col">
+													<span class="truncate text-xs font-medium">{item.name}</span>
+													<span class="text-[10px] text-muted-foreground">
+														{new Date(item.createdAt).toLocaleDateString()}
+													</span>
+												</div>
+											</button>
+											{#if pendingDeleteId === item.id}
+												<Button
+													variant="destructive"
+													size="sm"
+													aria-label={m.paths_confirm_delete()}
+													onclick={() => confirmDelete(item.id)}
+												>
+													{m.common_delete()}
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													aria-label={m.paths_cancel_delete()}
+													onclick={() => (pendingDeleteId = null)}
+												>
+													{m.common_cancel()}
+												</Button>
+											{:else if !item.builtin}
+												<Button
+													variant="ghost"
+													size="icon"
+													class="text-muted-foreground hover:text-foreground"
+													aria-label={m.paths_rename_entry({ name: item.name })}
+													onclick={() => startRename(item.id, item.name)}
+												>
+													<PencilSimple size={14} />
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													class="text-muted-foreground hover:text-destructive"
+													aria-label={m.paths_delete_entry({ name: item.name })}
+													onclick={() => (pendingDeleteId = item.id)}
+												>
+													<Trash size={14} />
+												</Button>
+											{/if}
+										</div>
+									{/if}
+								{/each}
+							</div>
+						{/if}
 					</div>
-					<p class="text-sm font-medium">{selected.name}</p>
-					<Button
-						size="sm"
-						data-testid="paths-apply"
-						disabled={!canApply}
-						onclick={() => (applyOpen = true)}
+				{/if}
+			</SidebarUI.SidebarContent>
+		</SidebarUI.Sidebar>
+
+		<SidebarUI.SidebarInset>
+			<header data-testid="paths-header" class="flex items-center gap-2 border-b p-4">
+				<SidebarUI.SidebarTrigger />
+				<WorkspaceNav />
+				<select
+					aria-label={m.paths_library_select()}
+					class="ml-2 h-7 rounded border bg-background text-sm font-semibold"
+					value={libraryKind}
+					onchange={(e) => (libraryKind = (e.target as HTMLSelectElement).value as 'path' | 'anim')}
+				>
+					<option value="path">{m.paths_library_path()}</option>
+					<option value="anim">{m.paths_library_anim()}</option>
+				</select>
+				{#if libraryKind === 'path'}
+					<span class="text-xs text-muted-foreground">({pathLibrary.entries.length})</span>
+				{/if}
+				<div class="ml-auto flex items-center gap-3">
+					<LanguageSwitcher />
+					<a
+						href="/about"
+						class="text-sm text-muted-foreground hover:text-foreground"
+						data-testid="header-about-link"
 					>
-						{m.apply_title()}
-					</Button>
-					{#if composition.rings.length === 0}
-						<p class="text-[11px] text-muted-foreground">
-							{m.paths_add_ring_hint()}
-						</p>
+						{m.header_about()}
+					</a>
+				</div>
+			</header>
+
+			<main class="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+				{#if libraryKind === 'path'}
+					{#if selected}
+						<div data-testid="paths-preview">
+							<!-- Key on the entry id: RingPreview renders once on mount and does not
+						     react to prop changes, so remount it when the selection changes. -->
+							{#key selected.id}
+								<RingPreview
+									path={selected.path}
+									secondaryPath={selected.secondaryPath}
+									baseRadius={composition.baseRadius}
+									ringIncrement={composition.ringIncrement}
+									size={360}
+								/>
+							{/key}
+						</div>
+						<p class="text-sm font-medium">{selected.name}</p>
+						<Button
+							size="sm"
+							data-testid="paths-apply"
+							disabled={!canApply}
+							onclick={() => (applyOpen = true)}
+						>
+							{m.apply_title()}
+						</Button>
+						{#if composition.rings.length === 0}
+							<p class="text-[11px] text-muted-foreground">
+								{m.paths_add_ring_hint()}
+							</p>
+						{/if}
+					{:else}
+						<p class="text-sm text-muted-foreground">{m.paths_nothing_to_show()}</p>
 					{/if}
 				{:else}
-					<p class="text-sm text-muted-foreground">{m.paths_nothing_to_show()}</p>
+					<div data-testid="anim-library-placeholder" class="text-sm text-muted-foreground">
+						{m.paths_anim_placeholder()}
+					</div>
 				{/if}
-			{:else}
-				<div data-testid="anim-library-placeholder" class="text-sm text-muted-foreground">
-					{m.paths_anim_placeholder()}
-				</div>
-			{/if}
-		</main>
-	</SidebarUI.SidebarInset>
-</SidebarUI.SidebarProvider>
+			</main>
+		</SidebarUI.SidebarInset>
+	</SidebarUI.SidebarProvider>
 
-<ApplyToRingSheet
-	bind:open={applyOpen}
-	entry={selected}
-	rings={composition.rings}
-	onapply={applyToRing}
-/>
+	<ApplyToRingSheet
+		bind:open={applyOpen}
+		entry={selected}
+		rings={composition.rings}
+		onapply={applyToRing}
+	/>
+{/key}

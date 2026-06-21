@@ -94,6 +94,12 @@ describe('Paths page', () => {
 		await expect.element(page.getByTestId('paths-apply')).toBeDisabled();
 	});
 
+	it('keeps the language switcher and About link in the header', async () => {
+		render(PathsPage);
+		await expect.element(page.getByTestId('language-switcher')).toBeInTheDocument();
+		await expect.element(page.getByTestId('header-about-link')).toBeInTheDocument();
+	});
+
 	it('puts the workspace nav behind a collapsible sidebar trigger (no hard indent)', async () => {
 		render(PathsPage);
 		await expect.element(page.getByRole('button', { name: 'Toggle Sidebar' })).toBeInTheDocument();
