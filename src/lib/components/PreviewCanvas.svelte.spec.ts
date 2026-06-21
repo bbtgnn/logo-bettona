@@ -6,6 +6,7 @@ import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition } from '$lib/state/composition';
 import { animationState, setAnimationDurationSec } from '$lib/state/animation';
 import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 let lastRenderedScope: paper.PaperScope | undefined;
 let lastRenderInput: RenderInput | undefined;
@@ -49,6 +50,7 @@ describe('PreviewCanvas.svelte', () => {
 	};
 
 	beforeEach(() => {
+		switchLocale('en');
 		lastRenderedScope = undefined;
 		lastRenderInput = undefined;
 		renderCallCount = 0;

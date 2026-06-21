@@ -4,6 +4,7 @@
 	import PathThumbnail from './PathThumbnail.svelte';
 	import type { PathLibraryEntry, Ring } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+	import { m } from '$lib/paraglide/messages';
 
 	let {
 		open = $bindable(false),
@@ -45,8 +46,8 @@
 <Sheet.Root bind:open>
 	<Sheet.Content side="right" class="w-[420px] sm:w-[480px]">
 		<Sheet.Header>
-			<Sheet.Title>Applica al marchio</Sheet.Title>
-			<Sheet.Description>Scegli l'anello e lo slot su cui applicare la forma.</Sheet.Description>
+			<Sheet.Title>{m.apply_title()}</Sheet.Title>
+			<Sheet.Description>{m.apply_desc()}</Sheet.Description>
 		</Sheet.Header>
 
 		{#if entry}
@@ -57,7 +58,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<label for="apply-ring" class="text-xs font-medium">Anello</label>
+					<label for="apply-ring" class="text-xs font-medium">{m.apply_ring_label()}</label>
 					<select
 						id="apply-ring"
 						data-testid="apply-ring-select"
@@ -66,13 +67,13 @@
 						onchange={(e) => (ringIndex = Number((e.target as HTMLSelectElement).value))}
 					>
 						{#each rings as _ring, i (i)}
-							<option value={i}>Anello {i + 1}</option>
+							<option value={i}>{m.editor_ring_label({ index: i + 1 })}</option>
 						{/each}
 					</select>
 				</div>
 
 				<fieldset class="space-y-2">
-					<legend class="text-xs font-medium">Slot</legend>
+					<legend class="text-xs font-medium">{m.common_slot()}</legend>
 					<label class="flex items-center gap-2 text-sm">
 						<input
 							type="radio"
@@ -81,7 +82,7 @@
 							checked={slot === 'template'}
 							onchange={() => (slotRaw = 'template')}
 						/>
-						Principale
+						{m.slot_primary()}
 					</label>
 					<label class="flex items-center gap-2 text-sm">
 						<input
@@ -91,7 +92,7 @@
 							checked={slot === 'secondary'}
 							onchange={() => (slotRaw = 'secondary')}
 						/>
-						Secondaria
+						{m.slot_secondary()}
 					</label>
 					<label class="flex items-center gap-2 text-sm" class:opacity-50={!entry.secondaryPath}>
 						<input
@@ -102,12 +103,13 @@
 							checked={slot === 'both'}
 							onchange={() => (slotRaw = 'both')}
 						/>
-						Entrambe
+						{m.slot_both()}
 					</label>
 				</fieldset>
 
 				<div class="flex justify-end">
-					<Button size="sm" onclick={confirm} data-testid="apply-confirm">Applica</Button>
+					<Button size="sm" onclick={confirm} data-testid="apply-confirm">{m.common_apply()}</Button
+					>
 				</div>
 			</div>
 		{/if}

@@ -2,6 +2,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { createPreviewPresenter } from './preview-presenter.svelte';
 	import { exportStatus } from '$lib/state/export-status.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	// `animate` is set by the (app) layout only on the /animate route. Animation export
 	// captures a timed animation, so it belongs to the animate surface; Export SVG is
@@ -26,7 +27,7 @@
 				disabled={exportStatus.rendering}
 				class="flex-1"
 			>
-				Export SVG
+				{m.preview_export_svg()}
 			</Button>
 			{#if animate}
 				<Button
@@ -35,7 +36,7 @@
 					disabled={exportStatus.rendering || !presenter.animationExportSupported}
 					class="flex-1"
 				>
-					Export animation
+					{m.preview_export_animation()}
 				</Button>
 			{/if}
 		</div>
@@ -45,7 +46,7 @@
 				<div
 					class="h-1.5 rounded bg-muted"
 					role="progressbar"
-					aria-label="Rendering progress"
+					aria-label={m.preview_rendering_progress()}
 					aria-valuemin="0"
 					aria-valuemax="100"
 					aria-valuenow={progressPercent}
@@ -55,13 +56,15 @@
 						style:width={`${progressPercent}%`}
 					></div>
 				</div>
-				<p class="text-[10px] text-muted-foreground">Rendering… {progressPercent}%</p>
+				<p class="text-[10px] text-muted-foreground">
+					{m.preview_rendering({ pct: progressPercent })}
+				</p>
 			</div>
 		{/if}
 
 		{#if animate && !presenter.animationExportSupported}
 			<p class="text-[10px] text-muted-foreground">
-				Animation export not supported in this browser.
+				{m.preview_export_unsupported()}
 			</p>
 		{/if}
 	</div>

@@ -5,6 +5,7 @@ import PathsPage from './+page.svelte';
 import { pathLibrary } from '$lib/state/path-library';
 import { composition } from '$lib/state/composition';
 import type { Path, PathLibraryEntry } from '$lib/types';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 const PATH: Path = { cmds: ['M', 'L', 'L', 'L', 'Z'], crds: [0, 0, 100, 0, 100, 50, 0, 50] };
 
@@ -23,6 +24,7 @@ describe('Paths page', () => {
 		// Desktop width so the shadcn Sidebar renders its inline (non-Sheet) variant and
 		// the path list is present in the DOM (below 768px it becomes a closed mobile sheet).
 		await page.viewport(1280, 800);
+		switchLocale('en');
 		pathLibrary.entries = [entry('a', 'Forma A'), entry('b', 'Forma B')];
 	});
 	afterEach(() => {
@@ -99,25 +101,25 @@ describe('Paths page', () => {
 
 	it('deletes a path only after confirming', async () => {
 		render(PathsPage);
-		await userEvent.click(page.getByRole('button', { name: 'Elimina Forma A' }));
+		await userEvent.click(page.getByRole('button', { name: 'Delete Forma A' }));
 		// Nothing removed until the confirmation is pressed.
 		expect(pathLibrary.entries).toHaveLength(2);
-		await userEvent.click(page.getByRole('button', { name: 'Conferma eliminazione' }));
+		await userEvent.click(page.getByRole('button', { name: 'Confirm deletion' }));
 		expect(pathLibrary.entries.map((e) => e.id)).toEqual(['b']);
 	});
 
 	it('cancels a pending deletion', async () => {
 		render(PathsPage);
-		await userEvent.click(page.getByRole('button', { name: 'Elimina Forma A' }));
-		await userEvent.click(page.getByRole('button', { name: 'Annulla eliminazione' }));
+		await userEvent.click(page.getByRole('button', { name: 'Delete Forma A' }));
+		await userEvent.click(page.getByRole('button', { name: 'Cancel deletion' }));
 		expect(pathLibrary.entries).toHaveLength(2);
 	});
 
 	it('renames a path inline after confirming', async () => {
 		render(PathsPage);
-		await userEvent.click(page.getByRole('button', { name: 'Rinomina Forma A' }));
-		await userEvent.fill(page.getByLabelText('Nuovo nome'), 'Logo tondo');
-		await userEvent.click(page.getByRole('button', { name: 'Conferma rinomina' }));
+		await userEvent.click(page.getByRole('button', { name: 'Rename Forma A' }));
+		await userEvent.fill(page.getByLabelText('New name'), 'Logo tondo');
+		await userEvent.click(page.getByRole('button', { name: 'Confirm rename' }));
 		expect(pathLibrary.entries.find((e) => e.id === 'a')?.name).toBe('Logo tondo');
 	});
 

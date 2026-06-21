@@ -7,6 +7,7 @@
 	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
 	import RingPreview from './RingPreview.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	let {
 		open = $bindable(false),
@@ -44,14 +45,14 @@
 <Sheet.Root bind:open>
 	<Sheet.Content side="right" class="w-[420px] sm:w-[480px]">
 		<Sheet.Header>
-			<Sheet.Title>Carica da libreria</Sheet.Title>
-			<Sheet.Description>Scegli un path salvato e lo slot da sovrascrivere.</Sheet.Description>
+			<Sheet.Title>{m.library_title()}</Sheet.Title>
+			<Sheet.Description>{m.library_desc()}</Sheet.Description>
 		</Sheet.Header>
 
 		<div class="mt-4 space-y-4">
 			{#if pathLibrary.entries.length === 0}
 				<p class="text-sm text-muted-foreground" data-testid="library-picker-empty">
-					Libreria vuota. Salva prima dal Ring Editor.
+					{m.library_empty()}
 				</p>
 			{:else if !selected}
 				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="library-picker-grid">
@@ -95,7 +96,7 @@
 					</div>
 
 					<fieldset class="space-y-2">
-						<legend class="text-xs font-medium">Slot</legend>
+						<legend class="text-xs font-medium">{m.common_slot()}</legend>
 						<label class="flex items-center gap-2 text-sm">
 							<input
 								type="radio"
@@ -104,7 +105,7 @@
 								checked={slot === 'template'}
 								onchange={() => (slotRaw = 'template')}
 							/>
-							Template
+							{m.slot_primary()}
 						</label>
 						<label class="flex items-center gap-2 text-sm">
 							<input
@@ -114,7 +115,7 @@
 								checked={slot === 'secondary'}
 								onchange={() => (slotRaw = 'secondary')}
 							/>
-							Secondary
+							{m.slot_secondary()}
 						</label>
 						<label
 							class="flex items-center gap-2 text-sm"
@@ -128,14 +129,16 @@
 								checked={slot === 'both'}
 								onchange={() => (slotRaw = 'both')}
 							/>
-							Entrambi
+							{m.slot_both()}
 						</label>
 					</fieldset>
 
 					<div class="flex justify-end gap-2">
-						<Button variant="outline" size="sm" onclick={() => (selected = null)}>Indietro</Button>
+						<Button variant="outline" size="sm" onclick={() => (selected = null)}
+							>{m.common_back()}</Button
+						>
 						<Button size="sm" onclick={confirm} data-testid="library-picker-confirm">
-							Applica
+							{m.common_apply()}
 						</Button>
 					</div>
 				</div>

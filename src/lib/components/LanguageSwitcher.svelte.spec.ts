@@ -1,11 +1,13 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import LanguageSwitcher from './LanguageSwitcher.svelte';
 import { currentLocale, switchLocale } from '$lib/state/locale.svelte';
 
 describe('LanguageSwitcher', () => {
 	beforeEach(() => switchLocale('en'));
+	// Restore the base locale so this file never leaves 'it' behind for other specs.
+	afterEach(() => switchLocale('en'));
 
 	it('renders eng and ita options with flags', async () => {
 		render(LanguageSwitcher);

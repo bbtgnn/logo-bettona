@@ -9,6 +9,7 @@
 	import { pathLibrary, applyEntryToRing, removeEntry, renameEntry } from '$lib/state/path-library';
 	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
+	import { m } from '$lib/paraglide/messages';
 
 	// Which library the page is showing. 'anim' (animation presets) is a placeholder
 	// for now — a future feature owns its content.
@@ -53,7 +54,7 @@
 	}
 </script>
 
-<svelte:head><title>Path Library — logo-bettona</title></svelte:head>
+<svelte:head><title>{m.paths_page_title()}</title></svelte:head>
 
 <SidebarUI.SidebarProvider>
 	<SidebarUI.Sidebar>
@@ -62,7 +63,7 @@
 				<div data-testid="paths-list">
 					{#if pathLibrary.entries.length === 0}
 						<p class="p-3 text-xs text-muted-foreground" data-testid="paths-empty-state">
-							Nessun path salvato. Salva dal Ring Editor.
+							{m.paths_empty_saved()}
 						</p>
 					{:else}
 						<div class="flex flex-col gap-1">
@@ -70,7 +71,7 @@
 								{#if editingId === item.id}
 									<div class="flex items-center gap-1">
 										<input
-											aria-label="Nuovo nome"
+											aria-label={m.paths_new_name()}
 											class="h-8 flex-1 rounded border bg-background px-2 text-xs"
 											bind:value={editDraft}
 											onkeydown={(e) => {
@@ -78,16 +79,16 @@
 												else if (e.key === 'Escape') editingId = null;
 											}}
 										/>
-										<Button size="sm" aria-label="Conferma rinomina" onclick={commitRename}
-											>OK</Button
+										<Button size="sm" aria-label={m.paths_confirm_rename()} onclick={commitRename}
+											>{m.common_ok()}</Button
 										>
 										<Button
 											variant="ghost"
 											size="sm"
-											aria-label="Annulla rinomina"
+											aria-label={m.paths_cancel_rename()}
 											onclick={() => (editingId = null)}
 										>
-											Annulla
+											{m.common_cancel()}
 										</Button>
 									</div>
 								{:else}
@@ -115,25 +116,25 @@
 											<Button
 												variant="destructive"
 												size="sm"
-												aria-label="Conferma eliminazione"
+												aria-label={m.paths_confirm_delete()}
 												onclick={() => confirmDelete(item.id)}
 											>
-												Elimina
+												{m.common_delete()}
 											</Button>
 											<Button
 												variant="ghost"
 												size="sm"
-												aria-label="Annulla eliminazione"
+												aria-label={m.paths_cancel_delete()}
 												onclick={() => (pendingDeleteId = null)}
 											>
-												Annulla
+												{m.common_cancel()}
 											</Button>
 										{:else if !item.builtin}
 											<Button
 												variant="ghost"
 												size="icon"
 												class="text-muted-foreground hover:text-foreground"
-												aria-label="Rinomina {item.name}"
+												aria-label={m.paths_rename_entry({ name: item.name })}
 												onclick={() => startRename(item.id, item.name)}
 											>
 												<PencilSimple size={14} />
@@ -142,7 +143,7 @@
 												variant="ghost"
 												size="icon"
 												class="text-muted-foreground hover:text-destructive"
-												aria-label="Elimina {item.name}"
+												aria-label={m.paths_delete_entry({ name: item.name })}
 												onclick={() => (pendingDeleteId = item.id)}
 											>
 												<Trash size={14} />
@@ -163,13 +164,13 @@
 			<SidebarUI.SidebarTrigger />
 			<WorkspaceNav />
 			<select
-				aria-label="Library"
+				aria-label={m.paths_library_select()}
 				class="ml-2 h-7 rounded border bg-background text-sm font-semibold"
 				value={libraryKind}
 				onchange={(e) => (libraryKind = (e.target as HTMLSelectElement).value as 'path' | 'anim')}
 			>
-				<option value="path">Path Library</option>
-				<option value="anim">Anim Library</option>
+				<option value="path">{m.paths_library_path()}</option>
+				<option value="anim">{m.paths_library_anim()}</option>
 			</select>
 			{#if libraryKind === 'path'}
 				<span class="text-xs text-muted-foreground">({pathLibrary.entries.length})</span>
@@ -199,19 +200,19 @@
 						disabled={!canApply}
 						onclick={() => (applyOpen = true)}
 					>
-						Applica al marchio
+						{m.apply_title()}
 					</Button>
 					{#if composition.rings.length === 0}
 						<p class="text-[11px] text-muted-foreground">
-							Aggiungi un anello in Editor per applicare.
+							{m.paths_add_ring_hint()}
 						</p>
 					{/if}
 				{:else}
-					<p class="text-sm text-muted-foreground">Nessuna forma da mostrare.</p>
+					<p class="text-sm text-muted-foreground">{m.paths_nothing_to_show()}</p>
 				{/if}
 			{:else}
 				<div data-testid="anim-library-placeholder" class="text-sm text-muted-foreground">
-					Anim Library — preset di animazioni, in arrivo.
+					{m.paths_anim_placeholder()}
 				</div>
 			{/if}
 		</main>

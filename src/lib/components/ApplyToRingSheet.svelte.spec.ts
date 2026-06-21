@@ -1,8 +1,9 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ApplyToRingSheet from './ApplyToRingSheet.svelte';
 import type { Path, PathLibraryEntry, Ring } from '$lib/types';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 const PATH: Path = { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] };
 
@@ -28,6 +29,8 @@ function ring(): Ring {
 }
 
 describe('ApplyToRingSheet', () => {
+	beforeEach(() => switchLocale('en'));
+
 	it('lists one option per ring', async () => {
 		render(ApplyToRingSheet, {
 			props: { open: true, entry: entry(false), rings: [ring(), ring(), ring()], onapply: vi.fn() }
@@ -41,7 +44,7 @@ describe('ApplyToRingSheet', () => {
 		render(ApplyToRingSheet, {
 			props: { open: true, entry: entry(false), rings: [ring()], onapply: vi.fn() }
 		});
-		await expect.element(page.getByRole('radio', { name: 'Entrambe' })).toBeDisabled();
+		await expect.element(page.getByRole('radio', { name: 'Both' })).toBeDisabled();
 	});
 
 	it('confirm calls onapply with the chosen ring index and slot', async () => {
@@ -50,7 +53,7 @@ describe('ApplyToRingSheet', () => {
 			props: { open: true, entry: entry(true), rings: [ring(), ring()], onapply }
 		});
 		await userEvent.selectOptions(page.getByTestId('apply-ring-select'), '1');
-		await userEvent.click(page.getByRole('radio', { name: 'Secondaria' }));
+		await userEvent.click(page.getByRole('radio', { name: 'Secondary' }));
 		await userEvent.click(page.getByTestId('apply-confirm'));
 		expect(onapply).toHaveBeenCalledWith(1, 'secondary');
 	});
