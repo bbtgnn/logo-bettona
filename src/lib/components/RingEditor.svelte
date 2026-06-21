@@ -20,6 +20,7 @@
 	import { importSvg } from '$lib/geometry/svg-import';
 	import { animationState } from '$lib/state/animation';
 	import { saveEntry } from '$lib/state/path-library';
+	import { m } from '$lib/paraglide/messages';
 	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
 	import RingCanvas from './RingCanvas.svelte';
 	import type { Ring } from '$lib/types';
@@ -96,9 +97,9 @@
 		if (!ring.templatePath) return;
 		try {
 			const entry = saveEntry(ring.templatePath, ring.secondaryTemplatePath);
-			showSaveStatus(`Salvato come '${entry.name}'`);
+			showSaveStatus(m.editor_saved_as({ name: entry.name }));
 		} catch {
-			showSaveStatus('Libreria piena');
+			showSaveStatus(m.editor_library_full());
 		}
 	}
 
@@ -124,7 +125,7 @@
 		const path = await importSvg(file, importScope);
 
 		if (!path) {
-			importError = 'No valid path found. Make sure the SVG contains a single-contour path.';
+			importError = m.editor_svg_invalid();
 			return;
 		}
 
@@ -156,7 +157,7 @@
 		<div class="flex items-center gap-1 px-2 py-1.5">
 			<button
 				class="cursor-grab text-muted-foreground hover:text-foreground"
-				aria-label="Drag to reorder"
+				aria-label={m.editor_ring_drag()}
 			>
 				<DotsSixVertical size={16} />
 			</button>
@@ -168,14 +169,14 @@
 				{:else}
 					<CaretRight size={14} />
 				{/if}
-				Ring {index + 1}
+				{m.editor_ring_label({ index: index + 1 })}
 			</Collapsible.CollapsibleTrigger>
 			<Button
 				variant="ghost"
 				size="icon"
 				class="h-6 w-6 text-muted-foreground hover:text-destructive"
 				onclick={() => removeRing(index)}
-				aria-label="Delete ring"
+				aria-label={m.editor_ring_delete()}
 			>
 				<Trash size={14} />
 			</Button>
@@ -189,14 +190,14 @@
 						size="sm"
 						onclick={() => (editVariant = 'primary')}
 					>
-						Primary
+						{m.editor_ring_primary()}
 					</Button>
 					<Button
 						variant={editVariant === 'secondary' ? 'default' : 'outline'}
 						size="sm"
 						onclick={() => (editVariant = 'secondary')}
 					>
-						Secondary
+						{m.editor_ring_secondary()}
 					</Button>
 				</div>
 			{/if}
@@ -207,7 +208,9 @@
 						? ring.secondaryTemplatePath
 						: ring.templatePath}
 					onchange={applyPathFromEditor}
-					label={`Path editor${!morphInactive && editVariant === 'secondary' ? ' (secondary)' : ''}`}
+					label={!morphInactive && editVariant === 'secondary'
+						? m.editor_path_editor_secondary()
+						: m.editor_path_editor()}
 				/>
 			{/key}
 
@@ -225,7 +228,7 @@
 							createRingMorphTarget(index);
 						}}
 					>
-						Create morph target
+						{m.editor_create_morph()}
 					</Button>
 				{:else}
 					<div class="space-y-2">
@@ -239,10 +242,10 @@
 									editVariant = 'primary';
 								}}
 							>
-								Remove morph target
+								{m.editor_remove_morph()}
 							</Button>
 							<span class="text-xs text-muted-foreground"
-								>Morph t: {(ring.morphT ?? 0).toFixed(2)}</span
+								>{m.editor_morph_t({ value: (ring.morphT ?? 0).toFixed(2) })}</span
 							>
 						</div>
 						<Slider
@@ -265,7 +268,7 @@
 					disabled={!ring.templatePath}
 					data-testid="ring-save-to-library-{index}"
 				>
-					Salva in libreria
+					{m.editor_save_to_library()}
 				</Button>
 				<Button
 					variant="outline"
@@ -273,7 +276,7 @@
 					onclick={() => (libraryOpen = true)}
 					data-testid="ring-load-from-library-{index}"
 				>
-					Carica da libreria
+					{m.editor_load_from_library()}
 				</Button>
 				{#if saveStatus}
 					<span class="text-xs text-muted-foreground" data-testid="ring-save-status-{index}">
@@ -291,7 +294,7 @@
 			<LibraryPickerSheet bind:open={libraryOpen} onapply={handleApplyFromLibrary} />
 
 			<div class="flex flex-col gap-1">
-				<Label for="svg-upload-{index}" class="text-xs">Import SVG</Label>
+				<Label for="svg-upload-{index}" class="text-xs">{m.editor_import_svg()}</Label>
 				<input
 					id="svg-upload-{index}"
 					type="file"
@@ -305,7 +308,7 @@
 			</div>
 
 			<div class="flex flex-col gap-1">
-				<Label for="copies-{index}" class="text-xs">Copies</Label>
+				<Label for="copies-{index}" class="text-xs">{m.editor_copies()}</Label>
 				<Input
 					id="copies-{index}"
 					type="number"
@@ -320,8 +323,8 @@
 
 			<div class="flex flex-col gap-2">
 				<Label class="text-xs"
-					>Ring height <span class="text-muted-foreground">{ring.ringHeight.toFixed(2)}</span
-					></Label
+					>{m.editor_ring_height()}
+					<span class="text-muted-foreground">{ring.ringHeight.toFixed(2)}</span></Label
 				>
 				<Slider
 					type="single"
@@ -335,7 +338,7 @@
 
 			{#if colorMode.mode === 'manual'}
 				<div class="flex flex-col gap-1">
-					<Label for="color-{index}" class="text-xs">Color</Label>
+					<Label for="color-{index}" class="text-xs">{m.editor_color()}</Label>
 					<div class="flex items-center gap-2">
 						<input
 							id="color-{index}"

@@ -11,9 +11,13 @@ import {
 } from '$lib/state/kaleidoscope.svelte';
 import { animationState } from '$lib/state/animation';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 describe('KaleidoscopeSection', () => {
-	beforeEach(() => setKaleidoscopeEnabled(false));
+	beforeEach(() => {
+		switchLocale('en');
+		setKaleidoscopeEnabled(false);
+	});
 
 	// Shared keyframes singleton: disarm tracks this file enabled so it does not pollute
 	// other specs in the browser project (e.g. keyframes hasEnabledTracks).
@@ -23,26 +27,26 @@ describe('KaleidoscopeSection', () => {
 
 	it('toggles kaleidoscope mode through the enable checkbox', async () => {
 		render(KaleidoscopeSection);
-		await userEvent.click(page.getByLabelText('Modalità caleidoscopio'));
+		await userEvent.click(page.getByLabelText('Kaleidoscope mode'));
 		expect(kaleidoscope.enabled).toBe(true);
 	});
 
 	it('updates sectors from the range input', async () => {
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Settori', { exact: true }), '12');
+		await userEvent.fill(page.getByLabelText('Sectors', { exact: true }), '12');
 		expect(kaleidoscope.sectors).toBe(12);
 	});
 
 	// Each slider must route to its OWN setter — guards against copy-paste wiring bugs
 	// across the structurally-identical control blocks.
 	const rangeCases: ReadonlyArray<readonly [string, string, () => number]> = [
-		['Ripetizioni', '5', () => kaleidoscope.repeat],
-		['Distanza dal centro', '0.5', () => kaleidoscope.offsetDistance],
-		['Scala globale', '2', () => kaleidoscope.scale],
-		['Dimensione tessera', '1.5', () => kaleidoscope.tileSize],
-		['Rotazione tessera', '90', () => kaleidoscope.tileRotation],
-		['Rotazione tappeto', '45', () => kaleidoscope.carpetRotation],
-		['Rotazione globale', '120', () => kaleidoscope.globalRotation]
+		['Repeats', '5', () => kaleidoscope.repeat],
+		['Distance from centre', '0.5', () => kaleidoscope.offsetDistance],
+		['Global scale', '2', () => kaleidoscope.scale],
+		['Tile size', '1.5', () => kaleidoscope.tileSize],
+		['Tile rotation', '90', () => kaleidoscope.tileRotation],
+		['Carpet rotation', '45', () => kaleidoscope.carpetRotation],
+		['Global rotation', '120', () => kaleidoscope.globalRotation]
 	];
 
 	for (const [label, value, get] of rangeCases) {
@@ -57,7 +61,7 @@ describe('KaleidoscopeSection', () => {
 		keyframes.ensureTrack('kaleidoscope.sectors');
 		keyframes.setTrackEnabled('kaleidoscope.sectors', false);
 		render(KaleidoscopeSection);
-		await userEvent.click(page.getByLabelText('Anima Settori'));
+		await userEvent.click(page.getByLabelText('Animate Sectors'));
 		expect(keyframes.tracks['kaleidoscope.sectors'].enabled).toBe(true);
 	});
 
@@ -67,34 +71,35 @@ describe('KaleidoscopeSection', () => {
 		setTileBackground(false);
 		render(KaleidoscopeSection);
 
-		await userEvent.click(page.getByLabelText('Maschera circolare'));
+		await userEvent.click(page.getByLabelText('Circular mask'));
 		expect(kaleidoscope.circularMask).toBe(false);
 
-		await userEvent.click(page.getByLabelText('Tessera viva'));
+		await userEvent.click(page.getByLabelText('Live tile'));
 		expect(kaleidoscope.liveTile).toBe(true);
 
-		await userEvent.click(page.getByLabelText('Sfondo tessera'));
+		await userEvent.click(page.getByLabelText('Tile background'));
 		expect(kaleidoscope.tileBackground).toBe(true);
 		expect(kaleidoscope.drawBackground).toBe(false);
 	});
 
-	it('shows "Aggiorna istantanea" only while the live tile is off', async () => {
+	it('shows "Refresh snapshot" only while the live tile is off', async () => {
 		setLiveTile(false);
 		render(KaleidoscopeSection);
-		await expect.element(page.getByText('Aggiorna istantanea')).toBeInTheDocument();
+		await expect.element(page.getByText('Refresh snapshot')).toBeInTheDocument();
 	});
 
 	it('hides the stopwatches when not animatable but keeps the sliders working', async () => {
 		render(KaleidoscopeSection, { animatable: false });
-		expect(page.getByLabelText('Anima Settori').query()).toBeNull();
-		expect(page.getByLabelText('Anima Rotazione globale').query()).toBeNull();
-		await userEvent.fill(page.getByLabelText('Settori', { exact: true }), '12');
+		expect(page.getByLabelText('Animate Sectors').query()).toBeNull();
+		expect(page.getByLabelText('Animate Global rotation').query()).toBeNull();
+		await userEvent.fill(page.getByLabelText('Sectors', { exact: true }), '12');
 		expect(kaleidoscope.sectors).toBe(12);
 	});
 });
 
 describe('KaleidoscopeSection rotation keyframing', () => {
 	beforeEach(() => {
+		switchLocale('en');
 		keyframes.ensureTrack(ROT);
 		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
 		keyframes.setTrackEnabled(ROT, false);
@@ -103,7 +108,7 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 
 	it('enables the rotation track via the stopwatch', async () => {
 		render(KaleidoscopeSection);
-		await userEvent.click(page.getByLabelText('Anima Rotazione globale'));
+		await userEvent.click(page.getByLabelText('Animate Global rotation'));
 		expect(keyframes.tracks[ROT].enabled).toBe(true);
 	});
 
@@ -111,7 +116,7 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		keyframes.setTrackEnabled(ROT, true);
 		animationState.progress = 0.5;
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Rotazione globale', { exact: true }), '120');
+		await userEvent.fill(page.getByLabelText('Global rotation', { exact: true }), '120');
 		const kf = keyframes.tracks[ROT].keyframes.find((k) => Math.abs(k.time - 0.5) < 1e-3);
 		expect(kf?.value).toBe(120);
 	});
@@ -121,7 +126,7 @@ describe('KaleidoscopeSection rotation keyframing', () => {
 		animationState.progress = 0.5;
 		animationState.isPlaying = false;
 		render(KaleidoscopeSection);
-		await userEvent.fill(page.getByLabelText('Rotazione globale', { exact: true }), '210');
+		await userEvent.fill(page.getByLabelText('Global rotation', { exact: true }), '210');
 		expect(kaleidoscope.globalRotation).toBeCloseTo(210, 4);
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { animationState, refreshPreview } from '$lib/state/animation';
+	import { m } from '$lib/paraglide/messages';
 	import type { KaleidoParam } from '$lib/state/kaleidoscope-params';
 
 	let { param, animatable = true }: { param: KaleidoParam; animatable?: boolean } = $props();
@@ -26,9 +27,9 @@
 		{#if animatable}
 			<button
 				type="button"
-				aria-label="Anima {param.label}"
+				aria-label={m.editor_animate_param({ label: param.label })}
 				aria-pressed={armed}
-				title="Anima questo parametro"
+				title={m.editor_animate_this_param()}
 				class="grid h-5 w-5 shrink-0 place-items-center rounded text-xs {armed
 					? 'bg-primary text-primary-foreground'
 					: 'bg-muted text-muted-foreground'}"

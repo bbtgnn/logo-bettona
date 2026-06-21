@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import AnimatableSlider from './AnimatableSlider.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 const param = {
 	id: 'kaleidoscope.scale',
@@ -17,6 +18,7 @@ const param = {
 
 describe('AnimatableSlider', () => {
 	beforeEach(() => {
+		switchLocale('en');
 		keyframes.tracks[param.id] = { paramId: param.id, enabled: false, keyframes: [] };
 		kaleidoscope.scale = 1;
 	});
@@ -29,7 +31,7 @@ describe('AnimatableSlider', () => {
 
 	it('arms the track when the stopwatch is toggled on', async () => {
 		render(AnimatableSlider, { param });
-		const stopwatch = page.getByLabelText('Anima Scala globale');
+		const stopwatch = page.getByLabelText('Animate Scala globale');
 		await stopwatch.click();
 		expect(keyframes.tracks[param.id].enabled).toBe(true);
 	});
@@ -54,7 +56,7 @@ describe('AnimatableSlider', () => {
 		// Even with the track armed, a non-animatable slider must ignore arming.
 		keyframes.tracks[param.id].enabled = true;
 		render(AnimatableSlider, { param, animatable: false });
-		expect(page.getByLabelText('Anima Scala globale').query()).toBeNull();
+		expect(page.getByLabelText('Animate Scala globale').query()).toBeNull();
 		const slider = page.getByLabelText('Scala globale', { exact: true });
 		await slider.fill('2');
 		expect(kaleidoscope.scale).toBe(2);

@@ -11,6 +11,7 @@
 		requestTileRefresh
 	} from '$lib/state/kaleidoscope.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
+	import { m } from '$lib/paraglide/messages';
 
 	// animatable=false → static sliders (no stopwatch), for the Editor where the
 	// kaleidoscope look is modelled but not keyframed. Animate uses the default.
@@ -21,7 +22,7 @@
 
 <SidebarCollapsible>
 	{#snippet trigger()}
-		Caleidoscopio
+		{m.editor_kaleidoscope()}
 	{/snippet}
 
 	{#snippet content()}
@@ -29,11 +30,11 @@
 			<label class="flex items-center gap-2 text-xs">
 				<input
 					type="checkbox"
-					aria-label="Modalità caleidoscopio"
+					aria-label={m.editor_kaleido_mode()}
 					checked={kaleidoscope.enabled}
 					onchange={(e) => setKaleidoscopeEnabled(checked(e))}
 				/>
-				Modalità caleidoscopio
+				{m.editor_kaleido_mode()}
 			</label>
 
 			{#each KALEIDO_PARAMS as param (param.id)}
@@ -43,37 +44,37 @@
 			<label class="flex items-center gap-2 text-xs">
 				<input
 					type="checkbox"
-					aria-label="Maschera circolare"
+					aria-label={m.editor_kaleido_circular_mask()}
 					checked={kaleidoscope.circularMask}
 					onchange={(e) => setCircularMask(checked(e))}
 				/>
-				Maschera circolare
+				{m.editor_kaleido_circular_mask()}
 			</label>
 
 			<label class="flex items-center gap-2 text-xs">
 				<input
 					type="checkbox"
-					aria-label="Tessera viva"
+					aria-label={m.editor_kaleido_live_tile()}
 					checked={kaleidoscope.liveTile}
 					onchange={(e) => setLiveTile(checked(e))}
 				/>
-				Tessera viva (audio)
+				{m.editor_kaleido_live_tile_audio()}
 			</label>
 
 			{#if !kaleidoscope.liveTile}
 				<Button variant="outline" class="w-full" onclick={() => requestTileRefresh()}>
-					Aggiorna istantanea
+					{m.editor_kaleido_refresh_snapshot()}
 				</Button>
 			{/if}
 
 			<label class="flex items-center gap-2 text-xs">
 				<input
 					type="checkbox"
-					aria-label="Sfondo tessera"
+					aria-label={m.editor_kaleido_tile_background()}
 					checked={kaleidoscope.tileBackground}
 					onchange={(e) => setTileBackground(checked(e))}
 				/>
-				Sfondo tessera
+				{m.editor_kaleido_tile_background()}
 			</label>
 		</div>
 	{/snippet}

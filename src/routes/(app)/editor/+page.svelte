@@ -7,6 +7,7 @@
 	import ColorsSection from '$lib/components/ColorsSection.svelte';
 	import SidebarCollapsible from '$lib/components/SidebarCollapsible.svelte';
 	import { composition, addRing, reorderRings } from '$lib/state/composition';
+	import { m } from '$lib/paraglide/messages';
 
 	let dragFromIndex: number | null = null;
 
@@ -38,15 +39,15 @@
 
 <SidebarCollapsible>
 	{#snippet trigger()}
-		Rings
+		{m.editor_rings()}
 	{/snippet}
 
 	{#snippet content()}
-		<Button onclick={addRing} class="w-full">Add Ring</Button>
+		<Button onclick={addRing} class="w-full">{m.editor_add_ring()}</Button>
 
 		{#if composition.rings.length === 0}
 			<p class="py-8 text-center text-xs text-muted-foreground">
-				No rings yet. Click "Add Ring" to start.
+				{m.editor_no_rings()}
 			</p>
 		{:else}
 			<div class="space-y-0.5">

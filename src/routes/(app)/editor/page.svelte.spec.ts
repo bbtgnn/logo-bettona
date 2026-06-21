@@ -1,9 +1,12 @@
 import { page } from 'vitest/browser';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import EditorPage from './+page.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 describe('Editor page', () => {
+	beforeEach(() => switchLocale('en'));
+
 	it('renders the Rings add button but not the Animation section', async () => {
 		render(EditorPage);
 		await expect.element(page.getByRole('button', { name: 'Add Ring' })).toBeInTheDocument();
@@ -12,7 +15,7 @@ describe('Editor page', () => {
 
 	it('shows the kaleidoscope section without stopwatches (static, not animatable)', async () => {
 		render(EditorPage);
-		await expect.element(page.getByLabelText('Modalità caleidoscopio')).toBeInTheDocument();
-		expect(page.getByLabelText('Anima Rotazione globale').query()).toBeNull();
+		await expect.element(page.getByLabelText('Kaleidoscope mode')).toBeInTheDocument();
+		expect(page.getByLabelText('Animate Global rotation').query()).toBeNull();
 	});
 });
