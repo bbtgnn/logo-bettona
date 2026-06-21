@@ -165,6 +165,18 @@ export function createPreviewPresenter() {
 			// owns that two-pass now, so the caller just declares it.
 			const restFit = animationState.mode === 'audioZones' ? { fraction: REST_FRACTION } : undefined;
 			pipeline!.render({ composition: comp, scope: scope!, ignoreMorph, viewport, restFit });
+
+			// Paint the palette background behind the rings. pipeline.render() cleared the
+			// scope, so re-add it every render; sendToBack keeps it under the marks. The flat
+			// SVG export reads this same scene and the WebM export captures this canvas, so all
+			// three surfaces inherit the background from here. Tagged so exportSvg can tell the
+			// background apart from real content.
+			scope!.activate();
+			const background = new paper.Path.Rectangle(scope!.view.bounds);
+			background.fillColor = new paper.Color(getCompositionBackgroundColor());
+			background.name = 'preview-background';
+			background.sendToBack();
+			scope!.view.update();
 		});
 
 		// Kaleidoscope rAF loop: the sole writer of the visible canvas while enabled.

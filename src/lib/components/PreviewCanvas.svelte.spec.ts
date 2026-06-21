@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
-import { composition } from '$lib/state/composition';
+import { composition, colorMode } from '$lib/state/composition';
 import { animationState, setAnimationDurationSec } from '$lib/state/animation';
 import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
@@ -169,5 +169,51 @@ describe('PreviewCanvas.svelte', () => {
 		render(PreviewCanvas);
 		expect(page.getByLabelText('Durata (s)', { exact: true }).query()).toBeNull();
 		expect(animationState.durationSec).toBe(7);
+	});
+
+	it('paints a palette-colored background rect behind the rings in flat mode', async () => {
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#112233' }
+		];
+		colorMode.palette = 0;
+
+		render(PreviewCanvas);
+
+		await vi.waitFor(() => {
+			expect(lastRenderedScope).toBeDefined();
+			const children = lastRenderedScope!.project.activeLayer.children;
+			const bg = children.find((c) => c.name === 'preview-background');
+			expect(bg).toBeDefined();
+			// back-most item
+			expect(children.indexOf(bg!)).toBe(0);
+			expect((bg as paper.Path).fillColor?.toCSS(true)).toBe('#112233');
+		});
+	});
+
+	it('updates the background rect color when the palette background changes', async () => {
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#112233' }
+		];
+		colorMode.palette = 0;
+
+		render(PreviewCanvas);
+
+		await vi.waitFor(() => {
+			const bg = lastRenderedScope!.project.activeLayer.children.find(
+				(c) => c.name === 'preview-background'
+			);
+			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#112233');
+		});
+
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#445566' }
+		];
+
+		await vi.waitFor(() => {
+			const bg = lastRenderedScope!.project.activeLayer.children.find(
+				(c) => c.name === 'preview-background'
+			);
+			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#445566');
+		});
 	});
 });
