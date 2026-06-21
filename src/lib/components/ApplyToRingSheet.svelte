@@ -62,7 +62,7 @@
 					<select
 						id="apply-ring"
 						data-testid="apply-ring-select"
-						class="h-9 rounded-md border border-input bg-background px-3 text-xs"
+						class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
 						value={ringIndex}
 						onchange={(e) => (ringIndex = Number((e.target as HTMLSelectElement).value))}
 					>
