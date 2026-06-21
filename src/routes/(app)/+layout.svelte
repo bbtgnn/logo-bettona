@@ -4,6 +4,8 @@
 	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
 	import PreviewCanvas from '$lib/components/PreviewCanvas.svelte';
 	import TimelinePanel from '$lib/components/TimelinePanel.svelte';
+	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
+	import { m } from '$lib/paraglide/messages';
 	import { currentLocale } from '$lib/state/locale.svelte';
 
 	let { children } = $props();
@@ -23,13 +25,16 @@
 			<header class="flex items-center gap-2 border-b p-4">
 				<SidebarUI.SidebarTrigger />
 				<WorkspaceNav />
-				<a
-					href="/about"
-					class="ml-auto text-sm text-muted-foreground hover:text-foreground"
-					data-testid="header-about-link"
-				>
-					About
-				</a>
+				<div class="ml-auto flex items-center gap-3">
+					<LanguageSwitcher />
+					<a
+						href="/about"
+						class="text-sm text-muted-foreground hover:text-foreground"
+						data-testid="header-about-link"
+					>
+						{m.header_about()}
+					</a>
+				</div>
 			</header>
 			<main class="flex flex-1 items-center justify-center p-8" data-testid="app-canvas">
 				<PreviewCanvas animate={isAnimate} />
