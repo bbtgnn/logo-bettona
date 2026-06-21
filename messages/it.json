@@ -151,5 +151,14 @@
 	"paths_library_anim": "Libreria animazioni",
 	"paths_add_ring_hint": "Aggiungi un anello in Editor per applicare.",
 	"paths_nothing_to_show": "Nessuna forma da mostrare.",
-	"paths_anim_placeholder": "Anim Library — preset di animazioni, in arrivo."
+	"paths_anim_placeholder": "Anim Library — preset di animazioni, in arrivo.",
+	"about_page_title": "About — logo-bettona",
+	"about_back": "← Indietro",
+	"about_tagline": "Strumento per generare loghi a forma di anello.",
+	"about_what_title": "Cos'è",
+	"about_what_body": "Editor interattivo per creare loghi circolari. Configura colori, anima percorsi, esporta. Pensato per designer che vogliono iterare velocemente su identità visive radiali.",
+	"about_how_title": "Come si usa",
+	"about_how_colors": "Imposta palette monocromatica o piena. Definisce colori anello e sfondo.",
+	"about_how_animation": "Anima percorsi anello. Scegli driver (es. anime.js) e parametri.",
+	"about_how_settings": "Geometria anello: raggio, spessore, segmenti."
 }

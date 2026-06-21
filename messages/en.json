@@ -151,5 +151,14 @@
 	"paths_library_anim": "Anim Library",
 	"paths_add_ring_hint": "Add a ring in Editor to apply.",
 	"paths_nothing_to_show": "Nothing to show.",
-	"paths_anim_placeholder": "Anim Library — animation presets, coming soon."
+	"paths_anim_placeholder": "Anim Library — animation presets, coming soon.",
+	"about_page_title": "About — logo-bettona",
+	"about_back": "← Back",
+	"about_tagline": "A tool to generate ring-shaped logos.",
+	"about_what_title": "What it is",
+	"about_what_body": "Interactive editor to create circular logos. Configure colours, animate paths, export. Built for designers who want to iterate quickly on radial visual identities.",
+	"about_how_title": "How to use it",
+	"about_how_colors": "Set a monochrome or full palette. Defines ring and background colours.",
+	"about_how_animation": "Animate ring paths. Choose a driver (e.g. anime.js) and parameters.",
+	"about_how_settings": "Ring geometry: radius, thickness, segments."
 }

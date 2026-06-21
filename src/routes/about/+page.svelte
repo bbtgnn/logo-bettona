@@ -1,8 +1,9 @@
 <script lang="ts">
 	import AboutHeroRing from '$lib/components/AboutHeroRing.svelte';
+	import { m } from '$lib/paraglide/messages';
 </script>
 
-<svelte:head><title>About — logo-bettona</title></svelte:head>
+<svelte:head><title>{m.about_page_title()}</title></svelte:head>
 
 <div class="min-h-screen w-full bg-background text-foreground">
 	<header class="border-b">
@@ -12,7 +13,7 @@
 				class="text-sm text-muted-foreground hover:text-foreground"
 				data-testid="about-back-link"
 			>
-				← Back
+				{m.about_back()}
 			</a>
 		</div>
 	</header>
@@ -20,33 +21,31 @@
 	<main class="mx-auto max-w-[1100px] px-6 py-16">
 		<section class="flex flex-col items-center gap-6 text-center">
 			<h1 class="text-5xl font-semibold tracking-tight">logo-bettona</h1>
-			<p class="max-w-xl text-muted-foreground">Strumento per generare loghi a forma di anello.</p>
+			<p class="max-w-xl text-muted-foreground">{m.about_tagline()}</p>
 			<AboutHeroRing />
 		</section>
 
 		<section class="mt-20 grid grid-cols-1 gap-8 md:grid-cols-2">
 			<article class="rounded-lg border p-6">
-				<h2 class="text-xl font-semibold">Cos'è</h2>
+				<h2 class="text-xl font-semibold">{m.about_what_title()}</h2>
 				<p class="mt-3 text-sm text-muted-foreground">
-					Editor interattivo per creare loghi circolari. Configura colori, anima percorsi, esporta.
-					Pensato per designer che vogliono iterare velocemente su identità visive radiali.
+					{m.about_what_body()}
 				</p>
 			</article>
 
 			<article class="rounded-lg border p-6">
-				<h2 class="text-xl font-semibold">Come si usa</h2>
+				<h2 class="text-xl font-semibold">{m.about_how_title()}</h2>
 				<ul class="mt-3 space-y-3 text-sm text-muted-foreground">
 					<li>
-						<span class="font-medium text-foreground">Colors</span> — Imposta palette monocromatica o
-						piena. Definisce colori anello e sfondo.
+						<span class="font-medium text-foreground">{m.editor_colors()}</span> — {m.about_how_colors()}
 					</li>
 					<li>
-						<span class="font-medium text-foreground">Animation</span> — Anima percorsi anello. Scegli
-						driver (es. anime.js) e parametri.
+						<span class="font-medium text-foreground">{m.animate_animation()}</span> —
+						{m.about_how_animation()}
 					</li>
 					<li>
-						<span class="font-medium text-foreground">Settings</span> — Geometria anello: raggio, spessore,
-						segmenti.
+						<span class="font-medium text-foreground">{m.editor_settings()}</span> —
+						{m.about_how_settings()}
 					</li>
 				</ul>
 			</article>
