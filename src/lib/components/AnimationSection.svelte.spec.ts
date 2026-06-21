@@ -73,9 +73,11 @@ vi.mock('$lib/state/animation', () => animationApi);
 vi.mock('$lib/state/composition', () => compositionApi);
 
 import AnimationSection from './AnimationSection.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 describe('AnimationSection', () => {
 	beforeEach(() => {
+		switchLocale('en');
 		vi.clearAllMocks();
 		animationApi.animationState.mode = null;
 		animationApi.animationState.audioSource = 'demo';
@@ -101,7 +103,7 @@ describe('AnimationSection', () => {
 		animationApi.animationState.mode = null;
 		render(AnimationSection);
 
-		await userEvent.selectOptions(page.getByLabelText('Sorgente movimento'), 'dataSeries');
+		await userEvent.selectOptions(page.getByLabelText('Motion source'), 'dataSeries');
 
 		expect(animationApi.setAnimationMode).toHaveBeenLastCalledWith('dataSeries');
 	});
@@ -110,7 +112,7 @@ describe('AnimationSection', () => {
 		animationApi.animationState.mode = 'simple';
 		render(AnimationSection);
 		await expect.element(page.getByRole('option', { name: /Simple/ })).toBeInTheDocument();
-		const select = page.getByLabelText('Sorgente movimento');
+		const select = page.getByLabelText('Motion source');
 		await expect.element(select).toHaveValue('simple');
 	});
 
@@ -118,17 +120,17 @@ describe('AnimationSection', () => {
 		animationApi.animationState.mode = 'simple';
 		render(AnimationSection);
 		await expect.element(page.getByTestId('audio-reactivity-toggle')).not.toBeChecked();
-		expect(page.getByLabelText('Tipo di reattività').query()).toBeNull();
-		await expect.element(page.getByLabelText('Sorgente movimento')).toBeInTheDocument();
+		expect(page.getByLabelText('Reactivity type').query()).toBeNull();
+		await expect.element(page.getByLabelText('Motion source')).toBeInTheDocument();
 	});
 
 	it('audio reactivity toggle is on and shows the audio-type selector in an audio mode', async () => {
 		animationApi.animationState.mode = 'audioBars';
 		render(AnimationSection);
 		await expect.element(page.getByTestId('audio-reactivity-toggle')).toBeChecked();
-		await expect.element(page.getByLabelText('Tipo di reattività')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Reactivity type')).toBeInTheDocument();
 		// the motion-source selector (Simple/Data Series) is not competing for the slot
-		expect(page.getByLabelText('Sorgente movimento').query()).toBeNull();
+		expect(page.getByLabelText('Motion source').query()).toBeNull();
 	});
 
 	it('turning audio reactivity on selects an audio mode (timeline is independent)', async () => {

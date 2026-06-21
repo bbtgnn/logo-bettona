@@ -2,6 +2,7 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { animationState, audioSource, togglePlay } from '$lib/state/animation';
+	import { m } from '$lib/paraglide/messages';
 
 	// ── canvas ref and rAF state ─────────────────────────────────────────────
 	let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -179,7 +180,7 @@
 			loadedName = audioSource.getFileName();
 			loadedDuration = audioSource.getDuration();
 		} catch {
-			loadError = 'Could not decode audio. Try a different file (MP3, WAV, AAC).';
+			loadError = m.animate_audio_decode_error();
 		} finally {
 			isLoading = false;
 		}
@@ -222,9 +223,9 @@
 			ondrop={handleDrop}
 		>
 			{#if isLoading}
-				<span class="text-muted-foreground">Loading…</span>
+				<span class="text-muted-foreground">{m.animate_audio_loading()}</span>
 			{:else}
-				<span class="text-muted-foreground">Drop audio file here or browse</span>
+				<span class="text-muted-foreground">{m.animate_audio_drop()}</span>
 			{/if}
 		</label>
 		{#if loadError}
@@ -239,10 +240,10 @@
 			</div>
 			<div class="flex shrink-0 gap-1">
 				<Button variant="ghost" class="h-6 px-2 text-[11px]" onclick={() => fileInputEl?.click()}>
-					Replace
+					{m.animate_audio_replace()}
 				</Button>
 				<Button variant="ghost" class="h-6 px-2 text-[11px]" onclick={handleRemove}>
-					Remove
+					{m.common_remove()}
 				</Button>
 			</div>
 		</div>
@@ -259,9 +260,9 @@
 		<!-- Transport + region controls -->
 		<div class="flex items-center gap-2">
 			{#if isPlaying}
-				<Button class="h-7 text-xs" onclick={handlePause}>Pause</Button>
+				<Button class="h-7 text-xs" onclick={handlePause}>{m.common_pause()}</Button>
 			{:else}
-				<Button class="h-7 text-xs" onclick={handlePlay}>Play</Button>
+				<Button class="h-7 text-xs" onclick={handlePlay}>{m.common_play()}</Button>
 			{/if}
 
 			<label class="flex items-center gap-1 text-xs">
@@ -269,13 +270,15 @@
 					type="checkbox"
 					checked={isLooping}
 					onchange={handleLoopChange}
-					aria-label="Loop region"
+					aria-label={m.animate_audio_loop_region()}
 				/>
-				Loop
+				{m.animate_audio_loop()}
 			</label>
 
 			<div class="ml-auto flex items-center gap-1">
-				<Label for="region-duration" class="whitespace-nowrap text-xs">Region (s)</Label>
+				<Label for="region-duration" class="text-xs whitespace-nowrap"
+					>{m.animate_audio_region()}</Label
+				>
 				<input
 					id="region-duration"
 					type="number"
@@ -305,7 +308,7 @@
 		<div
 			class="h-1.5 rounded bg-muted"
 			role="meter"
-			aria-label="Audio input level"
+			aria-label={m.animate_input_level_aria()}
 			aria-valuemin={0}
 			aria-valuemax={100}
 			aria-valuenow={inputLevelPercent}

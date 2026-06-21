@@ -11,6 +11,7 @@
 		audioSource
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
+	import { m } from '$lib/paraglide/messages';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import RingWaveConfigItem from './RingWaveConfigItem.svelte';
 	import AudioFilePanel from './AudioFilePanel.svelte';
@@ -30,7 +31,9 @@
 	let lastAudioMode = $state<AudioMode>(
 		animationState.mode === 'audioZones' ? 'audioZones' : 'audioBars'
 	);
-	let lastMotionMode = $state<MotionMode>(animationState.mode === 'dataSeries' ? 'dataSeries' : 'simple');
+	let lastMotionMode = $state<MotionMode>(
+		animationState.mode === 'dataSeries' ? 'dataSeries' : 'simple'
+	);
 
 	function selectAudioMode(mode: AudioMode) {
 		lastAudioMode = mode;
@@ -62,7 +65,7 @@
 
 	const showInputLevel = $derived(
 		(animationState.mode === 'audioBars' || animationState.mode === 'audioZones') &&
-		animationState.audioSource === 'mic'
+			animationState.audioSource === 'mic'
 	);
 
 	// Live input meter: polls the analyser's raw peak each frame while a real source
@@ -90,7 +93,7 @@
 
 <SidebarCollapsible>
 	{#snippet trigger()}
-		Animation
+		{m.animate_animation()}
 	{/snippet}
 
 	{#snippet content()}
@@ -99,7 +102,7 @@
 				<p
 					class="rounded border border-yellow-300 bg-yellow-100 px-2 py-1 text-[11px] text-yellow-900"
 				>
-					Animation won’t run until at least one ring has a secondary path.
+					{m.animate_block_warning()}
 				</p>
 			{/if}
 
@@ -111,29 +114,28 @@
 						checked={audioReactive}
 						onchange={(e) => toggleAudioReactivity((e.target as HTMLInputElement).checked)}
 					/>
-					Reattività audio
+					{m.animate_audio_reactivity()}
 				</label>
 				<p class="text-[11px] text-muted-foreground">
-					I petali reagiscono al suono. Resta attiva insieme alla timeline.
+					{m.animate_audio_reactivity_hint()}
 				</p>
 
 				{#if audioReactive}
 					<div class="flex flex-col gap-1">
-						<Label for="audio-mode" class="text-xs">Tipo di reattività</Label>
+						<Label for="audio-mode" class="text-xs">{m.animate_reactivity_type()}</Label>
 						<select
 							id="audio-mode"
 							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
 							value={animationState.mode}
-							onchange={(e) =>
-								selectAudioMode((e.target as HTMLSelectElement).value as AudioMode)}
+							onchange={(e) => selectAudioMode((e.target as HTMLSelectElement).value as AudioMode)}
 						>
-							<option value="audioBars">Audio Bars · onda per anello</option>
-							<option value="audioZones">Audio Zones · deforma per banda</option>
+							<option value="audioBars">{m.animate_opt_audio_bars()}</option>
+							<option value="audioZones">{m.animate_opt_audio_zones()}</option>
 						</select>
 					</div>
 				{:else}
 					<div class="flex flex-col gap-1">
-						<Label for="motion-source" class="text-xs">Sorgente movimento</Label>
+						<Label for="motion-source" class="text-xs">{m.animate_motion_source()}</Label>
 						<select
 							id="motion-source"
 							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
@@ -143,13 +145,13 @@
 								selectMotionMode(v === '' ? null : (v as MotionMode));
 							}}
 						>
-							<option value="simple">Simple · morph tra forme</option>
-							<option value="dataSeries">Data Series · valori per anello</option>
-							<option value="">Nessuna</option>
+							<option value="simple">{m.animate_opt_simple()}</option>
+							<option value="dataSeries">{m.animate_opt_data_series()}</option>
+							<option value="">{m.animate_opt_none()}</option>
 						</select>
 						{#if animationState.mode === 'dataSeries'}
 							<p class="text-[11px] text-muted-foreground">
-								Data Series mode maps each ring to your configured series values.
+								{m.animate_data_series_hint()}
 							</p>
 						{/if}
 					</div>
@@ -159,7 +161,7 @@
 			{#if animationState.mode === 'audioBars'}
 				<div class="flex flex-col gap-2 rounded border border-border p-2">
 					<div class="flex flex-col gap-1">
-						<Label for="audio-source" class="text-xs">Audio source</Label>
+						<Label for="audio-source" class="text-xs">{m.animate_audio_source()}</Label>
 						<select
 							id="audio-source"
 							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
@@ -169,19 +171,19 @@
 									(e.target as HTMLSelectElement).value as 'demo' | 'mic' | 'file' | 'off'
 								)}
 						>
-							<option value="demo">Demo</option>
-							<option value="mic">Microphone</option>
-							<option value="file">File</option>
+							<option value="demo">{m.animate_source_demo()}</option>
+							<option value="mic">{m.animate_source_microphone()}</option>
+							<option value="file">{m.animate_source_file()}</option>
 						</select>
 					</div>
 
 					{#if showInputLevel}
 						<div class="flex flex-col gap-1">
-							<Label class="text-xs">Input level</Label>
+							<Label class="text-xs">{m.animate_input_level()}</Label>
 							<div
 								class="h-1.5 rounded bg-muted"
 								role="meter"
-								aria-label="Audio input level"
+								aria-label={m.animate_input_level_aria()}
 								aria-valuemin={0}
 								aria-valuemax={100}
 								aria-valuenow={inputLevelPercent}
@@ -192,14 +194,14 @@
 								></div>
 							</div>
 							<p class="text-[10px] text-muted-foreground">
-								Source is being heard when this moves. Still flower + moving meter → raise gain.
+								{m.animate_input_hint_bars()}
 							</p>
 						</div>
 					{/if}
 
 					{#if animationState.audioSource === 'mic'}
 						<p class="text-[10px] text-muted-foreground">
-							Listening — speak or play near the microphone.
+							{m.animate_mic_listening()}
 						</p>
 					{/if}
 
@@ -208,7 +210,7 @@
 					{/if}
 
 					<div class="flex flex-col gap-1">
-						<Label for="input-gain" class="text-xs">Input gain</Label>
+						<Label for="input-gain" class="text-xs">{m.animate_input_gain()}</Label>
 						<input
 							id="input-gain"
 							type="range"
@@ -222,7 +224,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						<Label for="wave-crests" class="text-xs">Wave crests</Label>
+						<Label for="wave-crests" class="text-xs">{m.animate_wave_crests()}</Label>
 						<input
 							id="wave-crests"
 							type="range"
@@ -236,7 +238,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						<Label for="amplitude-gain" class="text-xs">Amplitude gain</Label>
+						<Label for="amplitude-gain" class="text-xs">{m.animate_amplitude_gain()}</Label>
 						<input
 							id="amplitude-gain"
 							type="range"
@@ -252,7 +254,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						<Label for="phase-speed" class="text-xs">Phase speed</Label>
+						<Label for="phase-speed" class="text-xs">{m.animate_phase_speed()}</Label>
 						<input
 							id="phase-speed"
 							type="range"
@@ -268,7 +270,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						<Label for="smoothing" class="text-xs">Smoothing</Label>
+						<Label for="smoothing" class="text-xs">{m.animate_smoothing()}</Label>
 						<input
 							id="smoothing"
 							type="range"
@@ -282,7 +284,7 @@
 					</div>
 
 					<div class="flex flex-col gap-1">
-						<p class="text-[11px] font-medium text-muted-foreground">Wave per ring</p>
+						<p class="text-[11px] font-medium text-muted-foreground">{m.animate_wave_per_ring()}</p>
 						{#each composition.rings as ring, i (i)}
 							<RingWaveConfigItem {ring} index={i} globalDefault={globalWaveDefault} />
 						{/each}
@@ -293,7 +295,7 @@
 			{#if animationState.mode === 'audioZones'}
 				<div class="flex flex-col gap-2 rounded border border-border p-2">
 					<div class="flex flex-col gap-1">
-						<Label for="audio-source-zones" class="text-xs">Audio source</Label>
+						<Label for="audio-source-zones" class="text-xs">{m.animate_audio_source()}</Label>
 						<select
 							id="audio-source-zones"
 							class="h-9 rounded-md border border-input bg-background px-3 text-xs"
@@ -303,34 +305,37 @@
 									(e.target as HTMLSelectElement).value as 'demo' | 'mic' | 'file' | 'off'
 								)}
 						>
-							<option value="demo">Demo</option>
-							<option value="mic">Microphone</option>
-							<option value="file">File</option>
+							<option value="demo">{m.animate_source_demo()}</option>
+							<option value="mic">{m.animate_source_microphone()}</option>
+							<option value="file">{m.animate_source_file()}</option>
 						</select>
 					</div>
 
 					{#if showInputLevel}
 						<div class="flex flex-col gap-1">
-							<Label class="text-xs">Input level</Label>
+							<Label class="text-xs">{m.animate_input_level()}</Label>
 							<div
 								class="h-1.5 rounded bg-muted"
 								role="meter"
-								aria-label="Audio input level"
+								aria-label={m.animate_input_level_aria()}
 								aria-valuemin={0}
 								aria-valuemax={100}
 								aria-valuenow={inputLevelPercent}
 							>
-								<div class="h-full rounded bg-green-500" style:width={`${inputLevelPercent}%`}></div>
+								<div
+									class="h-full rounded bg-green-500"
+									style:width={`${inputLevelPercent}%`}
+								></div>
 							</div>
 							<p class="text-[10px] text-muted-foreground">
-								Source is being heard when this moves.
+								{m.animate_input_hint_zones()}
 							</p>
 						</div>
 					{/if}
 
 					{#if animationState.audioSource === 'mic'}
 						<p class="text-[10px] text-muted-foreground">
-							Listening — speak or play near the microphone.
+							{m.animate_mic_listening()}
 						</p>
 					{/if}
 
@@ -339,9 +344,11 @@
 					{/if}
 
 					<div class="flex flex-col gap-2">
-						<p class="text-[11px] font-medium text-muted-foreground">Intensità per banda</p>
+						<p class="text-[11px] font-medium text-muted-foreground">
+							{m.animate_intensity_per_band()}
+						</p>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-bass" class="text-xs">Bassi · punta</Label>
+							<Label for="zones-bass" class="text-xs">{m.animate_zone_bass()}</Label>
 							<input
 								id="zones-bass"
 								type="range"
@@ -356,7 +363,7 @@
 							/>
 						</div>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-mid" class="text-xs">Medi · fianchi</Label>
+							<Label for="zones-mid" class="text-xs">{m.animate_zone_mid()}</Label>
 							<input
 								id="zones-mid"
 								type="range"
@@ -371,7 +378,7 @@
 							/>
 						</div>
 						<div class="flex flex-col gap-1">
-							<Label for="zones-treble" class="text-xs">Alti · base</Label>
+							<Label for="zones-treble" class="text-xs">{m.animate_zone_treble()}</Label>
 							<input
 								id="zones-treble"
 								type="range"
@@ -388,7 +395,6 @@
 					</div>
 				</div>
 			{/if}
-
 		</div>
 	{/snippet}
 </SidebarCollapsible>

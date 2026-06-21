@@ -4,6 +4,7 @@
 	import { CaretDown, CaretRight } from 'phosphor-svelte';
 	import { updateRing } from '$lib/state/composition';
 	import { resolveWaveConfig } from '$lib/geometry/wave';
+	import { m } from '$lib/paraglide/messages';
 	import WavePreview from './WavePreview.svelte';
 	import type { Ring, WaveConfig } from '$lib/types';
 
@@ -34,11 +35,11 @@
 				{:else}
 					<CaretRight size={14} />
 				{/if}
-				Ring {index + 1}
+				{m.editor_ring_label({ index: index + 1 })}
 				{#if hasOverride}
 					<span
 						class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-normal text-muted-foreground"
-						>(custom)</span
+						>{m.animate_custom()}</span
 					>
 				{/if}
 			</Collapsible.CollapsibleTrigger>
@@ -69,13 +70,13 @@
 					class="h-4 w-4 cursor-pointer rounded border-input"
 				/>
 				<Label for="wave-override-{index}" class="cursor-pointer text-xs"
-					>Customize wave for this ring</Label
+					>{m.animate_customize_wave()}</Label
 				>
 			</div>
 
 			{#if hasOverride}
 				<div class="flex flex-col gap-1">
-					<Label for="ring-crests-{index}" class="text-xs">Wave crests</Label>
+					<Label for="ring-crests-{index}" class="text-xs">{m.animate_wave_crests()}</Label>
 					<input
 						id="ring-crests-{index}"
 						type="range"
@@ -94,7 +95,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<Label for="ring-amplitude-{index}" class="text-xs">Amplitude gain</Label>
+					<Label for="ring-amplitude-{index}" class="text-xs">{m.animate_amplitude_gain()}</Label>
 					<input
 						id="ring-amplitude-{index}"
 						type="range"
@@ -113,7 +114,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<Label for="ring-phase-speed-{index}" class="text-xs">Phase speed</Label>
+					<Label for="ring-phase-speed-{index}" class="text-xs">{m.animate_phase_speed()}</Label>
 					<input
 						id="ring-phase-speed-{index}"
 						type="range"
