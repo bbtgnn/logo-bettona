@@ -14,7 +14,7 @@
 	<select
 		data-testid="language-switcher"
 		aria-label={m.header_language()}
-		class="h-8 w-auto min-w-[5rem] rounded border bg-background px-2 text-sm"
+		class="h-8 w-auto min-w-[5.5rem] rounded border bg-background py-1 text-sm"
 		value={currentLocale()}
 		onchange={(e) => switchLocale((e.currentTarget as HTMLSelectElement).value as Locale)}
 	>

@@ -174,7 +174,7 @@
 					{m.timeline_fps()}
 					<select
 						aria-label={m.timeline_fps_aria()}
-						class="h-7 rounded border bg-background px-2 py-1 text-xs"
+						class="h-7 rounded border bg-background py-1 text-xs"
 						value={animationState.fps}
 						onchange={(e) => setAnimationFps(Number((e.target as HTMLSelectElement).value))}
 					>
@@ -242,7 +242,7 @@
 				<div data-testid="timeline-graph" class="flex flex-col gap-2">
 					<select
 						aria-label={m.timeline_graph_param()}
-						class="h-7 w-fit rounded border bg-background px-2 py-1 text-xs"
+						class="h-7 w-fit rounded border bg-background py-1 text-xs"
 						value={graphParam?.id ?? ''}
 						onchange={(e) => (graphParamId = (e.target as HTMLSelectElement).value)}
 					>
@@ -288,7 +288,7 @@
 							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-2">
 								<select
 									aria-label={m.timeline_interp_aria()}
-									class="h-7 rounded border bg-background px-2 py-1 text-xs"
+									class="h-7 rounded border bg-background py-1 text-xs"
 									value={selectedKf.interp}
 									onchange={(e) => setSelectedInterp((e.target as HTMLSelectElement).value)}
 								>
