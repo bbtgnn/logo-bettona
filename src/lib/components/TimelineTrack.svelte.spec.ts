@@ -24,10 +24,10 @@ describe('TimelineTrack', () => {
 		await expect.element(page.getByTestId(`kf-${id}`)).toBeInTheDocument();
 	});
 
-	it('adds a keyframe at the playhead via the "Aggiungi keyframe" button', async () => {
+	it('adds a keyframe at the playhead via the "Add keyframe" button', async () => {
 		animationState.progress = 0.4;
 		render(TimelineTrack, { paramId: ROT, label: 'Rotazione' });
-		await userEvent.click(page.getByRole('button', { name: 'Aggiungi keyframe' }));
+		await userEvent.click(page.getByRole('button', { name: 'Add keyframe' }));
 		expect(keyframes.tracks[ROT].keyframes).toHaveLength(1);
 		expect(keyframes.tracks[ROT].keyframes[0].time).toBeCloseTo(0.4, 6);
 	});

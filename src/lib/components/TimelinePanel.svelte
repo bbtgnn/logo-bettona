@@ -13,6 +13,7 @@
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
 	import { xFromTime } from '$lib/animation/timeline-geometry';
+	import { m } from '$lib/paraglide/messages';
 	import type { Interp } from '$lib/animation/keyframes';
 	import TimelineRuler from './TimelineRuler.svelte';
 	import TimelineTrack from './TimelineTrack.svelte';
@@ -48,9 +49,9 @@
 
 	function formatElapsed(ms: number): string {
 		const totalSec = Math.floor(ms / 1000);
-		const m = Math.floor(totalSec / 60);
+		const min = Math.floor(totalSec / 60);
 		const s = totalSec % 60;
-		return `${m}:${String(s).padStart(2, '0')}`;
+		return `${min}:${String(s).padStart(2, '0')}`;
 	}
 
 	// Spacebar toggles play, except while typing in a field. Window-level so the
@@ -121,7 +122,7 @@
 	<div class="flex items-center gap-3 p-3">
 		<button
 			type="button"
-			aria-label="Mostra/nascondi timeline"
+			aria-label={m.timeline_toggle()}
 			class="flex items-center gap-1.5 text-sm font-medium text-foreground"
 			onclick={() => (open = !open)}
 		>
@@ -130,7 +131,7 @@
 			>
 				▸
 			</span>
-			Timeline
+			{m.timeline_title()}
 		</button>
 		{#if open}
 			<div class="flex items-center gap-2">
@@ -140,34 +141,39 @@
 					disabled={blockPlayback}
 					size="sm"
 				>
-					{animationState.isPlaying ? 'Pause' : 'Play'}
+					{animationState.isPlaying ? m.common_pause() : m.common_play()}
 				</Button>
-				<Button onclick={() => stopAnimation(true)} variant="ghost" size="sm">Stop</Button>
+				<Button onclick={() => stopAnimation(true)} variant="ghost" size="sm"
+					>{m.timeline_stop()}</Button
+				>
 
 				{#if isAudioMode}
-					<span class="text-xs text-muted-foreground tabular-nums" aria-label="Elapsed time">
+					<span
+						class="text-xs text-muted-foreground tabular-nums"
+						aria-label={m.timeline_elapsed_aria()}
+					>
 						{formatElapsed(animationState.elapsedMs)}
 					</span>
 				{:else}
 					<label class="flex items-center gap-1 text-xs text-muted-foreground">
-						Dur
+						{m.timeline_duration_label()}
 						<Input
 							type="number"
 							min="0.1"
 							step="0.1"
-							aria-label="Duration seconds"
+							aria-label={m.timeline_duration_aria()}
 							value={animationState.durationSec}
 							oninput={(e) => setAnimationDurationSec(Number((e.target as HTMLInputElement).value))}
 							class="h-7 w-16 text-xs"
 						/>
-						s
+						{m.timeline_seconds_unit()}
 					</label>
 				{/if}
 
 				<label class="flex items-center gap-1 text-xs text-muted-foreground">
-					fps
+					{m.timeline_fps()}
 					<select
-						aria-label="Frame rate"
+						aria-label={m.timeline_fps_aria()}
 						class="h-7 rounded border bg-background text-xs"
 						value={animationState.fps}
 						onchange={(e) => setAnimationFps(Number((e.target as HTMLSelectElement).value))}
@@ -184,14 +190,14 @@
 					size="sm"
 					onclick={() => (view = 'tracks')}
 				>
-					Timeline
+					{m.timeline_title()}
 				</Button>
 				<Button
 					variant={view === 'graph' ? 'default' : 'ghost'}
 					size="sm"
 					onclick={() => (view = 'graph')}
 				>
-					Graph Editor
+					{m.timeline_view_graph()}
 				</Button>
 			</div>
 
@@ -200,7 +206,7 @@
 					<Button
 						variant="ghost"
 						size="sm"
-						aria-label="Zoom indietro"
+						aria-label={m.timeline_zoom_out()}
 						onclick={zoomOut}
 						disabled={zoom <= ZOOM_MIN}
 					>
@@ -215,7 +221,7 @@
 					<Button
 						variant="ghost"
 						size="sm"
-						aria-label="Zoom avanti"
+						aria-label={m.timeline_zoom_in()}
 						onclick={zoomIn}
 						disabled={zoom >= ZOOM_MAX}
 					>
@@ -230,12 +236,12 @@
 		<div data-testid="timeline-body" class="flex min-h-[220px] flex-col gap-2 px-3 pb-3">
 			{#if armedParams.length === 0}
 				<p data-testid="timeline-empty" class="p-2 text-xs text-muted-foreground">
-					Arma un cronometro ⏱ nella sidebar per animare un parametro.
+					{m.timeline_empty_hint()}
 				</p>
 			{:else if view === 'graph'}
 				<div data-testid="timeline-graph" class="flex flex-col gap-2">
 					<select
-						aria-label="Parametro grafico"
+						aria-label={m.timeline_graph_param()}
 						class="h-7 w-fit rounded border bg-background text-xs"
 						value={graphParam?.id ?? ''}
 						onchange={(e) => (graphParamId = (e.target as HTMLSelectElement).value)}
@@ -281,16 +287,18 @@
 						{#if selectedKf}
 							<div data-testid="timeline-inspector" class="flex items-center gap-2 pt-2">
 								<select
-									aria-label="Interpolazione keyframe"
+									aria-label={m.timeline_interp_aria()}
 									class="h-7 rounded border bg-background text-xs"
 									value={selectedKf.interp}
 									onchange={(e) => setSelectedInterp((e.target as HTMLSelectElement).value)}
 								>
-									<option value="linear">Lineare</option>
-									<option value="bezier">Bezier</option>
-									<option value="hold">Hold</option>
+									<option value="linear">{m.timeline_interp_linear()}</option>
+									<option value="bezier">{m.timeline_interp_bezier()}</option>
+									<option value="hold">{m.timeline_interp_hold()}</option>
 								</select>
-								<Button variant="ghost" size="sm" onclick={deleteSelected}>Elimina keyframe</Button>
+								<Button variant="ghost" size="sm" onclick={deleteSelected}
+									>{m.timeline_delete_keyframe()}</Button
+								>
 							</div>
 						{/if}
 					</div>

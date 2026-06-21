@@ -5,9 +5,11 @@ import TimelinePanel from './TimelinePanel.svelte';
 import { keyframes } from '$lib/state/keyframes.svelte';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 import { animationState, stopAnimation } from '$lib/state/animation';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 describe('TimelinePanel', () => {
 	beforeEach(() => {
+		switchLocale('en');
 		for (const id of Object.keys(keyframes.tracks)) delete keyframes.tracks[id];
 		animationState.progress = 0;
 	});
@@ -30,9 +32,9 @@ describe('TimelinePanel', () => {
 	it('chevron collapses the open panel and re-expands it', async () => {
 		render(TimelinePanel);
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Show/hide timeline' }));
 		expect(page.getByTestId('timeline-body').query()).toBeNull();
-		await userEvent.click(page.getByRole('button', { name: 'Mostra/nascondi timeline' }));
+		await userEvent.click(page.getByRole('button', { name: 'Show/hide timeline' }));
 		await expect.element(page.getByTestId('timeline-body')).toBeInTheDocument();
 	});
 
@@ -72,7 +74,7 @@ describe('TimelinePanel', () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
-		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
+		expect(page.getByLabelText('Keyframe interpolation').query()).toBeNull();
 	});
 
 	it('selecting a keyframe reveals the contextual bar and edits interp', async () => {
@@ -81,7 +83,7 @@ describe('TimelinePanel', () => {
 		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
 		render(TimelinePanel);
 		await userEvent.click(page.getByTestId(`kf-${id}`));
-		await userEvent.selectOptions(page.getByLabelText('Interpolazione keyframe'), 'hold');
+		await userEvent.selectOptions(page.getByLabelText('Keyframe interpolation'), 'hold');
 		expect(keyframes.tracks['kaleidoscope.scale'].keyframes[0].interp).toBe('hold');
 	});
 
@@ -91,9 +93,9 @@ describe('TimelinePanel', () => {
 		const id = keyframes.addKeyframe('kaleidoscope.scale', { time: 0.5, value: 1 });
 		render(TimelinePanel);
 		await userEvent.click(page.getByTestId(`kf-${id}`));
-		await userEvent.click(page.getByRole('button', { name: 'Elimina keyframe' }));
+		await userEvent.click(page.getByRole('button', { name: 'Delete keyframe' }));
 		expect(keyframes.tracks['kaleidoscope.scale'].keyframes).toHaveLength(0);
-		expect(page.getByLabelText('Interpolazione keyframe').query()).toBeNull();
+		expect(page.getByLabelText('Keyframe interpolation').query()).toBeNull();
 	});
 
 	it('graph view defaults to an armed param that already has keyframes', async () => {
@@ -107,7 +109,7 @@ describe('TimelinePanel', () => {
 		await userEvent.click(page.getByRole('button', { name: 'Graph Editor' }));
 		// scale comes first in the registry, but the graph should skip it for the
 		// param that actually has a curve.
-		await expect.element(page.getByLabelText('Parametro grafico')).toHaveValue('kaleidoscope.sectors');
+		await expect.element(page.getByLabelText('Graph parameter')).toHaveValue('kaleidoscope.sectors');
 	});
 
 	it('switches to graph view then back to tracks WITHOUT closing the panel', async () => {
@@ -135,13 +137,13 @@ describe('TimelinePanel', () => {
 		await expect.element(page.getByTestId('timeline-zoom')).toHaveTextContent('100%');
 	});
 
-	it('zooms the tracks stage wider when Zoom avanti is pressed', async () => {
+	it('zooms the tracks stage wider when zoom-in is pressed', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
 		render(TimelinePanel);
 		const before = (page.getByTestId('timeline-tracks').element() as HTMLElement).style.width;
 		expect(before).toBe('100%');
-		await userEvent.click(page.getByRole('button', { name: 'Zoom avanti' }));
+		await userEvent.click(page.getByRole('button', { name: 'Zoom in' }));
 		const after = (page.getByTestId('timeline-tracks').element() as HTMLElement).style.width;
 		expect(after).not.toBe('100%');
 	});

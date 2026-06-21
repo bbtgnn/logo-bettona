@@ -3,6 +3,7 @@
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { animationState, refreshPreview } from '$lib/state/animation';
 	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
+	import { m } from '$lib/paraglide/messages';
 
 	let {
 		paramId,
@@ -71,7 +72,12 @@
 
 <div class="flex items-center gap-2">
 	<span class="w-28 shrink-0 truncate text-xs text-muted-foreground">{label}</span>
-	<Button variant="outline" size="sm" aria-label="Aggiungi keyframe" onclick={addAtPlayhead}>
+	<Button
+		variant="outline"
+		size="sm"
+		aria-label={m.timeline_add_keyframe()}
+		onclick={addAtPlayhead}
+	>
 		+
 	</Button>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -85,7 +91,7 @@
 			<button
 				type="button"
 				data-testid="kf-{kf.id}"
-				aria-label="Keyframe"
+				aria-label={m.timeline_keyframe()}
 				class="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border bg-foreground {kf.id ===
 				selectedId
 					? 'ring-2 ring-sky-400'
