@@ -125,7 +125,7 @@
 						<Label for="audio-mode" class="text-xs">{m.animate_reactivity_type()}</Label>
 						<select
 							id="audio-mode"
-							class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+							class="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
 							value={animationState.mode}
 							onchange={(e) => selectAudioMode((e.target as HTMLSelectElement).value as AudioMode)}
 						>
@@ -138,7 +138,7 @@
 						<Label for="motion-source" class="text-xs">{m.animate_motion_source()}</Label>
 						<select
 							id="motion-source"
-							class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+							class="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
 							value={animationState.mode ?? ''}
 							onchange={(e) => {
 								const v = (e.target as HTMLSelectElement).value;
@@ -164,7 +164,7 @@
 						<Label for="audio-source" class="text-xs">{m.animate_audio_source()}</Label>
 						<select
 							id="audio-source"
-							class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+							class="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
 							value={animationState.audioSource}
 							onchange={(e) =>
 								setAudioSource(
@@ -298,7 +298,7 @@
 						<Label for="audio-source-zones" class="text-xs">{m.animate_audio_source()}</Label>
 						<select
 							id="audio-source-zones"
-							class="h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+							class="h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-xs"
 							value={animationState.audioSource}
 							onchange={(e) =>
 								setAudioSource(

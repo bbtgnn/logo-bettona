@@ -168,7 +168,7 @@
 				<WorkspaceNav />
 				<select
 					aria-label={m.paths_library_select()}
-					class="ml-2 h-7 rounded border bg-background text-sm font-semibold"
+					class="ml-2 h-8 rounded border bg-background px-2 py-1 text-sm font-semibold"
 					value={libraryKind}
 					onchange={(e) => (libraryKind = (e.target as HTMLSelectElement).value as 'path' | 'anim')}
 				>
