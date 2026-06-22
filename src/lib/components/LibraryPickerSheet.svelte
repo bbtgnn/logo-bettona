@@ -8,17 +8,20 @@
 	import { composition } from '$lib/state/composition';
 	import RingPreview from './RingPreview.svelte';
 	import { m } from '$lib/paraglide/messages';
+	import { untrack } from 'svelte';
 
 	let {
 		open = $bindable(false),
-		onapply
+		onapply,
+		slots = ['template', 'secondary', 'both']
 	}: {
 		open?: boolean;
 		onapply: (entry: PathLibraryEntry, slot: ApplySlot) => void;
+		slots?: ApplySlot[];
 	} = $props();
 
 	let selected = $state<PathLibraryEntry | null>(null);
-	let slotRaw = $state<ApplySlot>('template');
+	let slotRaw = $state<ApplySlot>(untrack(() => slots[0] ?? 'template'));
 	let hoveredId = $state<string | null>(null);
 
 	// Auto-correct: if selected entry has no secondaryPath, 'both' is invalid
@@ -31,7 +34,7 @@
 	$effect(() => {
 		if (!open) {
 			selected = null;
-			slotRaw = 'template';
+			slotRaw = slots[0] ?? 'template';
 		}
 	});
 
@@ -95,43 +98,51 @@
 						<div class="text-sm font-medium">{selected.name}</div>
 					</div>
 
-					<fieldset class="space-y-2">
-						<legend class="text-xs font-medium">{m.common_slot()}</legend>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="radio"
-								name="apply-slot"
-								value="template"
-								checked={slot === 'template'}
-								onchange={() => (slotRaw = 'template')}
-							/>
-							{m.slot_primary()}
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="radio"
-								name="apply-slot"
-								value="secondary"
-								checked={slot === 'secondary'}
-								onchange={() => (slotRaw = 'secondary')}
-							/>
-							{m.slot_secondary()}
-						</label>
-						<label
-							class="flex items-center gap-2 text-sm"
-							class:opacity-50={!selected.secondaryPath}
-						>
-							<input
-								type="radio"
-								name="apply-slot"
-								value="both"
-								disabled={!selected.secondaryPath}
-								checked={slot === 'both'}
-								onchange={() => (slotRaw = 'both')}
-							/>
-							{m.slot_both()}
-						</label>
-					</fieldset>
+					{#if slots.length > 1}
+						<fieldset class="space-y-2">
+							<legend class="text-xs font-medium">{m.common_slot()}</legend>
+							{#if slots.includes('template')}
+								<label class="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="apply-slot"
+										value="template"
+										checked={slot === 'template'}
+										onchange={() => (slotRaw = 'template')}
+									/>
+									{m.slot_primary()}
+								</label>
+							{/if}
+							{#if slots.includes('secondary')}
+								<label class="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="apply-slot"
+										value="secondary"
+										checked={slot === 'secondary'}
+										onchange={() => (slotRaw = 'secondary')}
+									/>
+									{m.slot_secondary()}
+								</label>
+							{/if}
+							{#if slots.includes('both')}
+								<label
+									class="flex items-center gap-2 text-sm"
+									class:opacity-50={!selected.secondaryPath}
+								>
+									<input
+										type="radio"
+										name="apply-slot"
+										value="both"
+										disabled={!selected.secondaryPath}
+										checked={slot === 'both'}
+										onchange={() => (slotRaw = 'both')}
+									/>
+									{m.slot_both()}
+								</label>
+							{/if}
+						</fieldset>
+					{/if}
 
 					<div class="flex justify-end gap-2">
 						<Button variant="outline" size="sm" onclick={() => (selected = null)}
