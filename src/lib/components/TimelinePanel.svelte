@@ -12,7 +12,13 @@
 		setAnimationFps,
 		getAllAnimatableParams
 	} from '$lib/state/animation';
-	import { xFromTime, timeFromX, snapProgressToFps } from '$lib/animation/timeline-geometry';
+	import {
+		xFromTime,
+		timeFromX,
+		snapProgressToFps,
+		formatTimecode,
+		parseTimecode
+	} from '$lib/animation/timeline-geometry';
 	import { m } from '$lib/paraglide/messages';
 	import type { Interp } from '$lib/animation/keyframes';
 	import TimelineRuler from './TimelineRuler.svelte';
@@ -138,6 +144,30 @@
 		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
 	}
 
+	// Editable current-time field (non-audio mode). While not focused it mirrors the live
+	// playhead time; on focus it switches to an edit buffer; committing jumps via scrubTo.
+	let editingTime = $state(false);
+	let timeBuffer = $state('');
+	const currentSec = $derived(animationState.progress * animationState.durationSec);
+	function onTimeFocus() {
+		editingTime = true;
+		timeBuffer = formatTimecode(currentSec);
+	}
+	function commitTime() {
+		if (!editingTime) return;
+		const parsed = parseTimecode(timeBuffer);
+		editingTime = false;
+		if (parsed === null || !(animationState.durationSec > 0)) return;
+		const clamped = Math.max(0, Math.min(parsed, animationState.durationSec));
+		scrubTo(clamped / animationState.durationSec);
+	}
+	function onTimeKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			(e.currentTarget as HTMLInputElement).blur();
+		}
+	}
+
 	// Keep the graph selection valid. Prefer the explicit pick; otherwise default to
 	// an armed param that already has keyframes (so the graph opens on a curve, not an
 	// empty editor), then fall back to the first armed param.
@@ -181,6 +211,19 @@
 						{formatElapsed(animationState.elapsedMs)}
 					</span>
 				{:else}
+					<span class="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+						<input
+							type="text"
+							aria-label={m.timeline_current_time()}
+							class="h-7 w-20 rounded border bg-background px-1 text-center text-xs tabular-nums"
+							value={editingTime ? timeBuffer : formatTimecode(currentSec)}
+							onfocus={onTimeFocus}
+							oninput={(e) => (timeBuffer = (e.target as HTMLInputElement).value)}
+							onkeydown={onTimeKeydown}
+							onblur={commitTime}
+						/>
+						/ {formatTimecode(animationState.durationSec)}
+					</span>
 					<label class="flex items-center gap-1 text-xs text-muted-foreground">
 						{m.timeline_duration_label()}
 						<Input

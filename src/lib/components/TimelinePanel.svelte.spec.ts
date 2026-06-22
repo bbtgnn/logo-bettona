@@ -211,4 +211,36 @@ describe('TimelinePanel', () => {
 		handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: targetX, pointerId: 1 }));
 		expect(animationState.progress).toBeCloseTo(0.5, 1);
 	});
+
+	it('jumps the playhead when a timecode is typed and committed', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.durationSec = 10;
+		animationState.progress = 0;
+		render(TimelinePanel);
+		const input = page.getByLabelText('Current time (type to jump)');
+		await userEvent.fill(input, '0:05.00');
+		await userEvent.keyboard('{Enter}');
+		expect(animationState.progress).toBeCloseTo(0.5, 2);
+	});
+
+	it('ignores an invalid timecode entry (playhead unchanged)', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.durationSec = 10;
+		animationState.progress = 0.3;
+		render(TimelinePanel);
+		const input = page.getByLabelText('Current time (type to jump)');
+		await userEvent.fill(input, 'abc');
+		await userEvent.keyboard('{Enter}');
+		expect(animationState.progress).toBeCloseTo(0.3, 2);
+	});
+
+	it('shows the total duration as a timecode', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.durationSec = 65.5;
+		render(TimelinePanel);
+		await expect.element(page.getByText('1:05.50')).toBeInTheDocument();
+	});
 });

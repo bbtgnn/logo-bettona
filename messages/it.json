@@ -110,6 +110,7 @@
 	"timeline_elapsed_aria": "Tempo trascorso",
 	"timeline_duration_label": "Dur",
 	"timeline_duration_aria": "Durata secondi",
+	"timeline_current_time": "Tempo corrente (digita per saltare)",
 	"timeline_seconds_unit": "s",
 	"timeline_fps": "fps",
 	"timeline_fps_aria": "Frequenza fotogrammi",
