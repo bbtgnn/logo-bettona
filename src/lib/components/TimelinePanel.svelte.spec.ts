@@ -236,6 +236,18 @@ describe('TimelinePanel', () => {
 		expect(animationState.progress).toBeCloseTo(0.3, 2);
 	});
 
+	it('clamps a committed timecode beyond the duration to the end', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.durationSec = 10;
+		animationState.progress = 0;
+		render(TimelinePanel);
+		const input = page.getByLabelText('Current time (type to jump)');
+		await userEvent.fill(input, '0:20.00');
+		await userEvent.keyboard('{Enter}');
+		expect(animationState.progress).toBeCloseTo(1, 2);
+	});
+
 	it('shows the total duration as a timecode', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);

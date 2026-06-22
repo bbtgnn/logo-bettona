@@ -157,7 +157,7 @@
 		if (!editingTime) return;
 		const parsed = parseTimecode(timeBuffer);
 		editingTime = false;
-		if (parsed === null || !(animationState.durationSec > 0)) return;
+		if (parsed === null || animationState.durationSec <= 0) return;
 		const clamped = Math.max(0, Math.min(parsed, animationState.durationSec));
 		scrubTo(clamped / animationState.durationSec);
 	}
