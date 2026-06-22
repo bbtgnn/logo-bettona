@@ -61,7 +61,7 @@
 	"animate_layer_audio_zones": "Audio Zones",
 	"animate_layer_toggle": "Attiva livello",
 	"animate_data_series_unavailable": "Modalità non ancora disponibile.",
-	"animate_simple_empty": "Disegna una seconda forma nell'editor per fare il morph di un anello.",
+	"animate_simple_empty": "Aggiungi un anello nell'Editor, poi crea qui una forma morph.",
 	"animate_kaleidoscope_layer_toggle": "Anima caleidoscopio",
 	"animate_audio_reactivity": "Reattività audio",
 	"animate_audio_reactivity_hint": "I petali reagiscono al suono. Resta attiva insieme alla timeline.",
