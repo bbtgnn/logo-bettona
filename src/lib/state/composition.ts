@@ -201,7 +201,14 @@ export function updateRingPathVariant(
 		if (path && ring.secondaryTemplatePath) {
 			const compatibility = validatePathCompatibility(path, ring.secondaryTemplatePath);
 			if (!compatibility.ok) {
-				return compatibility;
+				// Stopgap: a structural primary edit re-seeds the secondary from the new
+				// primary so the morph pair stays interpolatable, instead of rejecting the
+				// edit. Proper fix relocates morph editing to Animate (spec Animate #2).
+				const reseeded = { cmds: [...path.cmds], crds: [...path.crds] };
+				composition.rings = composition.rings.map((r, i) =>
+					i === index ? { ...r, templatePath: path, secondaryTemplatePath: reseeded } : r
+				);
+				return { ok: true };
 			}
 		}
 		composition.rings = composition.rings.map((r, i) =>

@@ -100,4 +100,39 @@ describe('composition ring morph actions', () => {
 		expect(result.reason).toBe('Path commands must match exactly to interpolate');
 		expect(compositionModule.composition.rings[0]).toEqual(before);
 	});
+
+	it('updateRingPathVariant re-seeds the secondary on a structural primary edit', async () => {
+		const compositionModule = await import('./composition');
+		compositionModule.addRing();
+		compositionModule.createRingMorphTarget(0); // secondary == primary
+		// Structurally different from the default primary (['M','C','C']).
+		const restructured: Path = { cmds: ['M', 'C', 'Z'], crds: [0, 0, 1, 1, 2, 2, 3, 3] };
+		const result = compositionModule.updateRingPathVariant(0, 'primary', restructured);
+		expect(result).toEqual({ ok: true });
+		expect(compositionModule.composition.rings[0].templatePath).toEqual(restructured);
+		// Secondary re-seeded as a clone of the new primary (kept morph-compatible).
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).toEqual(restructured);
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).not.toBe(
+			compositionModule.composition.rings[0].templatePath
+		);
+	});
+
+	it('updateRingPathVariant preserves a distinct secondary on a compatible primary edit', async () => {
+		const compositionModule = await import('./composition');
+		compositionModule.addRing();
+		compositionModule.createRingMorphTarget(0);
+		const primary = compositionModule.composition.rings[0].templatePath!;
+		// Distinct but structurally compatible secondary.
+		const distinctSecondary: Path = { cmds: [...primary.cmds], crds: primary.crds.map((c) => c + 5) };
+		expect(compositionModule.updateRingPathVariant(0, 'secondary', distinctSecondary)).toEqual({
+			ok: true
+		});
+		// Compatible primary edit (same structure, shifted coords).
+		const editedPrimary: Path = { cmds: [...primary.cmds], crds: primary.crds.map((c) => c + 1) };
+		const result = compositionModule.updateRingPathVariant(0, 'primary', editedPrimary);
+		expect(result).toEqual({ ok: true });
+		expect(compositionModule.composition.rings[0].templatePath).toEqual(editedPrimary);
+		// The distinct secondary is untouched (only structural edits re-seed it).
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).toEqual(distinctSecondary);
+	});
 });
