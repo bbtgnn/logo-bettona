@@ -5,7 +5,9 @@ import {
 	yFromValue,
 	valueFromY,
 	formatSeconds,
-	snapProgressToFps
+	snapProgressToFps,
+	formatTimecode,
+	parseTimecode
 } from './timeline-geometry';
 
 describe('timeline geometry', () => {
@@ -69,5 +71,37 @@ describe('snapProgressToFps', () => {
 	it('clamps out-of-range progress to 0..1', () => {
 		expect(snapProgressToFps(-0.2, 1, 30)).toBe(0);
 		expect(snapProgressToFps(1.4, 1, 30)).toBe(1);
+	});
+});
+
+describe('timecode', () => {
+	it('formats seconds as m:ss.cs', () => {
+		expect(formatTimecode(0)).toBe('0:00.00');
+		expect(formatTimecode(3.25)).toBe('0:03.25');
+		expect(formatTimecode(65.5)).toBe('1:05.50');
+	});
+
+	it('carries centiseconds when rounding', () => {
+		expect(formatTimecode(3.999)).toBe('0:04.00');
+		expect(formatTimecode(59.999)).toBe('1:00.00');
+	});
+
+	it('clamps negative/non-finite to zero', () => {
+		expect(formatTimecode(-1)).toBe('0:00.00');
+		expect(formatTimecode(NaN)).toBe('0:00.00');
+	});
+
+	it('parses valid timecodes to seconds', () => {
+		expect(parseTimecode('0:03.25')).toBeCloseTo(3.25, 5);
+		expect(parseTimecode('1:05.5')).toBeCloseTo(65.5, 5);
+		expect(parseTimecode('3.2')).toBeCloseTo(3.2, 5);
+		expect(parseTimecode('7')).toBe(7);
+	});
+
+	it('returns null for invalid input', () => {
+		expect(parseTimecode('')).toBeNull();
+		expect(parseTimecode('abc')).toBeNull();
+		expect(parseTimecode('-1')).toBeNull();
+		expect(parseTimecode('1:2:3')).toBeNull();
 	});
 });
