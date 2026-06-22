@@ -7,9 +7,12 @@ import { switchLocale } from '$lib/state/locale.svelte';
 describe('Animate page', () => {
 	beforeEach(() => switchLocale('en'));
 
-	it('renders the Animation controls section', async () => {
+	it('renders the per-layer windows with their switches', async () => {
 		render(AnimatePage);
-		await expect.element(page.getByText('Animation', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByTestId('layer-toggle-simple')).toBeInTheDocument();
+		await expect.element(page.getByTestId('layer-toggle-dataSeries')).toBeInTheDocument();
+		await expect.element(page.getByTestId('layer-toggle-audioBars')).toBeInTheDocument();
+		await expect.element(page.getByTestId('layer-toggle-audioZones')).toBeInTheDocument();
 	});
 
 	it('shows the kaleidoscope section with stopwatches (animatable)', async () => {

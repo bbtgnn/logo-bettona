@@ -1,7 +1,13 @@
 <script lang="ts">
-	import AnimationSection from '$lib/components/AnimationSection.svelte';
+	import SimpleSection from '$lib/components/SimpleSection.svelte';
+	import DataSeriesSection from '$lib/components/DataSeriesSection.svelte';
+	import AudioBarsSection from '$lib/components/AudioBarsSection.svelte';
+	import AudioZonesSection from '$lib/components/AudioZonesSection.svelte';
 	import KaleidoscopeSection from '$lib/components/KaleidoscopeSection.svelte';
 </script>
 
-<AnimationSection />
+<SimpleSection />
+<DataSeriesSection />
+<AudioBarsSection />
+<AudioZonesSection />
 <KaleidoscopeSection />

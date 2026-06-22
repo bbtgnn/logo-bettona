@@ -9,7 +9,7 @@ import {
 	setLiveTile,
 	setTileBackground
 } from '$lib/state/kaleidoscope.svelte';
-import { animationState } from '$lib/state/animation';
+import { animationState, setLayerEnabled } from '$lib/state/animation';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
 
@@ -17,6 +17,7 @@ describe('KaleidoscopeSection', () => {
 	beforeEach(() => {
 		switchLocale('en');
 		setKaleidoscopeEnabled(false);
+		setLayerEnabled('kaleidoscope', true);
 	});
 
 	// Shared keyframes singleton: disarm tracks this file enabled so it does not pollute
@@ -95,11 +96,24 @@ describe('KaleidoscopeSection', () => {
 		await userEvent.fill(page.getByLabelText('Sectors', { exact: true }), '12');
 		expect(kaleidoscope.sectors).toBe(12);
 	});
+
+	it('kaleidoscope layer switch toggles layers.kaleidoscope', async () => {
+		const before = animationState.layers.kaleidoscope;
+		render(KaleidoscopeSection); // animatable defaults true
+		await userEvent.click(page.getByTestId('layer-toggle-kaleidoscope'));
+		expect(animationState.layers.kaleidoscope).toBe(!before);
+	});
+
+	it('hides the layer switch when not animatable', async () => {
+		render(KaleidoscopeSection, { animatable: false });
+		expect(page.getByTestId('layer-toggle-kaleidoscope').query()).toBeNull();
+	});
 });
 
 describe('KaleidoscopeSection rotation keyframing', () => {
 	beforeEach(() => {
 		switchLocale('en');
+		setLayerEnabled('kaleidoscope', true);
 		keyframes.ensureTrack(ROT);
 		for (const k of [...keyframes.tracks[ROT].keyframes]) keyframes.deleteKeyframe(ROT, k.id);
 		keyframes.setTrackEnabled(ROT, false);
