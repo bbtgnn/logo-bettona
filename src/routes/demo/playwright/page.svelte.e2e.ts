@@ -6,25 +6,21 @@ test('has expected h1', async ({ page }) => {
 });
 
 test('creates and removes ring morph target controls', async ({ page }) => {
+	// Add a fresh ring in the Editor.
 	await page.goto('/');
-
-	// Add a fresh ring (the default rings already ship with morph targets) and expand it.
 	await page.getByRole('button', { name: 'Add Ring' }).click();
-	await page
-		.getByRole('button', { name: /^Ring \d+$/ })
-		.last()
-		.click();
 
-	// Creating the morph target swaps the Create control for Remove.
-	await page.getByRole('button', { name: 'Create morph target' }).click();
-	await expect(page.getByRole('button', { name: 'Remove morph target' })).toBeVisible();
+	// Morph now lives in the Animate → Simple window, which is open by default.
+	await page.goto('/animate');
 
-	// The per-ring morphT slider + "Morph t:" readout no longer live in the editor —
-	// they moved to the Simple window of the animate workspace (covered by the
-	// SimpleSection unit test). The editor keeps only the morph-target draw controls.
-	await expect(page.getByText(/Morph t:/)).toHaveCount(0);
+	// Other layers (Audio Bars, Audio Zones) also render "Ring N" buttons, so scope
+	// to the Simple section's own ring rows to find the last one and open it.
+	const lastRingRow = page.locator('[data-testid^="ring-morph-config-"]').last();
+	await lastRingRow.getByRole('button', { name: /^Ring \d+$/ }).click();
+	await lastRingRow.getByRole('button', { name: 'Create morph target' }).click();
+	await expect(lastRingRow.getByRole('button', { name: 'Remove morph target' })).toBeVisible();
 
-	// Removing the morph target reverts the control.
-	await page.getByRole('button', { name: 'Remove morph target' }).click();
-	await expect(page.getByRole('button', { name: 'Create morph target' })).toBeVisible();
+	// Removing reverts the control.
+	await lastRingRow.getByRole('button', { name: 'Remove morph target' }).click();
+	await expect(lastRingRow.getByRole('button', { name: 'Create morph target' })).toBeVisible();
 });
