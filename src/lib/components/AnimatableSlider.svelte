@@ -2,9 +2,9 @@
 	import { keyframes } from '$lib/state/keyframes.svelte';
 	import { animationState, refreshPreview } from '$lib/state/animation';
 	import { m } from '$lib/paraglide/messages';
-	import type { KaleidoParam } from '$lib/state/kaleidoscope-params';
+	import type { AnimatableParam } from '$lib/state/animatable-params';
 
-	let { param, animatable = true }: { param: KaleidoParam; animatable?: boolean } = $props();
+	let { param, animatable = true }: { param: AnimatableParam; animatable?: boolean } = $props();
 
 	$effect(() => {
 		if (animatable) keyframes.ensureTrack(param.id);

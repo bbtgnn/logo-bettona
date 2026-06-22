@@ -1,4 +1,10 @@
-import { composition, setRingMorphT, setRingWave, setRingZoneDrive } from './composition';
+import {
+	composition,
+	setRingMorphT,
+	setRingWave,
+	setRingZoneDrive,
+	updateRing
+} from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createAudioZonesDriver } from './animation-drivers/audio-zones-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
@@ -15,6 +21,13 @@ import type {
 import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
 import { keyframes } from './keyframes.svelte';
 import { KALEIDO_PARAMS } from './kaleidoscope-params';
+import {
+	buildAudioBarsParams,
+	buildAudioZonesParams,
+	buildRingWaveParams,
+	type AnimatableParam
+} from './animatable-params';
+import { m } from '$lib/paraglide/messages';
 
 export type AnimationMode = AnimationDriverType | null;
 
@@ -203,14 +216,78 @@ function hasEnabledKeyframeTracks(): boolean {
 	return keyframes.hasEnabledTracks();
 }
 
+// Audio registries. Labels are getter objects so each param's `label` resolves the
+// current locale lazily (the {#key currentLocale()} root re-render re-reads them on
+// a language switch), mirroring KALEIDO_PARAMS.
+const AUDIO_BARS_PARAMS = buildAudioBarsParams({
+	getConfig: () => animationState.audioBars,
+	setConfig: setAudioBarsConfig,
+	labels: {
+		get inputGain() {
+			return m.animate_input_gain();
+		},
+		get waveCrests() {
+			return m.animate_wave_crests();
+		},
+		get waveAmplitudeGain() {
+			return m.animate_amplitude_gain();
+		},
+		get wavePhaseSpeed() {
+			return m.animate_phase_speed();
+		},
+		get smoothing() {
+			return m.animate_smoothing();
+		}
+	}
+});
+
+const AUDIO_ZONES_PARAMS = buildAudioZonesParams({
+	getIntensity: () => animationState.audioZones.defaultIntensity,
+	setIntensity: setAudioZonesDefaultIntensity,
+	labels: {
+		get bass() {
+			return m.animate_zone_bass();
+		},
+		get mid() {
+			return m.animate_zone_mid();
+		},
+		get treble() {
+			return m.animate_zone_treble();
+		}
+	}
+});
+
 /**
- * Applies every armed kaleidoscope keyframe track at the given normalized progress.
- * Each registry param samples its track; a disabled/empty track returns null and leaves
- * the static slider value in place. Discrete params (sectors/repeat) are rounded/clamped
- * by their setters.
+ * Every keyframable param across all registries, resolved against live state.
+ * Per-ring wave params are rebuilt each call from `composition.rings` so they
+ * track ring add/remove without stale indices.
  */
-export function applyKaleidoscopeKeyframes(progress: number): void {
-	for (const p of KALEIDO_PARAMS) {
+export function getAllAnimatableParams(): AnimatableParam[] {
+	const globalDefault = {
+		crests: animationState.audioBars.waveCrests,
+		amplitudeGain: animationState.audioBars.waveAmplitudeGain,
+		phaseSpeed: animationState.audioBars.wavePhaseSpeed
+	};
+	return [
+		...KALEIDO_PARAMS,
+		...AUDIO_BARS_PARAMS,
+		...AUDIO_ZONES_PARAMS,
+		...buildRingWaveParams(composition.rings, {
+			updateRing,
+			globalDefault: () => globalDefault,
+			ringLabel: (i) => m.editor_ring_label({ index: i + 1 })
+		})
+	];
+}
+
+/**
+ * Applies every armed keyframe track at the given normalized progress. Walks every
+ * registry (kaleidoscope + audio + per-ring wave). A disabled/empty track returns
+ * null and leaves the static slider value in place. Discrete params (sectors/repeat)
+ * are rounded/clamped by their setters.
+ */
+export function applyKeyframes(progress: number): void {
+	for (const p of getAllAnimatableParams()) {
 		const v = keyframes.sampleParam(p.id, progress);
 		if (v !== null) p.set(v);
 	}
@@ -222,7 +299,7 @@ export function applyKaleidoscopeKeyframes(progress: number): void {
  */
 export function scrubTo(progress: number): void {
 	animationState.progress = clamp01(progress);
-	applyKaleidoscopeKeyframes(animationState.progress);
+	applyKeyframes(animationState.progress);
 }
 
 /**
@@ -232,7 +309,7 @@ export function scrubTo(progress: number): void {
  */
 export function refreshPreview(): void {
 	if (animationState.isPlaying) return;
-	applyKaleidoscopeKeyframes(animationState.progress);
+	applyKeyframes(animationState.progress);
 }
 
 function getProgressFromElapsed(elapsedMs: number): number {
@@ -279,7 +356,7 @@ function tick(nowMs: number) {
 	}
 
 	// Kaleidoscope keyframes ride the same clock regardless of driver mode.
-	applyKaleidoscopeKeyframes(progress);
+	applyKeyframes(progress);
 
 	if (hasCompleted(logicalElapsedMs)) {
 		animationState.isPlaying = false;

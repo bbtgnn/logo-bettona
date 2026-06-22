@@ -11,7 +11,9 @@ const mockComposition = {
 vi.mock('./composition', () => ({
 	composition: mockComposition,
 	setRingMorphT: vi.fn(),
-	setRingWave: vi.fn()
+	setRingWave: vi.fn(),
+	setRingZoneDrive: vi.fn(),
+	updateRing: vi.fn()
 }));
 
 const rafCallbacks: FrameRequestCallback[] = [];
@@ -477,7 +479,7 @@ describe('kaleidoscope keyframe application', () => {
 		setGlobalRotation(33);
 		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
 		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
-		animation.applyKaleidoscopeKeyframes(0.5);
+		animation.applyKeyframes(0.5);
 		expect(kaleidoscope.globalRotation).toBe(33);
 	});
 
@@ -488,7 +490,7 @@ describe('kaleidoscope keyframe application', () => {
 		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
 		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
 		keyframes.setTrackEnabled(ROT, true);
-		animation.applyKaleidoscopeKeyframes(0.5);
+		animation.applyKeyframes(0.5);
 		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 4);
 	});
 
@@ -504,7 +506,7 @@ describe('kaleidoscope keyframe application', () => {
 		keyframes.addKeyframe(TILEROT, { time: 0, value: 0 });
 		keyframes.addKeyframe(TILEROT, { time: 1, value: 100 });
 		keyframes.setTrackEnabled(TILEROT, true);
-		animation.applyKaleidoscopeKeyframes(0.5);
+		animation.applyKeyframes(0.5);
 		expect(kaleidoscope.scale).toBeCloseTo(2, 4);
 		expect(kaleidoscope.tileRotation).toBeCloseTo(50, 4);
 	});
@@ -518,7 +520,7 @@ describe('kaleidoscope keyframe application', () => {
 		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
 		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
 		keyframes.setTrackEnabled(SCALE, true);
-		animation.applyKaleidoscopeKeyframes(0.5);
+		animation.applyKeyframes(0.5);
 		expect(kaleidoscope.offsetDistance).toBe(0.25);
 	});
 
@@ -530,7 +532,7 @@ describe('kaleidoscope keyframe application', () => {
 		keyframes.addKeyframe(SECTORS, { time: 0, value: 8 });
 		keyframes.addKeyframe(SECTORS, { time: 1, value: 12 });
 		keyframes.setTrackEnabled(SECTORS, true);
-		animation.applyKaleidoscopeKeyframes(0.5); // sample ~10
+		animation.applyKeyframes(0.5); // sample ~10
 		expect(kaleidoscope.sectors).toBe(10);
 		expect(kaleidoscope.sectors % 2).toBe(0);
 	});
@@ -549,12 +551,27 @@ describe('kaleidoscope keyframe application', () => {
 		keyframes.setTrackEnabled(SCALE, true);
 
 		animation.animationState.mode = 'audioBars';
-		animation.applyKaleidoscopeKeyframes(0.5);
+		animation.applyKeyframes(0.5);
 
 		// Track still samples (not nulled out by the audio mode)...
 		expect(keyframes.sampleParam(SCALE, 0.5)).toBeCloseTo(2, 5);
 		// ...and the sampled value was applied to the live kaleidoscope param.
 		expect(kaleidoscope.scale).toBeCloseTo(2, 5);
+	});
+
+	// applyKeyframes now walks every registry, not just the kaleidoscope one: an
+	// armed audioBars param must sample and apply through its setter too.
+	it('drives an armed audioBars param through applyKeyframes', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const CRESTS = 'audioBars.waveCrests';
+		keyframes.addKeyframe(CRESTS, { time: 0, value: 1 });
+		keyframes.addKeyframe(CRESTS, { time: 1, value: 8 });
+		keyframes.setTrackEnabled(CRESTS, true);
+
+		animation.applyKeyframes(0.5);
+
+		expect(animation.animationState.audioBars.waveCrests).toBeCloseTo(4.5, 1);
 	});
 });
 

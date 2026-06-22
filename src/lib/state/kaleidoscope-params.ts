@@ -11,16 +11,10 @@ import {
 } from './kaleidoscope.svelte';
 import { KALEIDO_GLOBAL_ROTATION } from './keyframes.svelte';
 import { m } from '$lib/paraglide/messages';
+import type { AnimatableParam } from './animatable-params';
 
-export type KaleidoParam = {
-	id: string;
-	label: string;
-	min: number;
-	max: number;
-	step: number;
-	get(): number;
-	set(v: number): void;
-};
+// Kaleidoscope params are one registry of the generic animatable shape.
+export type KaleidoParam = AnimatableParam;
 
 // Single source of truth for every animatable kaleidoscope slider. Order = sidebar order.
 // Booleans (masks, live tile) and the background color are intentionally absent: not animatable.
