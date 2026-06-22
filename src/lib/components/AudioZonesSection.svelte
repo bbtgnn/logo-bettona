@@ -11,6 +11,8 @@
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import AudioFilePanel from './AudioFilePanel.svelte';
 	import AnimatableSlider from './AnimatableSlider.svelte';
+	import RingZoneConfigItem from './RingZoneConfigItem.svelte';
+	import { composition } from '$lib/state/composition';
 
 	const zonesParams = getAudioZonesParams();
 
@@ -98,6 +100,19 @@
 					</p>
 					{#each zonesParams as param (param.id)}
 						<AnimatableSlider {param} />
+					{/each}
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<p class="text-[11px] font-medium text-muted-foreground">
+						{m.animate_zones_per_ring()}
+					</p>
+					{#each composition.rings as ring, i (i)}
+						<RingZoneConfigItem
+							{ring}
+							index={i}
+							globalDefault={animationState.audioZones.defaultIntensity}
+						/>
 					{/each}
 				</div>
 			</div>

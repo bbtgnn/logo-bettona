@@ -29,4 +29,17 @@ describe('AudioZonesSection', () => {
 		await userEvent.click(page.getByLabelText('Animate Bass · tip'));
 		expect(keyframes.tracks['audioZones.bass'].enabled).toBe(true);
 	});
+
+	it('renders a per-ring zone config (with preview) for each ring', async () => {
+		render(AudioZonesSection);
+		await expect.element(page.getByTestId('ring-zone-config-0')).toBeInTheDocument();
+		await expect.element(page.getByText('Per-ring intensity')).toBeInTheDocument();
+	});
+
+	it('shows the per-ring zone copy in Italian', async () => {
+		switchLocale('it');
+		render(AudioZonesSection);
+		await expect.element(page.getByText('Intensità per anello')).toBeInTheDocument();
+		switchLocale('en');
+	});
 });

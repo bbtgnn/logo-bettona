@@ -4,6 +4,7 @@
 	import { CaretDown, CaretRight } from 'phosphor-svelte';
 	import { updateRing } from '$lib/state/composition';
 	import { resolveZoneIntensity } from '$lib/geometry/zones';
+	import { m } from '$lib/paraglide/messages';
 	import ZonePreview from './ZonePreview.svelte';
 	import type { Ring, ZoneIntensity } from '$lib/types';
 
@@ -23,7 +24,7 @@
 	const resolved = $derived(resolveZoneIntensity(ring, globalDefault));
 </script>
 
-<div class="rounded border bg-background">
+<div class="rounded border bg-background" data-testid="ring-zone-config-{index}">
 	<Collapsible.Collapsible bind:open>
 		<div class="flex items-center gap-1 px-2 py-1.5">
 			<Collapsible.CollapsibleTrigger
@@ -34,11 +35,11 @@
 				{:else}
 					<CaretRight size={14} />
 				{/if}
-				Ring {index + 1}
+				{m.editor_ring_label({ index: index + 1 })}
 				{#if hasOverride}
 					<span
 						class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-normal text-muted-foreground"
-						>(custom)</span
+						>{m.animate_custom()}</span
 					>
 				{/if}
 			</Collapsible.CollapsibleTrigger>
@@ -67,13 +68,13 @@
 					class="h-4 w-4 cursor-pointer rounded border-input"
 				/>
 				<Label for="zone-override-{index}" class="cursor-pointer text-xs"
-					>Customize zones for this ring</Label
+					>{m.animate_customize_zones()}</Label
 				>
 			</div>
 
 			{#if hasOverride}
 				<div class="flex flex-col gap-1">
-					<Label for="ring-bass-{index}" class="text-xs">Bass intensity</Label>
+					<Label for="ring-bass-{index}" class="text-xs">{m.animate_ring_zone_bass()}</Label>
 					<input
 						id="ring-bass-{index}"
 						type="range"
@@ -92,7 +93,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<Label for="ring-mid-{index}" class="text-xs">Mid intensity</Label>
+					<Label for="ring-mid-{index}" class="text-xs">{m.animate_ring_zone_mid()}</Label>
 					<input
 						id="ring-mid-{index}"
 						type="range"
@@ -111,7 +112,7 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<Label for="ring-treble-{index}" class="text-xs">Treble intensity</Label>
+					<Label for="ring-treble-{index}" class="text-xs">{m.animate_ring_zone_treble()}</Label>
 					<input
 						id="ring-treble-{index}"
 						type="range"
