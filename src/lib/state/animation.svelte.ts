@@ -29,10 +29,13 @@ import {
 } from './animatable-params';
 import { m } from '$lib/paraglide/messages';
 
-export type AnimationMode = AnimationDriverType | null;
+export type AnimationLayer = 'simple' | 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope';
+export type AnimationLayers = Record<AnimationLayer, boolean>;
+
+const AUDIO_LAYERS: AnimationLayer[] = ['audioBars', 'audioZones'];
 
 export type AnimationState = {
-	mode: AnimationMode;
+	layers: AnimationLayers;
 	isPlaying: boolean;
 	isPaused: boolean;
 	progress: number;
@@ -68,7 +71,7 @@ const defaultDataSeriesConfig: DataSeriesConfig = {
 };
 
 export const animationState = $state<AnimationState>({
-	mode: 'simple',
+	layers: { simple: true, audioBars: false, audioZones: false, dataSeries: false, kaleidoscope: true },
 	isPlaying: false,
 	isPaused: false,
 	progress: 0,
@@ -187,10 +190,20 @@ function cleanupCurrentAnimation() {
 	}
 }
 
+// Mirror the runtime's active set onto the current layer flags. dataSeries is a
+// placeholder (never runs); kaleidoscope is gated in applyKeyframes, not a driver.
+function syncActiveDrivers(): void {
+	runtime.setActive('simple', animationState.layers.simple);
+	runtime.setActive('audioBars', animationState.layers.audioBars);
+	runtime.setActive('audioZones', animationState.layers.audioZones);
+}
+
 function stopInternal(resetProgress = true) {
 	audioSource.stop();
 	cleanupCurrentAnimation();
-	runtime.setMode(null);
+	runtime.setActive('simple', false);
+	runtime.setActive('audioBars', false);
+	runtime.setActive('audioZones', false);
 	if (resetProgress) {
 		applyMorphT(0);
 		animationState.progress = 0;
@@ -203,7 +216,11 @@ function stopInternal(resetProgress = true) {
 }
 
 function hasRunnableMode(): boolean {
-	return animationState.mode !== null;
+	return (
+		animationState.layers.simple ||
+		animationState.layers.audioBars ||
+		animationState.layers.audioZones
+	);
 }
 
 function hasMorphTargets(): boolean {
@@ -287,7 +304,9 @@ export function getAllAnimatableParams(): AnimatableParam[] {
  * are rounded/clamped by their setters.
  */
 export function applyKeyframes(progress: number): void {
+	const kaleidoOn = animationState.layers.kaleidoscope;
 	for (const p of getAllAnimatableParams()) {
+		if (!kaleidoOn && p.id.startsWith('kaleidoscope.')) continue;
 		const v = keyframes.sampleParam(p.id, progress);
 		if (v !== null) p.set(v);
 	}
@@ -326,7 +345,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
-	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') return false;
+	if (animationState.layers.audioBars || animationState.layers.audioZones) return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -347,15 +366,10 @@ function tick(nowMs: number) {
 	animationState.elapsedMs = logicalElapsedMs;
 	const progress = getProgressFromElapsed(logicalElapsedMs);
 
-	if (hasRunnableMode()) {
-		runtime.tick(logicalElapsedMs);
-		animationState.progress = progress;
-	} else {
-		applyMorphT(progress);
-		animationState.progress = progress;
-	}
+	runtime.tick(logicalElapsedMs);
+	animationState.progress = progress;
 
-	// Kaleidoscope keyframes ride the same clock regardless of driver mode.
+	// Keyframes ride the same clock regardless of which layers drive.
 	applyKeyframes(progress);
 
 	if (hasCompleted(logicalElapsedMs)) {
@@ -380,9 +394,7 @@ function startNewAnimation() {
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
 	animationState.elapsedMs = 0;
-	if (animationState.mode) {
-		runtime.setMode(animationState.mode);
-	}
+	syncActiveDrivers();
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
 	frameRequestId = requestAnimationFrame(tick);
@@ -425,16 +437,22 @@ export function setAnimationAlternate(value: boolean) {
 	reconfigureCurrentAnimation();
 }
 
-export function setAnimationMode(mode: AnimationMode): void {
-	if (animationState.mode === mode) return;
-	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') {
-		audioSource.stop();
+export function setLayerEnabled(layer: AnimationLayer, on: boolean): void {
+	if (animationState.layers[layer] === on) return;
+
+	animationState.layers = { ...animationState.layers, [layer]: on };
+
+	// Turning off the last active audio layer tears down the live audio source,
+	// preserving the old single-mode teardown behaviour.
+	if ((layer === 'audioBars' || layer === 'audioZones') && !on) {
+		const anyAudioLeft = AUDIO_LAYERS.some((l) => animationState.layers[l]);
+		if (!anyAudioLeft) audioSource.stop();
 	}
-	logicalElapsedMs = 0;
-	animationState.elapsedMs = 0;
-	animationState.mode = mode;
-	if (animationState.isPlaying) {
-		runtime.setMode(mode);
+
+	// dataSeries is a placeholder (never runs); kaleidoscope is gated in
+	// applyKeyframes, not a driver. The shared clock keeps running across toggles.
+	if (layer !== 'dataSeries' && layer !== 'kaleidoscope' && animationState.isPlaying) {
+		runtime.setActive(layer, on);
 	}
 }
 
@@ -488,9 +506,7 @@ export function togglePlay() {
 		stopInternal(true);
 		return;
 	}
-	if (animationState.mode) {
-		runtime.setMode(animationState.mode);
-	}
+	syncActiveDrivers();
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
 	frameRequestId = requestAnimationFrame(tick);
@@ -520,9 +536,13 @@ export function handleCompositionChanged() {
 		return;
 	}
 
-	// Driver modes own their per-ring frame output semantics:
+	// Active driver layers own their per-ring frame output semantics:
 	// topology updates should be absorbed without forcing a playback reset.
-	if (animationState.mode) {
+	if (
+		animationState.layers.simple ||
+		animationState.layers.audioBars ||
+		animationState.layers.audioZones
+	) {
 		lastRingCount = composition.rings.length;
 		animatedIndices = currentIndices;
 		return;

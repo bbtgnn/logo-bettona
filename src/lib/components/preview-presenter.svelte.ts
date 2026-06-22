@@ -51,10 +51,10 @@ export function createPreviewPresenter() {
 		ensureTileScope();
 		const viewport = { width: TILE_PX, height: TILE_PX, padding: 32 };
 		const ignoreMorph =
-			animationState.mode === 'audioBars' || animationState.mode === 'audioZones';
+			animationState.layers.audioBars || animationState.layers.audioZones;
 		// audioZones holds a stable rest-derived scale; pass it here too so the kaleidoscope
 		// tile matches the visible canvas instead of re-fitting the deformed pose.
-		const restFit = animationState.mode === 'audioZones' ? { fraction: REST_FRACTION } : undefined;
+		const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
 		pipeline!.render({ composition, scope: tileScope!, ignoreMorph, viewport, restFit });
 		const bg = kaleidoscope.tileBackground ? getCompositionBackgroundColor() : null;
 		return composeTileWithBackground(tileCanvas!, bg);
@@ -160,12 +160,12 @@ export function createPreviewPresenter() {
 			// applies this as the paper view size, so changing the ratio reshapes the canvas.
 			const { width, height } = ratioToCanvasSize(comp.aspectRatio, CANVAS_LONG_SIDE);
 			const viewport = { width, height, padding: 32 };
-			// audioBars/audioZones ride the primary petal; bypass morph in the render only.
+			// An active audio layer rides the primary petal; bypass morph in the render only.
 			const ignoreMorph =
-				animationState.mode === 'audioBars' || animationState.mode === 'audioZones';
+				animationState.layers.audioBars || animationState.layers.audioZones;
 			// audioZones reserves edge headroom by holding a rest-derived scale; the pipeline
 			// owns that two-pass now, so the caller just declares it.
-			const restFit = animationState.mode === 'audioZones' ? { fraction: REST_FRACTION } : undefined;
+			const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
 			pipeline!.render({ composition: comp, scope: scope!, ignoreMorph, viewport, restFit });
 
 			// Paint the palette background behind the rings. pipeline.render() cleared the
