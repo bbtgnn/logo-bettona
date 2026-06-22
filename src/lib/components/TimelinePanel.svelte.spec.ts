@@ -163,4 +163,16 @@ describe('TimelinePanel', () => {
 		expect(animationState.isPlaying).toBe(true);
 		stopAnimation(true);
 	});
+
+	it('aligns the track lane with the ruler lane (the "+" button no longer offsets it)', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		render(TimelinePanel);
+		const ruler = (await page.getByTestId('timeline-ruler').element()) as HTMLElement;
+		const lane = (await page.getByTestId('track-kaleidoscope.scale').element()) as HTMLElement;
+		const r = ruler.getBoundingClientRect();
+		const l = lane.getBoundingClientRect();
+		expect(l.left).toBeCloseTo(r.left, 0);
+		expect(l.width).toBeCloseTo(r.width, 0);
+	});
 });

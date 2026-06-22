@@ -71,15 +71,18 @@
 </script>
 
 <div class="flex items-center gap-2">
-	<span class="w-28 shrink-0 truncate text-xs text-muted-foreground">{label}</span>
-	<Button
-		variant="outline"
-		size="sm"
-		aria-label={m.timeline_add_keyframe()}
-		onclick={addAtPlayhead}
-	>
-		+
-	</Button>
+	<div class="flex w-28 shrink-0 items-center gap-1">
+		<span class="flex-1 truncate text-xs text-muted-foreground">{label}</span>
+		<Button
+			variant="outline"
+			size="sm"
+			class="h-6 w-6 shrink-0 p-0"
+			aria-label={m.timeline_add_keyframe()}
+			onclick={addAtPlayhead}
+		>
+			+
+		</Button>
+	</div>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={rowEl}
