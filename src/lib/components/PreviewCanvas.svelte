@@ -13,6 +13,9 @@
 	const progressPercent = $derived(
 		Math.round(Math.max(0, Math.min(1, presenter.exportProgress)) * 100)
 	);
+	let includeBackground = $state(true);
+	let pngScale = $state(1);
+	const PNG_SCALES = [1, 2, 4];
 </script>
 
 <div class="flex shrink-0 flex-col items-center gap-3">
@@ -23,11 +26,19 @@
 		<div class="flex gap-2">
 			<Button
 				variant="outline"
-				onclick={presenter.exportSvg}
+				onclick={() => presenter.exportSvg({ includeBackground })}
 				disabled={exportStatus.rendering}
 				class="flex-1"
 			>
 				{m.preview_export_svg()}
+			</Button>
+			<Button
+				variant="outline"
+				onclick={() => presenter.exportPng({ includeBackground, scale: pngScale })}
+				disabled={exportStatus.rendering}
+				class="flex-1"
+			>
+				{m.preview_export_png()}
 			</Button>
 			{#if animate}
 				<Button
@@ -39,6 +50,26 @@
 					{m.preview_export_animation()}
 				</Button>
 			{/if}
+		</div>
+
+		<div class="flex items-center gap-3 text-xs text-muted-foreground">
+			<label class="flex items-center gap-1.5">
+				<input type="checkbox" bind:checked={includeBackground} aria-label={m.preview_include_background()} />
+				{m.preview_include_background()}
+			</label>
+			<label class="flex items-center gap-1.5">
+				{m.preview_resolution()}
+				<select
+					aria-label={m.preview_resolution()}
+					class="h-7 rounded border bg-background py-1 text-xs"
+					value={pngScale}
+					onchange={(e) => (pngScale = Number((e.target as HTMLSelectElement).value))}
+				>
+					{#each PNG_SCALES as s (s)}
+						<option value={s}>{s}x</option>
+					{/each}
+				</select>
+			</label>
 		</div>
 
 		{#if animate && exportStatus.rendering}

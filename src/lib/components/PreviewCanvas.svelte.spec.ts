@@ -237,6 +237,29 @@ describe('PreviewCanvas.svelte', () => {
 		}
 	});
 
+	it('shows the PNG export controls on both routes', async () => {
+		render(PreviewCanvas);
+		await expect.element(page.getByRole('button', { name: 'Export PNG' })).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Include background')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Resolution')).toBeInTheDocument();
+	});
+
+	it('triggers a PNG download when Export PNG is clicked', async () => {
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
+			await userEvent.click(page.getByRole('button', { name: 'Export PNG' }));
+			expect(downloads).toContain('composition.png');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+		}
+	});
+
 	it('flat Export SVG produces no download when there are no rings', async () => {
 		composition.rings = [];
 		const downloads: string[] = [];
