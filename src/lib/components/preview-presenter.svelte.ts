@@ -67,8 +67,11 @@ export function createPreviewPresenter() {
 	// Kaleidoscope render params with the carpet background sourced from the palette
 	// (no longer a stored kaleidoscope field). The drawBackground getter is evaluated
 	// into the spread, so the render layer reads a plain boolean.
-	function kaleidoParams() {
-		return { ...kaleidoscope, backgroundColor: getCompositionBackgroundColor() };
+	function kaleidoParams(overrides?: { drawBackground?: boolean }) {
+		const base = { ...kaleidoscope, backgroundColor: getCompositionBackgroundColor() };
+		return overrides?.drawBackground === undefined
+			? base
+			: { ...base, drawBackground: overrides.drawBackground };
 	}
 
 	function drawKaleidoscope() {
@@ -92,7 +95,14 @@ export function createPreviewPresenter() {
 		URL.revokeObjectURL(url);
 	}
 
-	function exportKaleidoscopeSvg() {
+	function downloadDataUrl(dataUrl: string, filename: string) {
+		const a = document.createElement('a');
+		a.href = dataUrl;
+		a.download = filename;
+		a.click();
+	}
+
+	function exportKaleidoscopeSvg(includeBackground: boolean) {
 		ensureTileScope();
 		renderTile();
 		tileScope!.activate();
@@ -100,7 +110,10 @@ export function createPreviewPresenter() {
 		const frame = canvasEl
 			? { width: canvasEl.width, height: canvasEl.height }
 			: { width: TILE_PX, height: TILE_PX };
-		downloadSvg(generateKaleidoscopeSVG(tileSvg, kaleidoParams(), frame), 'kaleidoscope.svg');
+		const params = kaleidoParams({
+			drawBackground: includeBackground ? kaleidoscope.drawBackground : false
+		});
+		downloadSvg(generateKaleidoscopeSVG(tileSvg, params, frame), 'kaleidoscope.svg');
 	}
 
 	// Records the live canvas to a WebM video for the configured duration/fps, taps the
@@ -125,23 +138,79 @@ export function createPreviewPresenter() {
 		}
 	}
 
-	function exportSvg() {
+	function exportSvg(opts?: { includeBackground?: boolean }) {
+		const includeBackground = opts?.includeBackground ?? true;
+
 		// In kaleidoscope mode the visible canvas IS the kaleidoscope, so Export SVG
 		// exports the kaleidoscope render; otherwise it exports the flat composition.
 		if (kaleidoscope.enabled) {
-			exportKaleidoscopeSvg();
+			exportKaleidoscopeSvg(includeBackground);
 			return;
 		}
 
 		if (!scope) return;
-		const hasContent = scope.project.activeLayer.children.some(
-			(child) => child.name !== 'preview-background'
-		);
+		const layer = scope.project.activeLayer;
+		const hasContent = layer.children.some((child) => child.name !== 'preview-background');
 		if (!hasContent) return;
 
 		scope.activate();
+		// Background off: drop the tagged rect for the duration of the serialization, then
+		// re-insert it at the back. Synchronous and no view.update() → the visible canvas
+		// never repaints, so this cannot flicker.
+		const bg = includeBackground
+			? null
+			: (layer.children.find((c) => c.name === 'preview-background') ?? null);
+		if (bg) bg.remove();
 		const svgData = scope.project.exportSVG({ asString: true }) as string;
+		if (bg) {
+			layer.addChild(bg);
+			bg.sendToBack();
+		}
 		downloadSvg(svgData, 'composition.svg');
+	}
+
+	function exportPng(opts: { includeBackground: boolean; scale: number }) {
+		const { includeBackground, scale } = opts;
+		const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE * scale);
+		const off = document.createElement('canvas');
+		off.width = width;
+		off.height = height;
+
+		if (kaleidoscope.enabled) {
+			const ctx = off.getContext('2d');
+			if (!ctx) return;
+			const tile = renderTile();
+			const params = kaleidoParams({
+				drawBackground: includeBackground ? kaleidoscope.drawBackground : false
+			});
+			renderKaleidoscopeToCanvas(ctx, tile, tile.width, tile.height, params, { width, height });
+			downloadDataUrl(off.toDataURL('image/png'), 'kaleidoscope.png');
+			return;
+		}
+
+		// Flat: render the composition into an offscreen paper scope at the scaled size so
+		// the PNG is independent of the visible canvas (no flicker, free resolution scaling).
+		// The offscreen canvas starts transparent → background off yields a transparent PNG.
+		const tempScope = new paper.PaperScope();
+		tempScope.setup(off);
+		const ignoreMorph = animationState.layers.audioBars || animationState.layers.audioZones;
+		const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
+		pipeline!.render({
+			composition,
+			scope: tempScope,
+			ignoreMorph,
+			viewport: { width, height, padding: 32 * scale },
+			restFit
+		});
+		if (includeBackground) {
+			tempScope.activate();
+			const background = new paper.Path.Rectangle(tempScope.view.bounds);
+			background.fillColor = new paper.Color(getCompositionBackgroundColor());
+			background.sendToBack();
+		}
+		tempScope.view.update();
+		downloadDataUrl(off.toDataURL('image/png'), 'composition.png');
+		tempScope.project.clear();
 	}
 
 	function attach(canvas: HTMLCanvasElement) {
@@ -250,6 +319,7 @@ export function createPreviewPresenter() {
 	return {
 		attach,
 		exportSvg,
+		exportPng,
 		exportAnimation,
 		get exportProgress() {
 			return exportProgress;
