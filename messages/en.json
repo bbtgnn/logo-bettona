@@ -34,8 +34,6 @@
 	"editor_ring_drag": "Drag to reorder",
 	"editor_ring_label": "Ring {index}",
 	"editor_ring_delete": "Delete ring",
-	"editor_ring_primary": "Primary",
-	"editor_ring_secondary": "Secondary",
 	"editor_path_editor": "Path editor",
 	"editor_path_editor_secondary": "Path editor (secondary)",
 	"editor_create_morph": "Create morph target",

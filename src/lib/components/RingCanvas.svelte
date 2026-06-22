@@ -143,8 +143,8 @@
 		scope.setup(canvas);
 
 		// Skip redraw while dragging so parent path updates do not reset Paper mid-gesture.
-		// `isDragging` is non-reactive; if it stays true (e.g. lost mouseup), switching primary/secondary
-		// remounts this canvas via `{#key editVariant}` in RingEditor so draw runs again.
+		// `isDragging` is non-reactive; if it stays true (e.g. lost mouseup), remounting this
+		// canvas (e.g. its `templatePath` prop changes / the parent re-keys it) reruns draw.
 		$effect(() => {
 			if (!isDragging) {
 				draw(scope, templatePath, onchange, setDragging);

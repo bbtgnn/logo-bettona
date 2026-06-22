@@ -34,8 +34,6 @@
 	"editor_ring_drag": "Trascina per riordinare",
 	"editor_ring_label": "Anello {index}",
 	"editor_ring_delete": "Elimina anello",
-	"editor_ring_primary": "Primaria",
-	"editor_ring_secondary": "Secondaria",
 	"editor_path_editor": "Editor tracciato",
 	"editor_path_editor_secondary": "Editor tracciato (secondaria)",
 	"editor_create_morph": "Crea forma morph",
