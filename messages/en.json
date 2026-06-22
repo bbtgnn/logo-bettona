@@ -122,6 +122,7 @@
 	"timeline_delete_keyframe": "Delete keyframe",
 	"timeline_add_keyframe": "Add keyframe",
 	"timeline_keyframe": "Keyframe",
+	"timeline_scrub_playhead": "Drag to move the playhead",
 	"common_apply": "Apply",
 	"common_cancel": "Cancel",
 	"common_ok": "OK",

@@ -122,6 +122,7 @@
 	"timeline_delete_keyframe": "Elimina keyframe",
 	"timeline_add_keyframe": "Aggiungi keyframe",
 	"timeline_keyframe": "Keyframe",
+	"timeline_scrub_playhead": "Trascina per spostare il marcatore",
 	"common_apply": "Applica",
 	"common_cancel": "Annulla",
 	"common_ok": "OK",

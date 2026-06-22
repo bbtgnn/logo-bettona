@@ -192,4 +192,23 @@ describe('TimelinePanel', () => {
 		expect(addBtn.parentElement).toBe(lane.previousElementSibling);
 		expect(addBtn.parentElement).not.toBe(lane.parentElement);
 	});
+
+	it('scrubs progress by dragging the playhead handle', async () => {
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		animationState.isPlaying = false;
+		animationState.progress = 0;
+		render(TimelinePanel);
+		await expect.element(page.getByTestId('playhead-handle')).toBeInTheDocument();
+		const handle = page.getByTestId('playhead-handle').element() as HTMLElement;
+		const ruler = page.getByTestId('timeline-ruler').element() as HTMLElement;
+		const rect = ruler.getBoundingClientRect();
+		const targetX = rect.left + rect.width * 0.5;
+		// Grab the handle, drag to mid-ruler, release. The handle scrubs against the same
+		// lane column the ruler measures, so mid-ruler == progress 0.5.
+		handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.left, pointerId: 1 }));
+		handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: targetX, pointerId: 1 }));
+		handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: targetX, pointerId: 1 }));
+		expect(animationState.progress).toBeCloseTo(0.5, 1);
+	});
 });
