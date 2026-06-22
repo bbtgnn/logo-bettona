@@ -175,4 +175,21 @@ describe('TimelinePanel', () => {
 		expect(l.left).toBeCloseTo(r.left, 0);
 		expect(l.width).toBeCloseTo(r.width, 0);
 	});
+
+	it('"+" keyframe button lives inside the gutter that directly precedes the lane (CSS-independent)', async () => {
+		// Tailwind isn't loaded in this test DOM, so flex/width classes can't make
+		// the geometry-based alignment test above fail on broken markup. Assert the
+		// DOM structure directly instead: the fix moved the "+" button into a gutter
+		// div that is the lane's previousElementSibling, rather than leaving it as a
+		// standalone sibling between the label and the lane (which used to offset
+		// the lane from the ruler).
+		keyframes.ensureTrack('kaleidoscope.scale');
+		keyframes.setTrackEnabled('kaleidoscope.scale', true);
+		render(TimelinePanel);
+		await expect.element(page.getByTestId('track-kaleidoscope.scale')).toBeInTheDocument();
+		const addBtn = page.getByRole('button', { name: 'Add keyframe' }).element() as HTMLElement;
+		const lane = page.getByTestId('track-kaleidoscope.scale').element() as HTMLElement;
+		expect(addBtn.parentElement).toBe(lane.previousElementSibling);
+		expect(addBtn.parentElement).not.toBe(lane.parentElement);
+	});
 });
