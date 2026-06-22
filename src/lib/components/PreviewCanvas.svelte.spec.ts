@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
-import { composition, colorMode } from '$lib/state/composition';
+import { composition, colorMode, setAspectRatio } from '$lib/state/composition';
 import { animationState, setAnimationDurationSec } from '$lib/state/animation';
 import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
@@ -215,6 +215,26 @@ describe('PreviewCanvas.svelte', () => {
 			);
 			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#445566');
 		});
+	});
+
+	it('keeps the canvas CSS box in the aspect ratio under kaleidoscope mode (no stretch)', async () => {
+		setKaleidoscopeEnabled(true);
+		setAspectRatio('16:9');
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => {
+				const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+				expect(canvas).toBeTruthy();
+				const w = parseFloat(canvas.style.width);
+				const h = parseFloat(canvas.style.height);
+				expect(w).toBeGreaterThan(0);
+				expect(h).toBeGreaterThan(0);
+				expect(w / h).toBeCloseTo(16 / 9, 1);
+			});
+		} finally {
+			setKaleidoscopeEnabled(false);
+			setAspectRatio('1:1');
+		}
 	});
 
 	it('flat Export SVG produces no download when there are no rings', async () => {

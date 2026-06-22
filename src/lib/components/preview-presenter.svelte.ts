@@ -221,9 +221,16 @@ export function createPreviewPresenter() {
 			void kaleidoscope.refreshNonce;
 			void kaleidoscope.tileBackground;
 			const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE);
-			if (canvasEl && (canvasEl.width !== width || canvasEl.height !== height)) {
-				canvasEl.width = width;
-				canvasEl.height = height;
+			if (canvasEl) {
+				if (canvasEl.width !== width || canvasEl.height !== height) {
+					canvasEl.width = width;
+					canvasEl.height = height;
+				}
+				// paper.js sets inline style.width/height at setup (hi-DPI path); the
+				// kaleidoscope owns the visible canvas here, so keep the CSS box in sync
+				// with the aspect ratio or the new buffer gets stretched into the old box.
+				canvasEl.style.width = `${width}px`;
+				canvasEl.style.height = `${height}px`;
 			}
 			if (!kaleidoscope.liveTile) refreshTile();
 		});
