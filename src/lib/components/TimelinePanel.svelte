@@ -2,16 +2,15 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { keyframes } from '$lib/state/keyframes.svelte';
-	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
 	import {
 		animationState,
 		refreshPreview,
 		togglePlay,
 		stopAnimation,
 		setAnimationDurationSec,
-		setAnimationFps
+		setAnimationFps,
+		getAllAnimatableParams
 	} from '$lib/state/animation';
-	import { composition } from '$lib/state/composition';
 	import { xFromTime } from '$lib/animation/timeline-geometry';
 	import { m } from '$lib/paraglide/messages';
 	import type { Interp } from '$lib/animation/keyframes';
@@ -25,13 +24,11 @@
 
 	const FPS_OPTIONS = [25, 30, 50, 60];
 
-	// Audio modes run off a live clock with no fixed duration → show elapsed instead of a
-	// duration field. blockPlayback mirrors the morph requirement for timed modes.
+	// An active audio layer runs off a live clock with no fixed duration → show elapsed
+	// instead of a duration field. Play itself is always available (the clock always runs).
 	const isAudioMode = $derived(
-		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+		animationState.layers.audioBars || animationState.layers.audioZones
 	);
-	const hasMorphRings = $derived(composition.rings.some((r) => r.secondaryTemplatePath !== null));
-	const blockPlayback = $derived(!isAudioMode && !hasMorphRings);
 
 	// Horizontal zoom of the tracks stage. The stage width is zoom×100% inside a scroll
 	// container, so the ruler, keyframes and playhead all scale (they measure their own
@@ -62,7 +59,7 @@
 		const tag = t?.tagName;
 		if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || t?.isContentEditable) return;
 		e.preventDefault();
-		if (!blockPlayback) togglePlay();
+		togglePlay();
 	}
 
 	$effect(() => {
@@ -73,7 +70,9 @@
 	let laneColEl = $state<HTMLDivElement>();
 	let selection = $state<{ paramId: string; keyframeId: string } | null>(null);
 
-	const armedParams = $derived(KALEIDO_PARAMS.filter((p) => keyframes.tracks[p.id]?.enabled));
+	const armedParams = $derived(
+		getAllAnimatableParams().filter((p) => keyframes.tracks[p.id]?.enabled)
+	);
 
 	// The selected keyframe, resolved against live state (null once it's deleted).
 	const selectedKf = $derived(
@@ -135,12 +134,7 @@
 		</button>
 		{#if open}
 			<div class="flex items-center gap-2">
-				<Button
-					onclick={togglePlay}
-					aria-pressed={animationState.isPlaying}
-					disabled={blockPlayback}
-					size="sm"
-				>
+				<Button onclick={togglePlay} aria-pressed={animationState.isPlaying} size="sm">
 					{animationState.isPlaying ? m.common_pause() : m.common_play()}
 				</Button>
 				<Button onclick={() => stopAnimation(true)} variant="ghost" size="sm"

@@ -28,7 +28,7 @@
 	import type { ApplySlot } from '$lib/state/path-library';
 
 	const morphInactive = $derived(
-		animationState.mode === 'audioBars' || animationState.mode === 'audioZones'
+		animationState.layers.audioBars || animationState.layers.audioZones
 	);
 
 	let {

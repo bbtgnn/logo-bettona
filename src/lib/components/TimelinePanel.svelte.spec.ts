@@ -150,13 +150,17 @@ describe('TimelinePanel', () => {
 		expect(after).not.toBe('100%');
 	});
 
-	it('toggles play on spacebar (audio mode → playback not blocked)', async () => {
-		animationState.mode = 'audioBars';
+	it('Play button is always enabled (no blockPlayback gate)', async () => {
+		render(TimelinePanel);
+		const play = page.getByRole('button', { name: /Play|Pause/ });
+		await expect.element(play).not.toBeDisabled();
+	});
+
+	it('toggles play on spacebar unconditionally', async () => {
 		animationState.isPlaying = false;
 		render(TimelinePanel);
 		window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
 		expect(animationState.isPlaying).toBe(true);
 		stopAnimation(true);
-		animationState.mode = 'simple';
 	});
 });

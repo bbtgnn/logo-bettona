@@ -215,22 +215,12 @@ function stopInternal(resetProgress = true) {
 	animationState.isPaused = false;
 }
 
-function hasRunnableMode(): boolean {
-	return (
-		animationState.layers.simple ||
-		animationState.layers.audioBars ||
-		animationState.layers.audioZones
-	);
-}
-
+// Refresh the morph-ring bookkeeping (animatedIndices/lastRingCount) so a later
+// stop zeroes the rings that were actually morphing.
 function hasMorphTargets(): boolean {
 	animatedIndices = getMorphRingIndices();
 	lastRingCount = composition.rings.length;
 	return animatedIndices.length > 0;
-}
-
-function hasEnabledKeyframeTracks(): boolean {
-	return keyframes.hasEnabledTracks();
 }
 
 // Audio registries. Labels are getter objects so each param's `label` resolves the
@@ -386,10 +376,10 @@ function tick(nowMs: number) {
 
 function startNewAnimation() {
 	lastRingCount = composition.rings.length;
-	if (!hasRunnableMode() && !hasMorphTargets() && !hasEnabledKeyframeTracks()) {
-		stopInternal(true);
-		return;
-	}
+	// Sync the morph-ring bookkeeping so a stop still zeroes the right rings.
+	hasMorphTargets();
+	// Play is always activatable: the timeline always runs the clock, regardless of
+	// whether any layer drives or any keyframe track is armed.
 	animationState.progress = 0;
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
@@ -502,10 +492,7 @@ export function togglePlay() {
 		return;
 	}
 
-	if (!hasRunnableMode() && !hasMorphTargets() && !hasEnabledKeyframeTracks()) {
-		stopInternal(true);
-		return;
-	}
+	// Resume is unconditional — the clock always runs (Play is always activatable).
 	syncActiveDrivers();
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
