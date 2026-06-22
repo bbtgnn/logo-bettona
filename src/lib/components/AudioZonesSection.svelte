@@ -3,13 +3,16 @@
 	import {
 		animationState,
 		setLayerEnabled,
-		setAudioZonesDefaultIntensity,
 		setAudioSource,
-		audioSource
+		audioSource,
+		getAudioZonesParams
 	} from '$lib/state/animation';
 	import { m } from '$lib/paraglide/messages';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import AudioFilePanel from './AudioFilePanel.svelte';
+	import AnimatableSlider from './AnimatableSlider.svelte';
+
+	const zonesParams = getAudioZonesParams();
 
 	const showInputLevel = $derived(
 		animationState.layers.audioZones && animationState.audioSource === 'mic'
@@ -93,47 +96,9 @@
 					<p class="text-[11px] font-medium text-muted-foreground">
 						{m.animate_intensity_per_band()}
 					</p>
-					<div class="flex flex-col gap-1">
-						<Label for="zones-bass" class="text-xs">{m.animate_zone_bass()}</Label>
-						<input
-							id="zones-bass"
-							type="range"
-							min="0"
-							max="1"
-							step="0.01"
-							value={animationState.audioZones.defaultIntensity.bass}
-							oninput={(e) =>
-								setAudioZonesDefaultIntensity({ bass: Number((e.target as HTMLInputElement).value) })}
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<Label for="zones-mid" class="text-xs">{m.animate_zone_mid()}</Label>
-						<input
-							id="zones-mid"
-							type="range"
-							min="0"
-							max="1"
-							step="0.01"
-							value={animationState.audioZones.defaultIntensity.mid}
-							oninput={(e) =>
-								setAudioZonesDefaultIntensity({ mid: Number((e.target as HTMLInputElement).value) })}
-						/>
-					</div>
-					<div class="flex flex-col gap-1">
-						<Label for="zones-treble" class="text-xs">{m.animate_zone_treble()}</Label>
-						<input
-							id="zones-treble"
-							type="range"
-							min="0"
-							max="1"
-							step="0.01"
-							value={animationState.audioZones.defaultIntensity.treble}
-							oninput={(e) =>
-								setAudioZonesDefaultIntensity({
-									treble: Number((e.target as HTMLInputElement).value)
-								})}
-						/>
-					</div>
+					{#each zonesParams as param (param.id)}
+						<AnimatableSlider {param} />
+					{/each}
 				</div>
 			</div>
 		</div>

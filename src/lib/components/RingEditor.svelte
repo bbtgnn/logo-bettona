@@ -14,7 +14,6 @@
 		colorMode,
 		createRingMorphTarget,
 		removeRingMorphTarget,
-		setRingMorphT,
 		updateRingPathVariant
 	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
@@ -231,32 +230,17 @@
 						{m.editor_create_morph()}
 					</Button>
 				{:else}
-					<div class="space-y-2">
-						<div class="flex items-center justify-between gap-2">
-							<Button
-								variant="outline"
-								size="sm"
-								onclick={() => {
-									ringPathError = null;
-									removeRingMorphTarget(index);
-									editVariant = 'primary';
-								}}
-							>
-								{m.editor_remove_morph()}
-							</Button>
-							<span class="text-xs text-muted-foreground"
-								>{m.editor_morph_t({ value: (ring.morphT ?? 0).toFixed(2) })}</span
-							>
-						</div>
-						<Slider
-							type="single"
-							min={0}
-							max={1}
-							step={0.01}
-							value={ring.morphT ?? 0}
-							onValueChange={(v) => setRingMorphT(index, v)}
-						/>
-					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							ringPathError = null;
+							removeRingMorphTarget(index);
+							editVariant = 'primary';
+						}}
+					>
+						{m.editor_remove_morph()}
+					</Button>
 				{/if}
 			{/if}
 

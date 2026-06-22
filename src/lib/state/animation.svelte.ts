@@ -264,6 +264,15 @@ const AUDIO_ZONES_PARAMS = buildAudioZonesParams({
 	}
 });
 
+// The static audio registries, surfaced for the section UIs so each slider can carry
+// a ⏱ stopwatch via AnimatableSlider (same param objects the apply-loop walks).
+export function getAudioBarsParams(): AnimatableParam[] {
+	return AUDIO_BARS_PARAMS;
+}
+export function getAudioZonesParams(): AnimatableParam[] {
+	return AUDIO_ZONES_PARAMS;
+}
+
 /**
  * Every keyframable param across all registries, resolved against live state.
  * Per-ring wave params are rebuilt each call from `composition.rings` so they

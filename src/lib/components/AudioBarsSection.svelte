@@ -3,16 +3,19 @@
 	import {
 		animationState,
 		setLayerEnabled,
-		setAudioBarsConfig,
 		setAudioSource,
-		audioSource
+		audioSource,
+		getAudioBarsParams
 	} from '$lib/state/animation';
 	import { composition } from '$lib/state/composition';
 	import { m } from '$lib/paraglide/messages';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import RingWaveConfigItem from './RingWaveConfigItem.svelte';
 	import AudioFilePanel from './AudioFilePanel.svelte';
+	import AnimatableSlider from './AnimatableSlider.svelte';
 	import type { WaveConfig } from '$lib/types';
+
+	const barsParams = getAudioBarsParams();
 
 	const globalWaveDefault = $derived<WaveConfig>({
 		crests: animationState.audioBars.waveCrests,
@@ -100,77 +103,9 @@
 					<AudioFilePanel />
 				{/if}
 
-				<div class="flex flex-col gap-1">
-					<Label for="input-gain" class="text-xs">{m.animate_input_gain()}</Label>
-					<input
-						id="input-gain"
-						type="range"
-						min="0.5"
-						max="4"
-						step="0.1"
-						value={animationState.audioBars.inputGain}
-						oninput={(e) =>
-							setAudioBarsConfig({ inputGain: Number((e.target as HTMLInputElement).value) })}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="wave-crests" class="text-xs">{m.animate_wave_crests()}</Label>
-					<input
-						id="wave-crests"
-						type="range"
-						min="1"
-						max="8"
-						step="1"
-						value={animationState.audioBars.waveCrests}
-						oninput={(e) =>
-							setAudioBarsConfig({ waveCrests: Number((e.target as HTMLInputElement).value) })}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="amplitude-gain" class="text-xs">{m.animate_amplitude_gain()}</Label>
-					<input
-						id="amplitude-gain"
-						type="range"
-						min="0"
-						max="1"
-						step="0.01"
-						value={animationState.audioBars.waveAmplitudeGain}
-						oninput={(e) =>
-							setAudioBarsConfig({
-								waveAmplitudeGain: Number((e.target as HTMLInputElement).value)
-							})}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="phase-speed" class="text-xs">{m.animate_phase_speed()}</Label>
-					<input
-						id="phase-speed"
-						type="range"
-						min="0"
-						max="6"
-						step="0.1"
-						value={animationState.audioBars.wavePhaseSpeed}
-						oninput={(e) =>
-							setAudioBarsConfig({ wavePhaseSpeed: Number((e.target as HTMLInputElement).value) })}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="smoothing" class="text-xs">{m.animate_smoothing()}</Label>
-					<input
-						id="smoothing"
-						type="range"
-						min="0"
-						max="0.95"
-						step="0.05"
-						value={animationState.audioBars.smoothing}
-						oninput={(e) =>
-							setAudioBarsConfig({ smoothing: Number((e.target as HTMLInputElement).value) })}
-					/>
-				</div>
+				{#each barsParams as param (param.id)}
+					<AnimatableSlider {param} />
+				{/each}
 
 				<div class="flex flex-col gap-1">
 					<p class="text-[11px] font-medium text-muted-foreground">{m.animate_wave_per_ring()}</p>
