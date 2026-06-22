@@ -181,8 +181,11 @@ export function removeRingMorphTarget(index: number) {
 export type UpdateRingPathVariantResult = { ok: true } | { ok: false; reason: string };
 
 /**
- * Updates primary or secondary template path. When both paths exist, enforces strict
- * structural compatibility; rejects the update without mutating state if incompatible.
+ * Updates primary or secondary template path. Editing the secondary enforces strict
+ * structural compatibility with the primary and rejects an incompatible update without
+ * mutating state. Editing the primary always succeeds: a structurally incompatible
+ * primary edit re-seeds the secondary from the new primary (stopgap, see the primary
+ * branch), keeping the morph pair interpolatable.
  */
 export function updateRingPathVariant(
 	index: number,
