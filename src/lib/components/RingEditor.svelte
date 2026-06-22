@@ -12,12 +12,9 @@
 		setRingExpanded,
 		isRingExpanded,
 		colorMode,
-		createRingMorphTarget,
-		removeRingMorphTarget,
 		updateRingPathVariant
 	} from '$lib/state/composition';
 	import { importSvg } from '$lib/geometry/svg-import';
-	import { animationState } from '$lib/state/animation';
 	import { saveEntry } from '$lib/state/path-library';
 	import { m } from '$lib/paraglide/messages';
 	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
@@ -25,10 +22,6 @@
 	import type { Ring } from '$lib/types';
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
-
-	const morphInactive = $derived(
-		animationState.layers.audioBars || animationState.layers.audioZones
-	);
 
 	let {
 		ring,
@@ -47,7 +40,6 @@
 	let open = $state(false);
 	let importError = $state<string | null>(null);
 	let ringPathError = $state<string | null>(null);
-	let editVariant = $state<'primary' | 'secondary'>('primary');
 	let saveStatus = $state<string | null>(null);
 	let saveStatusTimer: ReturnType<typeof setTimeout> | null = null;
 	let libraryOpen = $state(false);
@@ -59,28 +51,9 @@
 
 	function handleApplyFromLibrary(entry: PathLibraryEntry, slot: ApplySlot) {
 		libraryApplyError = null;
-
-		if (slot === 'template' || slot === 'both') {
+		if (slot === 'template') {
 			const r1 = updateRingPathVariant(index, 'primary', clonePath(entry.path));
-			if (!r1.ok) {
-				libraryApplyError = r1.reason;
-				return;
-			}
-		}
-
-		if (slot === 'secondary') {
-			const r2 = updateRingPathVariant(index, 'secondary', clonePath(entry.path));
-			if (!r2.ok) libraryApplyError = r2.reason;
-			return;
-		}
-
-		if (slot === 'both') {
-			if (entry.secondaryPath) {
-				const r3 = updateRingPathVariant(index, 'secondary', clonePath(entry.secondaryPath));
-				if (!r3.ok) libraryApplyError = r3.reason;
-			} else if (ring.secondaryTemplatePath) {
-				removeRingMorphTarget(index);
-			}
+			if (!r1.ok) libraryApplyError = r1.reason;
 		}
 	}
 
@@ -106,12 +79,6 @@
 		open = isRingExpanded(index);
 	});
 
-	$effect(() => {
-		if (!ring.secondaryTemplatePath && editVariant === 'secondary') {
-			editVariant = 'primary';
-		}
-	});
-
 	// Dedicated PaperScope for SVG import (not for display — RingCanvas has its own)
 	const importScope = new paper.PaperScope();
 	importScope.setup(new paper.Size(1, 1));
@@ -129,7 +96,7 @@
 		}
 
 		ringPathError = null;
-		const result = updateRingPathVariant(index, editVariant, path);
+		const result = updateRingPathVariant(index, 'primary', path);
 		if (!result.ok) {
 			ringPathError = result.reason;
 		}
@@ -137,7 +104,7 @@
 
 	function applyPathFromEditor(newPath: NonNullable<Ring['templatePath']>) {
 		ringPathError = null;
-		const result = updateRingPathVariant(index, editVariant, newPath);
+		const result = updateRingPathVariant(index, 'primary', newPath);
 		if (!result.ok) {
 			ringPathError = result.reason;
 		}
@@ -182,66 +149,14 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			{#if ring.secondaryTemplatePath && !morphInactive}
-				<div class="flex items-center gap-2">
-					<Button
-						variant={editVariant === 'primary' ? 'default' : 'outline'}
-						size="sm"
-						onclick={() => (editVariant = 'primary')}
-					>
-						{m.editor_ring_primary()}
-					</Button>
-					<Button
-						variant={editVariant === 'secondary' ? 'default' : 'outline'}
-						size="sm"
-						onclick={() => (editVariant = 'secondary')}
-					>
-						{m.editor_ring_secondary()}
-					</Button>
-				</div>
-			{/if}
-
-			{#key editVariant}
-				<RingCanvas
-					templatePath={!morphInactive && editVariant === 'secondary'
-						? ring.secondaryTemplatePath
-						: ring.templatePath}
-					onchange={applyPathFromEditor}
-					label={!morphInactive && editVariant === 'secondary'
-						? m.editor_path_editor_secondary()
-						: m.editor_path_editor()}
-				/>
-			{/key}
+			<RingCanvas
+				templatePath={ring.templatePath}
+				onchange={applyPathFromEditor}
+				label={m.editor_path_editor()}
+			/>
 
 			{#if ringPathError}
 				<p class="text-xs text-destructive">{ringPathError}</p>
-			{/if}
-
-			{#if !morphInactive}
-				{#if !ring.secondaryTemplatePath}
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={() => {
-							ringPathError = null;
-							createRingMorphTarget(index);
-						}}
-					>
-						{m.editor_create_morph()}
-					</Button>
-				{:else}
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={() => {
-							ringPathError = null;
-							removeRingMorphTarget(index);
-							editVariant = 'primary';
-						}}
-					>
-						{m.editor_remove_morph()}
-					</Button>
-				{/if}
 			{/if}
 
 			<div class="flex flex-wrap items-center gap-2">
@@ -275,7 +190,7 @@
 				</p>
 			{/if}
 
-			<LibraryPickerSheet bind:open={libraryOpen} onapply={handleApplyFromLibrary} />
+			<LibraryPickerSheet bind:open={libraryOpen} slots={['template']} onapply={handleApplyFromLibrary} />
 
 			<div class="flex flex-col gap-1">
 				<Label for="svg-upload-{index}" class="text-xs">{m.editor_import_svg()}</Label>

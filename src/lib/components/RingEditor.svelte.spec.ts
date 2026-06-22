@@ -29,11 +29,14 @@ describe('RingEditor', () => {
 		setRingExpanded(0, true);
 	});
 
-	it('keeps the morph-target controls but no longer renders the morphT slider', async () => {
+	it('shows only the primary path editor, no morph controls', async () => {
 		render(RingEditor, { ring: morphRing(), index: 0 });
-		// The drawing controls stay in the editor.
-		await expect.element(page.getByRole('button', { name: 'Remove morph target' })).toBeInTheDocument();
-		// The morphT slider + "Morph t:" readout moved to the Simple animate window.
-		expect(page.getByText(/Morph t:/i).query()).toBeNull();
+		// Morph controls are gone from the editor.
+		expect(page.getByRole('button', { name: 'Create morph target' }).query()).toBeNull();
+		expect(page.getByRole('button', { name: 'Remove morph target' }).query()).toBeNull();
+		expect(page.getByRole('button', { name: 'Secondary' }).query()).toBeNull();
+		// The primary drawing + sizing controls stay.
+		await expect.element(page.getByText('Path editor', { exact: true })).toBeInTheDocument();
+		await expect.element(page.getByText('Copies')).toBeInTheDocument();
 	});
 });
