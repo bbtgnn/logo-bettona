@@ -6,8 +6,7 @@ import {
 	kaleidoscope,
 	setKaleidoscopeEnabled,
 	setCircularMask,
-	setLiveTile,
-	setTileBackground
+	setLiveTile
 } from '$lib/state/kaleidoscope.svelte';
 import { animationState, setLayerEnabled } from '$lib/state/animation';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
@@ -66,27 +65,21 @@ describe('KaleidoscopeSection', () => {
 		expect(keyframes.tracks['kaleidoscope.sectors'].enabled).toBe(true);
 	});
 
-	it('wires the circular-mask, live-tile and tile-background checkboxes', async () => {
+	it('wires the circular-mask and live-tile checkboxes', async () => {
 		setCircularMask(true);
 		setLiveTile(false);
-		setTileBackground(false);
-		render(KaleidoscopeSection);
+		render(KaleidoscopeSection); // animatable defaults true → live tile shown
 
 		await userEvent.click(page.getByLabelText('Circular mask'));
 		expect(kaleidoscope.circularMask).toBe(false);
 
 		await userEvent.click(page.getByLabelText('Live tile'));
 		expect(kaleidoscope.liveTile).toBe(true);
-
-		await userEvent.click(page.getByLabelText('Tile background'));
-		expect(kaleidoscope.tileBackground).toBe(true);
-		expect(kaleidoscope.drawBackground).toBe(false);
 	});
 
-	it('shows "Refresh snapshot" only while the live tile is off', async () => {
-		setLiveTile(false);
-		render(KaleidoscopeSection);
-		await expect.element(page.getByText('Refresh snapshot')).toBeInTheDocument();
+	it('shows the live-tile toggle only in the animatable (Animate) section', async () => {
+		render(KaleidoscopeSection, { animatable: false });
+		expect(page.getByLabelText('Live tile').query()).toBeNull();
 	});
 
 	it('hides the stopwatches when not animatable but keeps the sliders working', async () => {

@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 	import AnimatableSlider from './AnimatableSlider.svelte';
 	import {
 		kaleidoscope,
 		setKaleidoscopeEnabled,
 		setCircularMask,
-		setLiveTile,
-		setTileBackground,
-		requestTileRefresh
+		setLiveTile
 	} from '$lib/state/kaleidoscope.svelte';
 	import { KALEIDO_PARAMS } from '$lib/state/kaleidoscope-params';
 	import { animationState, setLayerEnabled } from '$lib/state/animation';
@@ -66,31 +63,17 @@
 				{m.editor_kaleido_circular_mask()}
 			</label>
 
-			<label class="flex items-center gap-2 text-xs">
-				<input
-					type="checkbox"
-					aria-label={m.editor_kaleido_live_tile()}
-					checked={kaleidoscope.liveTile}
-					onchange={(e) => setLiveTile(checked(e))}
-				/>
-				{m.editor_kaleido_live_tile_audio()}
-			</label>
-
-			{#if !kaleidoscope.liveTile}
-				<Button variant="outline" class="w-full" onclick={() => requestTileRefresh()}>
-					{m.editor_kaleido_refresh_snapshot()}
-				</Button>
+			{#if animatable}
+				<label class="flex items-center gap-2 text-xs">
+					<input
+						type="checkbox"
+						aria-label={m.editor_kaleido_live_tile()}
+						checked={kaleidoscope.liveTile}
+						onchange={(e) => setLiveTile(checked(e))}
+					/>
+					{m.editor_kaleido_live_tile_audio()}
+				</label>
 			{/if}
-
-			<label class="flex items-center gap-2 text-xs">
-				<input
-					type="checkbox"
-					aria-label={m.editor_kaleido_tile_background()}
-					checked={kaleidoscope.tileBackground}
-					onchange={(e) => setTileBackground(checked(e))}
-				/>
-				{m.editor_kaleido_tile_background()}
-			</label>
 		</div>
 	{/snippet}
 </SidebarCollapsible>

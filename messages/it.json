@@ -16,8 +16,6 @@
 	"editor_kaleido_circular_mask": "Maschera circolare",
 	"editor_kaleido_live_tile": "Tessera viva",
 	"editor_kaleido_live_tile_audio": "Tessera viva (audio)",
-	"editor_kaleido_refresh_snapshot": "Aggiorna istantanea",
-	"editor_kaleido_tile_background": "Sfondo tessera",
 	"editor_animate_param": "Anima {label}",
 	"editor_animate_this_param": "Anima questo parametro",
 	"editor_kaleido_global_rotation": "Rotazione globale",

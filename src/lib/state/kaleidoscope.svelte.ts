@@ -6,8 +6,6 @@ import { clampSectors, clampRepeat, type KaleidoscopeParams } from '$lib/geometr
 export type KaleidoscopeState = Omit<KaleidoscopeParams, 'backgroundColor'> & {
 	enabled: boolean;
 	liveTile: boolean;
-	tileBackground: boolean;
-	refreshNonce: number;
 };
 
 export const kaleidoscope = $state<KaleidoscopeState>({
@@ -22,14 +20,9 @@ export const kaleidoscope = $state<KaleidoscopeState>({
 	globalRotation: 0,
 	circularMask: true,
 	liveTile: false,
-	tileBackground: false,
-	refreshNonce: 0,
-	// Derived, not stored: the kaleidoscope paints its own background only when the tile
-	// doesn't carry one. A getter so it can never drift from tileBackground (the render
-	// layout reads params.drawBackground straight off this object).
-	get drawBackground() {
-		return !this.tileBackground;
-	}
+	// The kaleidoscope always paints its own background; the source tile stays transparent
+	// (the render layout reads params.drawBackground straight off this object).
+	drawBackground: true
 });
 
 export function setKaleidoscopeEnabled(v: boolean) {
@@ -64,12 +57,4 @@ export function setCircularMask(v: boolean) {
 }
 export function setLiveTile(v: boolean) {
 	kaleidoscope.liveTile = v;
-}
-export function setTileBackground(v: boolean) {
-	// drawBackground follows automatically (derived getter) — no second field to sync.
-	kaleidoscope.tileBackground = v;
-}
-// Bumped to ask PreviewCanvas for a fresh static-tile snapshot (live tile off).
-export function requestTileRefresh() {
-	kaleidoscope.refreshNonce++;
 }

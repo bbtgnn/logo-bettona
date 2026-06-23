@@ -56,8 +56,8 @@ export function createPreviewPresenter() {
 		// tile matches the visible canvas instead of re-fitting the deformed pose.
 		const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
 		pipeline!.render({ composition, scope: tileScope!, ignoreMorph, viewport, restFit });
-		const bg = kaleidoscope.tileBackground ? getCompositionBackgroundColor() : null;
-		return composeTileWithBackground(tileCanvas!, bg);
+		// The tile stays transparent; the kaleidoscope paints the background itself.
+		return composeTileWithBackground(tileCanvas!, null);
 	}
 
 	function refreshTile() {
@@ -279,16 +279,11 @@ export function createPreviewPresenter() {
 
 		// While in kaleidoscope mode the composition no longer paints the visible canvas
 		// (gated above), so this keeps the canvas sized to the aspect ratio and re-snapshots
-		// the static tile whenever the composition, aspect, explicit refresh, or "Sfondo
-		// tessera" toggle changes. Merged from two former effects so the tile is re-snapshot
-		// exactly once per change (the two could both fire on the same tick and double-render).
-		// The tile renders to the OFFSCREEN scope, so the rAF loop stays the only writer of
-		// the visible canvas (no flicker).
+		// the static tile whenever the composition or aspect changes. The tile renders to the
+		// OFFSCREEN scope, so the rAF loop stays the only writer of the visible canvas (no flicker).
 		$effect(() => {
 			if (!kaleidoscope.enabled) return;
 			void $state.snapshot(composition); // deep-track composition edits
-			void kaleidoscope.refreshNonce;
-			void kaleidoscope.tileBackground;
 			const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE);
 			if (canvasEl) {
 				if (canvasEl.width !== width || canvasEl.height !== height) {

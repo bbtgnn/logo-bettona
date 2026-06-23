@@ -16,8 +16,6 @@
 	"editor_kaleido_circular_mask": "Circular mask",
 	"editor_kaleido_live_tile": "Live tile",
 	"editor_kaleido_live_tile_audio": "Live tile (audio)",
-	"editor_kaleido_refresh_snapshot": "Refresh snapshot",
-	"editor_kaleido_tile_background": "Tile background",
 	"editor_animate_param": "Animate {label}",
 	"editor_animate_this_param": "Animate this parameter",
 	"editor_kaleido_global_rotation": "Global rotation",

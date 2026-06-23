@@ -4,7 +4,7 @@ import {
 	setKaleidoscopeEnabled,
 	setSectors,
 	setRepeat,
-	setTileBackground
+	setLiveTile
 } from './kaleidoscope.svelte';
 
 describe('kaleidoscope state', () => {
@@ -12,7 +12,7 @@ describe('kaleidoscope state', () => {
 		setKaleidoscopeEnabled(false);
 		setSectors(6);
 		setRepeat(2);
-		setTileBackground(false);
+		setLiveTile(false);
 	});
 
 	it('toggles enabled', () => {
@@ -32,15 +32,14 @@ describe('kaleidoscope state', () => {
 		expect(kaleidoscope.repeat).toBe(10);
 	});
 
-	it('stores the tile-background flag', () => {
-		setTileBackground(true);
-		expect(kaleidoscope.tileBackground).toBe(true);
+	it('toggles the live tile flag', () => {
+		setLiveTile(true);
+		expect(kaleidoscope.liveTile).toBe(true);
+		setLiveTile(false);
+		expect(kaleidoscope.liveTile).toBe(false);
 	});
 
-	it('mirrors drawBackground as the inverse of tileBackground', () => {
-		setTileBackground(true);
-		expect(kaleidoscope.drawBackground).toBe(false);
-		setTileBackground(false);
+	it('always paints its own background (drawBackground constant true)', () => {
 		expect(kaleidoscope.drawBackground).toBe(true);
 	});
 });
