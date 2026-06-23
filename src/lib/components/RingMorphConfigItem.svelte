@@ -6,6 +6,7 @@
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { CaretDown, CaretRight } from 'phosphor-svelte';
 	import {
+		composition,
 		createRingMorphTarget,
 		removeRingMorphTarget,
 		updateRingPathVariant,
@@ -15,6 +16,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
 	import RingCanvas from './RingCanvas.svelte';
+	import RingMorphPreview from './RingMorphPreview.svelte';
 	import type { Ring, PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
 
@@ -88,6 +90,13 @@
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
 			{#if !ring.secondaryTemplatePath}
+				<RingMorphPreview
+					path={ring.templatePath}
+					copies={ring.copies}
+					baseRadius={composition.baseRadius}
+					ringIncrement={composition.ringIncrement}
+					size={200}
+				/>
 				<Button
 					variant="outline"
 					size="sm"
@@ -99,6 +108,28 @@
 					{m.editor_create_morph()}
 				</Button>
 			{:else}
+				<RingMorphPreview
+					path={ring.templatePath}
+					secondaryPath={ring.secondaryTemplatePath}
+					morphT={ring.morphT ?? 0}
+					copies={ring.copies}
+					baseRadius={composition.baseRadius}
+					ringIncrement={composition.ringIncrement}
+					size={200}
+					showTry
+				/>
+
+				<div class="flex flex-col gap-1">
+					<span class="text-xs text-muted-foreground">{m.animate_morph_primary_label()}</span>
+					<RingMorphPreview
+						path={ring.templatePath}
+						copies={ring.copies}
+						baseRadius={composition.baseRadius}
+						ringIncrement={composition.ringIncrement}
+						size={120}
+					/>
+				</div>
+
 				<RingCanvas
 					templatePath={ring.secondaryTemplatePath}
 					onchange={applyPathFromEditor}
