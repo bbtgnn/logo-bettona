@@ -6,6 +6,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 	aspectRatio: '1:1',
 	rings: [
 		{
+			id: 'ring-default-0',
 			copies: 8,
 			color: '#ffffff',
 			templatePath: {
@@ -28,6 +29,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			morphT: 1
 		},
 		{
+			id: 'ring-default-1',
 			copies: 8,
 			color: '#000000',
 			templatePath: {
@@ -50,6 +52,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			morphT: 1
 		},
 		{
+			id: 'ring-default-2',
 			copies: 8,
 			color: '#ffffff',
 			templatePath: {
@@ -72,6 +75,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			ringHeight: 0.12
 		},
 		{
+			id: 'ring-default-3',
 			copies: 8,
 			color: '#000000',
 			templatePath: {

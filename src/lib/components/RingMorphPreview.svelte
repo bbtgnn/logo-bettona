@@ -50,6 +50,7 @@
 			aspectRatio: '1:1',
 			rings: [
 				{
+					id: 'ring-morph-preview-ring',
 					copies,
 					color: '#000000',
 					templatePath: path,

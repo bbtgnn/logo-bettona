@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import ApplyToRingSheet from './ApplyToRingSheet.svelte';
 import type { Path, PathLibraryEntry, Ring } from '$lib/types';
 import { switchLocale } from '$lib/state/locale.svelte';
+import { newRingId } from '$lib/state/ring-id';
 
 const PATH: Path = { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] };
 
@@ -19,6 +20,7 @@ function entry(withSecondary: boolean): PathLibraryEntry {
 
 function ring(): Ring {
 	return {
+		id: newRingId(),
 		copies: 8,
 		color: '#000',
 		templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },

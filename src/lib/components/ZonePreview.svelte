@@ -41,6 +41,7 @@
 
 			if (template) {
 				const baseRing: Ring = {
+					id: 'zone-preview-ring',
 					copies: Math.max(1, Math.floor(copies)),
 					color: '#000000',
 					templatePath: template,

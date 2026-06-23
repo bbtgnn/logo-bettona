@@ -12,13 +12,14 @@ import type {
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
 import { composition } from './composition-persistence.svelte';
+import { newRingId } from './ring-id';
 
 export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
 	palette: 0
 });
 
-const DEFAULT_RING: Ring = {
+const DEFAULT_RING: Omit<Ring, 'id'> = {
 	copies: 8,
 	color: '#000000',
 	templatePath: {
@@ -123,7 +124,7 @@ export function removeFullPalette(index: number) {
 }
 
 export function addRing() {
-	composition.rings = [...composition.rings, { ...DEFAULT_RING }];
+	composition.rings = [...composition.rings, { ...DEFAULT_RING, id: newRingId() }];
 	applyColorMode();
 }
 

@@ -21,6 +21,7 @@ const twoRingComposition: Composition = {
 	aspectRatio: '1:1',
 	rings: [
 		{
+			id: 'test-ring-0',
 			copies: 4,
 			color: '#ff0000',
 			templatePath: rectPath,
@@ -29,6 +30,7 @@ const twoRingComposition: Composition = {
 			ringHeight: 0.4
 		},
 		{
+			id: 'test-ring-1',
 			copies: 4,
 			color: '#0000ff',
 			templatePath: rectPath,

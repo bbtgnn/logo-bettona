@@ -12,6 +12,7 @@ vi.mock('rune-sync/localstorage', () => ({
 
 function makeRing(): Ring {
 	return {
+		id: 'test-ring',
 		copies: 1,
 		color: '#000',
 		templatePath: { cmds: ['M', 'L'], crds: [0, 0, 1, 1] },

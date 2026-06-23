@@ -11,6 +11,7 @@ function makeComposition(): Composition {
 		aspectRatio: '1:1',
 		rings: [
 			{
+				id: 'test-ring',
 				copies: 4,
 				color: '#000000',
 				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 10, 10] },

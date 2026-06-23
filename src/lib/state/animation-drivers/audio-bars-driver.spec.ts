@@ -17,6 +17,7 @@ type WaveCall = { index: number; wave: WaveState | null };
 
 function makeRing(waveConfig?: WaveConfig | null): Ring {
 	return {
+		id: 'test-ring',
 		copies: 8,
 		color: '#000000',
 		templatePath: null,

@@ -2,6 +2,7 @@ import { untrack } from 'svelte';
 import { localStorageSync } from 'rune-sync/localstorage';
 import type { Composition } from '$lib/types';
 import { DEFAULT_COMPOSITION } from './default';
+import { newRingId } from './ring-id';
 
 /**
  * Returns a copy of the composition with transient fields (`wave`, `zoneDrive`)
@@ -24,6 +25,25 @@ function stripTransients(composition: Composition): Composition {
 type LegacyMono = { main?: string; bg?: string };
 
 /**
+ * Backfills a stable `id` on any ring that lacks one (legacy saved data predates
+ * the field). Existing ids pass through untouched. Runs on every load and cross-tab
+ * sync so the in-memory composition always has fully-identified rings.
+ */
+export function ensureRingIds(c: Composition): Composition {
+	if (c.rings?.every((r) => typeof (r as { id?: string }).id === 'string' && r.id.length > 0)) {
+		return c;
+	}
+	return {
+		...c,
+		rings: c.rings.map((r) =>
+			typeof (r as { id?: string }).id === 'string' && r.id.length > 0
+				? r
+				: { ...r, id: newRingId() }
+		)
+	};
+}
+
+/**
  * Migrates persisted monochrome palettes from the legacy `{main,bg}` shape to
  * `{primary,secondary,background}`. Idempotent: already-migrated entries pass through.
  * Mapping secondary+background both to the old `bg` preserves the previous look exactly.
@@ -38,7 +58,8 @@ export function normalizeComposition(c: Composition): Composition {
 		}
 		return p;
 	});
-	return palettes ? { ...c, monochromePalettes: palettes } : c;
+	const withPalettes = palettes ? { ...c, monochromePalettes: palettes } : c;
+	return ensureRingIds(withPalettes);
 }
 
 /**

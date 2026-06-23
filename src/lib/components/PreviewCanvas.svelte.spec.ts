@@ -72,6 +72,7 @@ describe('PreviewCanvas.svelte', () => {
 		composition.ringIncrement = 50;
 		composition.rings = [
 			{
+				id: 'test-ring',
 				copies: 8,
 				color: '#000000',
 				templatePath: {

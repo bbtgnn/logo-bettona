@@ -9,6 +9,7 @@
 		aspectRatio: '1:1',
 		rings: [
 			{
+				id: 'about-hero-ring-0',
 				copies: 8,
 				color: '#000000',
 				templatePath: {
@@ -28,6 +29,7 @@
 				ringHeight: 0.2
 			},
 			{
+				id: 'about-hero-ring-1',
 				copies: 8,
 				color: '#000000',
 				templatePath: {

@@ -28,6 +28,7 @@ export type AudioZonesConfig = {
 };
 
 export type Ring = {
+	id: string;
 	copies: number;
 	color: string;
 	templatePath: Path | null;

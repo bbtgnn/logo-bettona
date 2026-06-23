@@ -76,6 +76,7 @@ describe('Paths page', () => {
 	it('enables Apply when an entry is selected and the mark has rings', async () => {
 		composition.rings = [
 			{
+				id: 'test-ring',
 				copies: 8,
 				color: '#000',
 				templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },

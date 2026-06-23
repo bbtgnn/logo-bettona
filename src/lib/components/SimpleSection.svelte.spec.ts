@@ -22,8 +22,8 @@ describe('SimpleSection', () => {
 
 	it('renders a morph editor per ring', async () => {
 		composition.rings = [
-			{ copies: 4, color: '#000', templatePath: { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] }, secondaryTemplatePath: null, morphT: 0, ringHeight: 0.25 },
-			{ copies: 4, color: '#000', templatePath: { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] }, secondaryTemplatePath: null, morphT: 0, ringHeight: 0.25 }
+			{ id: 'test-ring-0', copies: 4, color: '#000', templatePath: { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] }, secondaryTemplatePath: null, morphT: 0, ringHeight: 0.25 },
+			{ id: 'test-ring-1', copies: 4, color: '#000', templatePath: { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] }, secondaryTemplatePath: null, morphT: 0, ringHeight: 0.25 }
 		];
 		render(SimpleSection);
 		await expect.element(page.getByTestId('ring-morph-config-0')).toBeInTheDocument();

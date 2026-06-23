@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Composition, ColorModeState, Path } from '$lib/types';
+import type { Composition, ColorModeState, Path, Ring } from '$lib/types';
 
 const initialComposition: Composition = {
 	baseRadius: 100,
@@ -134,5 +134,24 @@ describe('composition ring morph actions', () => {
 		expect(compositionModule.composition.rings[0].templatePath).toEqual(editedPrimary);
 		// The distinct secondary is untouched (only structural edits re-seed it).
 		expect(compositionModule.composition.rings[0].secondaryTemplatePath).toEqual(distinctSecondary);
+	});
+});
+
+describe('ensureRingIds', () => {
+	const base = (rings: Partial<Ring>[]): Composition =>
+		({ rings } as unknown as Composition);
+
+	it('mints an id for rings missing one', async () => {
+		const { ensureRingIds } = await import('./composition-persistence.svelte');
+		const out = ensureRingIds(base([{ copies: 8 }, { copies: 4 }]));
+		expect(out.rings[0].id.length).toBeGreaterThan(0);
+		expect(out.rings[1].id.length).toBeGreaterThan(0);
+		expect(out.rings[0].id).not.toBe(out.rings[1].id);
+	});
+
+	it('preserves an existing id', async () => {
+		const { ensureRingIds } = await import('./composition-persistence.svelte');
+		const out = ensureRingIds(base([{ id: 'keep-me', copies: 8 }]));
+		expect(out.rings[0].id).toBe('keep-me');
 	});
 });
