@@ -10,7 +10,6 @@ import {
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createAudioZonesDriver } from './animation-drivers/audio-zones-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
-import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
 import { createFallbackBars } from './animation-drivers/fallback-bars';
 import { createAudioSource } from './animation-drivers/audio-source';
@@ -32,7 +31,7 @@ import {
 } from './animatable-params';
 import { m } from '$lib/paraglide/messages';
 
-export type AnimationLayer = 'simple' | 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope';
+export type AnimationLayer = 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope';
 export type AnimationLayers = Record<AnimationLayer, boolean>;
 
 const AUDIO_LAYERS: AnimationLayer[] = ['audioBars', 'audioZones'];
@@ -74,7 +73,7 @@ const defaultDataSeriesConfig: DataSeriesConfig = {
 };
 
 export const animationState = $state<AnimationState>({
-	layers: { simple: true, audioBars: false, audioZones: false, dataSeries: false, kaleidoscope: true },
+	layers: { audioBars: false, audioZones: false, dataSeries: false, kaleidoscope: true },
 	isPlaying: false,
 	isPaused: false,
 	progress: 0,
@@ -107,15 +106,6 @@ const audioSource = createAudioSource({
 	getRingCount: () => composition.rings.length,
 	getConfig: () => animationState.audioBars
 });
-
-runtime.registerDriver(
-	'simple',
-	createSimpleDriver({
-		getRingCount: () => composition.rings.length,
-		getDurationSec: () => animationState.durationSec,
-		getLoop: () => animationState.loop
-	})
-);
 
 runtime.registerDriver(
 	'audioBars',
@@ -196,7 +186,6 @@ function cleanupCurrentAnimation() {
 // Mirror the runtime's active set onto the current layer flags. dataSeries is a
 // placeholder (never runs); kaleidoscope is gated in applyKeyframes, not a driver.
 function syncActiveDrivers(): void {
-	runtime.setActive('simple', animationState.layers.simple);
 	runtime.setActive('audioBars', animationState.layers.audioBars);
 	runtime.setActive('audioZones', animationState.layers.audioZones);
 }
@@ -204,7 +193,6 @@ function syncActiveDrivers(): void {
 function stopInternal(resetProgress = true) {
 	audioSource.stop();
 	cleanupCurrentAnimation();
-	runtime.setActive('simple', false);
 	runtime.setActive('audioBars', false);
 	runtime.setActive('audioZones', false);
 	if (resetProgress) {
@@ -563,11 +551,7 @@ export function handleCompositionChanged() {
 
 	// Active driver layers own their per-ring frame output semantics:
 	// topology updates should be absorbed without forcing a playback reset.
-	if (
-		animationState.layers.simple ||
-		animationState.layers.audioBars ||
-		animationState.layers.audioZones
-	) {
+	if (animationState.layers.audioBars || animationState.layers.audioZones) {
 		lastRingCount = composition.rings.length;
 		animatedIndices = currentIndices;
 		return;

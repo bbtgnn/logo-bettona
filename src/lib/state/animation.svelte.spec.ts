@@ -76,9 +76,8 @@ describe('animation controller', () => {
 		expect(requestAnimationFrameMock).toHaveBeenCalled();
 	});
 
-	it('defaults to simple + kaleidoscope layers on, others off', async () => {
+	it('defaults to kaleidoscope layer on, others off', async () => {
 		const animation = await import('./animation');
-		expect(animation.animationState.layers.simple).toBe(true);
 		expect(animation.animationState.layers.kaleidoscope).toBe(true);
 		expect(animation.animationState.layers.audioBars).toBe(false);
 		expect(animation.animationState.layers.audioZones).toBe(false);
@@ -88,11 +87,11 @@ describe('animation controller', () => {
 	it('setLayerEnabled toggles a layer independently of the others', async () => {
 		const animation = await import('./animation');
 		animation.setLayerEnabled('audioBars', true);
-		expect(animation.animationState.layers.simple).toBe(true);
 		expect(animation.animationState.layers.audioBars).toBe(true);
-		animation.setLayerEnabled('simple', false);
-		expect(animation.animationState.layers.simple).toBe(false);
-		expect(animation.animationState.layers.audioBars).toBe(true);
+		expect(animation.animationState.layers.kaleidoscope).toBe(true);
+		animation.setLayerEnabled('audioBars', false);
+		expect(animation.animationState.layers.audioBars).toBe(false);
+		expect(animation.animationState.layers.kaleidoscope).toBe(true);
 	});
 
 	it('turning off the last audio layer stops the audio source', async () => {
@@ -121,8 +120,9 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPaused).toBe(false);
 	});
 
-	it('keeps simple-driver playback running when composition topology changes', async () => {
+	it('keeps audio-driver playback running when composition topology changes', async () => {
 		const animation = await import('./animation');
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(300);
@@ -196,43 +196,6 @@ describe('animation runtime integration', () => {
 		];
 	});
 
-	it('applies simple driver values when playing in default mode', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const animation = await import('./animation');
-		const { setRingMorphT } = await import('./composition');
-
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(600);
-
-		expect(animation.animationState.layers.simple).toBe(true);
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.2);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('simple non-loop reaches 1 at completion without wraparound reset', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const animation = await import('./animation');
-		const { setRingMorphT } = await import('./composition');
-
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(3000);
-
-		expect(animation.animationState.layers.simple).toBe(true);
-		expect(animation.animationState.isPlaying).toBe(false);
-		expect(animation.animationState.progress).toBe(1);
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 1);
-		expect(vi.mocked(setRingMorphT).mock.calls.at(-1)?.[1]).toBe(1);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
 	it('applies alternate progression to controller progress path', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
@@ -301,10 +264,10 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('elapsedMs resets to 0 when simple animation completes naturally', async () => {
+	it('elapsedMs resets to 0 when the bare-clock animation completes naturally', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		// default simple layer on, durationSec = 3
+		// no driver layer enabled; default durationSec = 3
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(1000);
@@ -327,9 +290,9 @@ describe('animation runtime integration', () => {
 		expect(animation.animationState.elapsedMs).toBe(10000);
 		expect(animation.animationState.isPlaying).toBe(true);
 
-		// Enable the simple layer mid-play — the shared clock is NOT reset and
+		// Enable another layer mid-play — the shared clock is NOT reset and
 		// playback continues (layers are independent; no exclusive-mode switch).
-		animation.setLayerEnabled('simple', true);
+		animation.setLayerEnabled('audioZones', true);
 		expect(animation.animationState.elapsedMs).toBe(10000);
 		expect(animation.animationState.isPlaying).toBe(true);
 

@@ -81,25 +81,25 @@ describe('createAnimationRuntime', () => {
 		const init = vi.fn();
 		const dispose = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT: vi.fn() });
-		runtime.registerDriver('simple', { init, dispose, frame: () => ({}) });
+		runtime.registerDriver('audioZones', { init, dispose, frame: () => ({}) });
 
-		runtime.setActive('simple', true);
-		runtime.setActive('simple', true);
+		runtime.setActive('audioZones', true);
+		runtime.setActive('audioZones', true);
 		expect(init).toHaveBeenCalledOnce();
 
-		runtime.setActive('simple', false);
-		runtime.setActive('simple', false);
+		runtime.setActive('audioZones', false);
+		runtime.setActive('audioZones', false);
 		expect(dispose).toHaveBeenCalledOnce();
 	});
 
 	it('ticks every active driver; distinct-property drivers coexist', () => {
 		const applyRingT = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT });
-		runtime.registerDriver('simple', { init() {}, dispose() {}, frame: () => ({ 0: 0.5 }) });
+		runtime.registerDriver('audioZones', { init() {}, dispose() {}, frame: () => ({ 0: 0.5 }) });
 		const audioFrame = vi.fn(() => ({})); // audio self-applies wave, returns no morph map
 		runtime.registerDriver('audioBars', { init() {}, dispose() {}, frame: audioFrame });
 
-		runtime.setActive('simple', true);
+		runtime.setActive('audioZones', true);
 		runtime.setActive('audioBars', true);
 		runtime.tick(100);
 
