@@ -37,33 +37,49 @@ export function formatSeconds(sec: number): string {
 	return (Number.isInteger(r) ? String(r) : r.toFixed(1)) + 's';
 }
 
-/** Formats seconds as `m:ss.cs` (centiseconds). Negative/non-finite → `0:00.00`. */
-export function formatTimecode(sec: number): string {
-	const safe = Number.isFinite(sec) && sec > 0 ? sec : 0;
-	// Round to centiseconds first so carrying rolls seconds and minutes correctly.
-	const totalCs = Math.round(safe * 100);
-	const cs = totalCs % 100;
-	const totalSec = Math.floor(totalCs / 100);
-	const s = totalSec % 60;
-	const min = Math.floor(totalSec / 60);
-	return `${min}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+/** Normalizes an fps to a positive integer; falls back to 30 for bad input. */
+function safeFps(fps: number): number {
+	return Number.isFinite(fps) && fps > 0 ? Math.round(fps) : 30;
 }
 
 /**
- * Parses a user-typed time to seconds. Accepts `m:ss.cs`, `m:ss`, `ss.cs`, `ss`
- * (and a bare decimal). Returns null for empty, malformed, or negative input.
+ * Formats seconds as After-Effects-style `m:ss:ff`, where `ff` is the frame
+ * number (0..fps-1) at the given frame rate. Negative/non-finite → `0:00:00`.
  */
-export function parseTimecode(str: string): number | null {
+export function formatTimecode(sec: number, fps: number): string {
+	const f = safeFps(fps);
+	const safe = Number.isFinite(sec) && sec > 0 ? sec : 0;
+	// Round to whole frames first so carrying rolls seconds and minutes correctly.
+	const totalFrames = Math.round(safe * f);
+	const ff = totalFrames % f;
+	const totalSec = Math.floor(totalFrames / f);
+	const s = totalSec % 60;
+	const min = Math.floor(totalSec / 60);
+	return `${min}:${String(s).padStart(2, '0')}:${String(ff).padStart(2, '0')}`;
+}
+
+/**
+ * Parses a user-typed time to seconds at the given fps. Accepts `m:ss:ff`,
+ * `ss:ff` (rightmost field is always frames, like After Effects), and a bare
+ * `ss` / decimal. Returns null for empty, malformed, or negative input.
+ */
+export function parseTimecode(str: string, fps: number): number | null {
+	const f = safeFps(fps);
 	const t = str.trim();
 	if (t === '') return null;
 	let seconds: number;
 	if (t.includes(':')) {
 		const parts = t.split(':');
-		if (parts.length !== 2) return null;
-		const [minStr, restStr] = parts;
-		if (!/^\d+$/.test(minStr)) return null;
-		if (!/^\d+(\.\d+)?$/.test(restStr)) return null;
-		seconds = Number(minStr) * 60 + Number(restStr);
+		if (!parts.every((p) => /^\d+$/.test(p))) return null;
+		if (parts.length === 3) {
+			const [minStr, secStr, frameStr] = parts;
+			seconds = Number(minStr) * 60 + Number(secStr) + Number(frameStr) / f;
+		} else if (parts.length === 2) {
+			const [secStr, frameStr] = parts;
+			seconds = Number(secStr) + Number(frameStr) / f;
+		} else {
+			return null;
+		}
 	} else {
 		if (!/^\d+(\.\d+)?$/.test(t)) return null;
 		seconds = Number(t);

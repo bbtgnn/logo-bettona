@@ -75,33 +75,43 @@ describe('snapProgressToFps', () => {
 });
 
 describe('timecode', () => {
-	it('formats seconds as m:ss.cs', () => {
-		expect(formatTimecode(0)).toBe('0:00.00');
-		expect(formatTimecode(3.25)).toBe('0:03.25');
-		expect(formatTimecode(65.5)).toBe('1:05.50');
+	it('formats seconds as m:ss:ff (frames) for the given fps', () => {
+		expect(formatTimecode(0, 25)).toBe('0:00:00');
+		// 3.24s at 25fps = 81 frames → 3s + 6 frames
+		expect(formatTimecode(3.24, 25)).toBe('0:03:06');
+		// 65.52s at 25fps = 1638 frames → 1m 5s + 13 frames
+		expect(formatTimecode(65.52, 25)).toBe('1:05:13');
 	});
 
-	it('carries centiseconds when rounding', () => {
-		expect(formatTimecode(3.999)).toBe('0:04.00');
-		expect(formatTimecode(59.999)).toBe('1:00.00');
+	it('adapts the frame field to the fps', () => {
+		// 1.5s → half a second of frames: 25 at 50fps, 15 at 30fps
+		expect(formatTimecode(1.5, 50)).toBe('0:01:25');
+		expect(formatTimecode(1.5, 30)).toBe('0:01:15');
+	});
+
+	it('carries frames into seconds when rounding reaches fps', () => {
+		// 3.999s at 25fps = 99.975 → 100 frames → 4s + 0 frames
+		expect(formatTimecode(3.999, 25)).toBe('0:04:00');
+		// 59.99s at 25fps = 1499.75 → 1500 frames → 1m 0s
+		expect(formatTimecode(59.99, 25)).toBe('1:00:00');
 	});
 
 	it('clamps negative/non-finite to zero', () => {
-		expect(formatTimecode(-1)).toBe('0:00.00');
-		expect(formatTimecode(NaN)).toBe('0:00.00');
+		expect(formatTimecode(-1, 25)).toBe('0:00:00');
+		expect(formatTimecode(NaN, 25)).toBe('0:00:00');
 	});
 
-	it('parses valid timecodes to seconds', () => {
-		expect(parseTimecode('0:03.25')).toBeCloseTo(3.25, 5);
-		expect(parseTimecode('1:05.5')).toBeCloseTo(65.5, 5);
-		expect(parseTimecode('3.2')).toBeCloseTo(3.2, 5);
-		expect(parseTimecode('7')).toBe(7);
+	it('parses m:ss:ff and ss:ff to seconds for the given fps', () => {
+		expect(parseTimecode('1:05:13', 25)).toBeCloseTo(65.52, 5);
+		expect(parseTimecode('03:06', 25)).toBeCloseTo(3.24, 5);
+		expect(parseTimecode('7', 25)).toBe(7);
+		expect(parseTimecode('3.2', 25)).toBeCloseTo(3.2, 5);
 	});
 
 	it('returns null for invalid input', () => {
-		expect(parseTimecode('')).toBeNull();
-		expect(parseTimecode('abc')).toBeNull();
-		expect(parseTimecode('-1')).toBeNull();
-		expect(parseTimecode('1:2:3')).toBeNull();
+		expect(parseTimecode('', 25)).toBeNull();
+		expect(parseTimecode('abc', 25)).toBeNull();
+		expect(parseTimecode('-1', 25)).toBeNull();
+		expect(parseTimecode('1:2:3:4', 25)).toBeNull();
 	});
 });

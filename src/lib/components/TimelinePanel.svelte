@@ -151,11 +151,11 @@
 	const currentSec = $derived(animationState.progress * animationState.durationSec);
 	function onTimeFocus() {
 		editingTime = true;
-		timeBuffer = formatTimecode(currentSec);
+		timeBuffer = formatTimecode(currentSec, animationState.fps);
 	}
 	function commitTime() {
 		if (!editingTime) return;
-		const parsed = parseTimecode(timeBuffer);
+		const parsed = parseTimecode(timeBuffer, animationState.fps);
 		editingTime = false;
 		if (parsed === null || animationState.durationSec <= 0) return;
 		const clamped = Math.max(0, Math.min(parsed, animationState.durationSec));
@@ -216,13 +216,13 @@
 							type="text"
 							aria-label={m.timeline_current_time()}
 							class="h-7 w-20 rounded border bg-background px-1 text-center text-xs tabular-nums"
-							value={editingTime ? timeBuffer : formatTimecode(currentSec)}
+							value={editingTime ? timeBuffer : formatTimecode(currentSec, animationState.fps)}
 							onfocus={onTimeFocus}
 							oninput={(e) => (timeBuffer = (e.target as HTMLInputElement).value)}
 							onkeydown={onTimeKeydown}
 							onblur={commitTime}
 						/>
-						/ {formatTimecode(animationState.durationSec)}
+						/ {formatTimecode(animationState.durationSec, animationState.fps)}
 					</span>
 					<label class="flex items-center gap-1 text-xs text-muted-foreground">
 						{m.timeline_duration_label()}

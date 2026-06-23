@@ -219,7 +219,7 @@ describe('TimelinePanel', () => {
 		animationState.progress = 0;
 		render(TimelinePanel);
 		const input = page.getByLabelText('Current time (type to jump)');
-		await userEvent.fill(input, '0:05.00');
+		await userEvent.fill(input, '0:05:00');
 		await userEvent.keyboard('{Enter}');
 		expect(animationState.progress).toBeCloseTo(0.5, 2);
 	});
@@ -243,16 +243,17 @@ describe('TimelinePanel', () => {
 		animationState.progress = 0;
 		render(TimelinePanel);
 		const input = page.getByLabelText('Current time (type to jump)');
-		await userEvent.fill(input, '0:20.00');
+		await userEvent.fill(input, '0:20:00');
 		await userEvent.keyboard('{Enter}');
 		expect(animationState.progress).toBeCloseTo(1, 2);
 	});
 
-	it('shows the total duration as a timecode', async () => {
+	it('shows the total duration as a frame timecode', async () => {
 		keyframes.ensureTrack('kaleidoscope.scale');
 		keyframes.setTrackEnabled('kaleidoscope.scale', true);
-		animationState.durationSec = 65.5;
+		animationState.fps = 25;
+		animationState.durationSec = 65.52;
 		render(TimelinePanel);
-		await expect.element(page.getByText('1:05.50')).toBeInTheDocument();
+		await expect.element(page.getByText('1:05:13')).toBeInTheDocument();
 	});
 });
