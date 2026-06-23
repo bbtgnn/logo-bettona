@@ -5,13 +5,8 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { CaretDown, CaretRight } from 'phosphor-svelte';
-	import {
-		composition,
-		createRingMorphTarget,
-		removeRingMorphTarget,
-		updateRingPathVariant,
-		setRingMorphT
-	} from '$lib/state/composition';
+	import { composition, updateRingPathVariant, setRingMorphT } from '$lib/state/composition';
+	import { createRingMorph, removeRingMorph } from '$lib/state/animation';
 	import { importSvg } from '$lib/geometry/svg-import';
 	import { m } from '$lib/paraglide/messages';
 	import LibraryPickerSheet from './LibraryPickerSheet.svelte';
@@ -44,7 +39,7 @@
 				const r = updateRingPathVariant(index, 'secondary', clonePath(entry.secondaryPath));
 				if (!r.ok) libraryApplyError = r.reason;
 			} else if (ring.secondaryTemplatePath) {
-				removeRingMorphTarget(index);
+				removeRingMorph(index);
 			}
 		}
 	}
@@ -106,7 +101,7 @@
 					size="sm"
 					onclick={() => {
 						ringPathError = null;
-						createRingMorphTarget(index);
+						createRingMorph(index);
 					}}
 				>
 					{m.editor_create_morph()}
@@ -156,7 +151,7 @@
 						size="sm"
 						onclick={() => {
 							ringPathError = null;
-							removeRingMorphTarget(index);
+							removeRingMorph(index);
 						}}
 					>
 						{m.editor_remove_morph()}

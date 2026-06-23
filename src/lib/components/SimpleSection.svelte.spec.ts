@@ -1,21 +1,23 @@
-import { page, userEvent } from 'vitest/browser';
+import { page } from 'vitest/browser';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import SimpleSection from './SimpleSection.svelte';
-import { animationState, setLayerEnabled } from '$lib/state/animation';
 import { composition } from '$lib/state/composition';
 import { switchLocale } from '$lib/state/locale.svelte';
 
 describe('SimpleSection', () => {
 	beforeEach(() => {
 		switchLocale('en');
-		setLayerEnabled('simple', true);
 	});
 
-	it('switch toggles the simple layer', async () => {
+	it('has no simple layer toggle', async () => {
 		render(SimpleSection);
-		await userEvent.click(page.getByTestId('layer-toggle-simple'));
-		expect(animationState.layers.simple).toBe(false);
+		await expect.element(page.getByTestId('layer-toggle-simple')).not.toBeInTheDocument();
+	});
+
+	it('renders the Morph heading', async () => {
+		render(SimpleSection);
+		await expect.element(page.getByText('Morph', { exact: true })).toBeInTheDocument();
 	});
 
 	it('renders a morph editor per ring', async () => {

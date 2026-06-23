@@ -9,7 +9,6 @@ describe('Animate page', () => {
 
 	it('renders the per-layer windows with their switches', async () => {
 		render(AnimatePage);
-		await expect.element(page.getByTestId('layer-toggle-simple')).toBeInTheDocument();
 		await expect.element(page.getByTestId('layer-toggle-dataSeries')).toBeInTheDocument();
 		await expect.element(page.getByTestId('layer-toggle-audioBars')).toBeInTheDocument();
 		await expect.element(page.getByTestId('layer-toggle-audioZones')).toBeInTheDocument();

@@ -51,7 +51,7 @@
 	"common_remove": "Remove",
 	"animate_animation": "Animation",
 	"animate_block_warning": "Animation won’t run until at least one ring has a secondary path.",
-	"animate_layer_simple": "Simple",
+	"animate_layer_morph": "Morph",
 	"animate_layer_data_series": "Data Series",
 	"animate_layer_audio_bars": "Audio Bars",
 	"animate_layer_audio_zones": "Audio Zones",

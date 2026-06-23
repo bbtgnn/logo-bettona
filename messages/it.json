@@ -51,7 +51,7 @@
 	"common_remove": "Rimuovi",
 	"animate_animation": "Animazione",
 	"animate_block_warning": "L'animazione non parte finché almeno un anello non ha una forma secondaria.",
-	"animate_layer_simple": "Simple",
+	"animate_layer_morph": "Morph",
 	"animate_layer_data_series": "Data Series",
 	"animate_layer_audio_bars": "Audio Bars",
 	"animate_layer_audio_zones": "Audio Zones",
