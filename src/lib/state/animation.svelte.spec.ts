@@ -13,7 +13,9 @@ vi.mock('./composition', () => ({
 	setRingMorphT: vi.fn(),
 	setRingWave: vi.fn(),
 	setRingZoneDrive: vi.fn(),
-	updateRing: vi.fn()
+	updateRing: vi.fn(),
+	createRingMorphTarget: vi.fn(),
+	removeRingMorphTarget: vi.fn()
 }));
 
 const rafCallbacks: FrameRequestCallback[] = [];
@@ -479,5 +481,38 @@ describe('setAnimationFps', () => {
 		const animation = await import('./animation');
 		animation.setAnimationFps(42);
 		expect(animation.animationState.fps).toBe(30);
+	});
+});
+
+describe('ring morph create/remove (a morph IS keyframes)', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('createRingMorph seeds an armed bezier 0→1 morphT track', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		keyframes.deleteTrack('ring.0.morphT');
+
+		animation.createRingMorph(0);
+
+		const track = keyframes.tracks['ring.0.morphT'];
+		expect(track?.enabled).toBe(true);
+		const sorted = [...track.keyframes].sort((a, b) => a.time - b.time);
+		expect(sorted.map((k) => [k.time, k.value])).toEqual([
+			[0, 0],
+			[1, 1]
+		]);
+		expect(sorted[0].interp).toBe('bezier');
+	});
+
+	it('removeRingMorph deletes the morphT track', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		animation.createRingMorph(0);
+		expect(keyframes.tracks['ring.0.morphT']).toBeDefined();
+
+		animation.removeRingMorph(0);
+		expect(keyframes.tracks['ring.0.morphT']).toBeUndefined();
 	});
 });

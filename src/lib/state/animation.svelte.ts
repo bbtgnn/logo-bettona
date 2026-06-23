@@ -1,5 +1,7 @@
 import {
 	composition,
+	createRingMorphTarget,
+	removeRingMorphTarget,
 	setRingMorphT,
 	setRingWave,
 	setRingZoneDrive,
@@ -25,6 +27,7 @@ import {
 	buildAudioBarsParams,
 	buildAudioZonesParams,
 	buildRingWaveParams,
+	buildRingMorphParams,
 	type AnimatableParam
 } from './animatable-params';
 import { m } from '$lib/paraglide/messages';
@@ -292,6 +295,10 @@ export function getAllAnimatableParams(): AnimatableParam[] {
 			updateRing,
 			globalDefault: () => globalDefault,
 			ringLabel: (i) => m.editor_ring_label({ index: i + 1 })
+		}),
+		...buildRingMorphParams(composition.rings, {
+			setMorphT: setRingMorphT,
+			ringLabel: (i) => m.editor_ring_label({ index: i + 1 })
 		})
 	];
 }
@@ -510,6 +517,28 @@ export function togglePlay() {
 
 export function stopAnimation(resetProgress = true) {
 	stopInternal(resetProgress);
+}
+
+/**
+ * Create a ring morph target and seed its default animation: an armed morphT track
+ * easing from 0 to 1 across the timeline (bezier ease-out/ease-in via addKeyframe's
+ * default handles). This is the "a morph IS keyframes" policy — composition.ts stays
+ * pure geometry; the keyframe seeding lives here.
+ */
+export function createRingMorph(index: number): void {
+	createRingMorphTarget(index);
+	const id = `ring.${index}.morphT`;
+	keyframes.ensureTrack(id);
+	keyframes.setTrackEnabled(id, true);
+	keyframes.addKeyframe(id, { time: 0, value: 0, interp: 'bezier' });
+	keyframes.addKeyframe(id, { time: 1, value: 1, interp: 'bezier' });
+	refreshPreview();
+}
+
+export function removeRingMorph(index: number): void {
+	removeRingMorphTarget(index);
+	keyframes.deleteTrack(`ring.${index}.morphT`);
+	refreshPreview();
 }
 
 /**
