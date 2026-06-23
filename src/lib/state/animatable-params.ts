@@ -168,3 +168,29 @@ export function buildRingWaveParams(
 	});
 	return params;
 }
+
+// Per-ring morph is DYNAMIC like wave overrides: a ring contributes a morphT param
+// only while it has a morph target (`secondaryTemplatePath`). Built from the live rings
+// array every call — ids carry the live index, never cached across add/remove.
+export function buildRingMorphParams(
+	rings: Ring[],
+	deps: {
+		setMorphT: (index: number, v: number) => void;
+		ringLabel: (index: number) => string;
+	}
+): AnimatableParam[] {
+	const params: AnimatableParam[] = [];
+	rings.forEach((ring, index) => {
+		if (ring.secondaryTemplatePath == null) return;
+		params.push({
+			id: `ring.${index}.morphT`,
+			label: `${deps.ringLabel(index)} · morph`,
+			min: 0,
+			max: 1,
+			step: 0.01,
+			get: () => rings[index].morphT ?? 0,
+			set: (v) => deps.setMorphT(index, v)
+		});
+	});
+	return params;
+}

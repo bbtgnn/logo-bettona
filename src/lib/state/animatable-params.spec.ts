@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
 	buildAudioBarsParams,
 	buildAudioZonesParams,
-	buildRingWaveParams
+	buildRingWaveParams,
+	buildRingMorphParams
 } from './animatable-params';
 import type { AudioBarsConfig } from './animation-drivers/types';
 import type { Ring, WaveConfig } from '$lib/types';
@@ -110,5 +111,36 @@ describe('buildRingWaveParams', () => {
 		});
 		params.find((p) => p.id === 'ring.0.wave.crests')!.set(6);
 		expect(calls).toEqual([[0, { waveConfig: { crests: 6, amplitudeGain: 0.4, phaseSpeed: 1 } }]]);
+	});
+});
+
+describe('buildRingMorphParams', () => {
+	function ringWithMorph(): Ring {
+		return { secondaryTemplatePath: { cmds: [], crds: [] }, morphT: 0.3 } as Ring;
+	}
+
+	it('builds a param only for rings with a morph target', () => {
+		const rings = [ringWithMorph(), {} as Ring];
+		const params = buildRingMorphParams(rings, {
+			setMorphT: () => {},
+			ringLabel: (i) => `Ring ${i + 1}`
+		});
+		expect(params.map((p) => p.id)).toEqual(['ring.0.morphT']);
+		expect(params[0].min).toBe(0);
+		expect(params[0].max).toBe(1);
+		expect(params[0].step).toBe(0.01);
+	});
+
+	it('get reads live morphT; set routes through setMorphT with the ring index', () => {
+		const rings = [{} as Ring, ringWithMorph()];
+		const calls: Array<[number, number]> = [];
+		const params = buildRingMorphParams(rings, {
+			setMorphT: (i, v) => calls.push([i, v]),
+			ringLabel: (i) => `Ring ${i + 1}`
+		});
+		expect(params[0].id).toBe('ring.1.morphT');
+		expect(params[0].get()).toBe(0.3);
+		params[0].set(0.8);
+		expect(calls).toEqual([[1, 0.8]]);
 	});
 });
