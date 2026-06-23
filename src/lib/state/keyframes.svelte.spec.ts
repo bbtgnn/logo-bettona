@@ -82,4 +82,30 @@ describe('keyframes store', () => {
 		} | null;
 		expect(saved?.tracks[ROT].keyframes.some((k) => k.value === 77)).toBe(true);
 	});
+
+	it('setTrackInPoint clamps to 0..1', () => {
+		keyframes.setTrackInPoint('t.in.clamp', 1.5);
+		expect(keyframes.tracks['t.in.clamp'].inPoint).toBe(1);
+		keyframes.setTrackInPoint('t.in.clamp', -0.5);
+		expect(keyframes.tracks['t.in.clamp'].inPoint).toBe(0);
+	});
+
+	it('setTrackInPoint cannot exceed an existing outPoint', () => {
+		keyframes.setTrackOutPoint('t.recip.a', 0.4);
+		keyframes.setTrackInPoint('t.recip.a', 0.9);
+		expect(keyframes.tracks['t.recip.a'].inPoint).toBe(0.4);
+	});
+
+	it('setTrackOutPoint cannot drop below an existing inPoint', () => {
+		keyframes.setTrackInPoint('t.recip.b', 0.6);
+		keyframes.setTrackOutPoint('t.recip.b', 0.2);
+		expect(keyframes.tracks['t.recip.b'].outPoint).toBe(0.6);
+	});
+
+	it('deleteTrack removes the track entry', () => {
+		keyframes.ensureTrack('t.del');
+		expect(keyframes.tracks['t.del']).toBeDefined();
+		keyframes.deleteTrack('t.del');
+		expect(keyframes.tracks['t.del']).toBeUndefined();
+	});
 });

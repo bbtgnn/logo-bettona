@@ -48,6 +48,21 @@ export const keyframes = {
 	setTrackEnabled(paramId: string, on: boolean) {
 		track(paramId).enabled = on;
 	},
+	setTrackInPoint(paramId: string, v: number) {
+		const t = track(paramId);
+		let next = clamp01(v);
+		if (t.outPoint != null) next = Math.min(next, t.outPoint);
+		t.inPoint = next;
+	},
+	setTrackOutPoint(paramId: string, v: number) {
+		const t = track(paramId);
+		let next = clamp01(v);
+		if (t.inPoint != null) next = Math.max(next, t.inPoint);
+		t.outPoint = next;
+	},
+	deleteTrack(paramId: string) {
+		delete state.tracks[paramId];
+	},
 	addKeyframe(paramId: string, init: { time: number; value: number; interp?: Interp }): string {
 		const t = track(paramId);
 		const kf: Keyframe = {
