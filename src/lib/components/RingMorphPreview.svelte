@@ -108,7 +108,7 @@
 
 	function startTry() {
 		playing = true;
-		const periodMs = 1500; // one 0→1 sweep; loops, matching the Simple driver
+		const periodMs = 1500; // one 0→1 sweep; loops, matching the default morph keyframes
 		let startTs: number | null = null;
 		const tick = (ts: number) => {
 			if (startTs === null) startTs = ts;

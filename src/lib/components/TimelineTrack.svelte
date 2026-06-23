@@ -150,6 +150,8 @@
 			role="slider"
 			tabindex="-1"
 			aria-label={m.timeline_trim_in()}
+			aria-valuemin={0}
+			aria-valuemax={1}
 			aria-valuenow={inPoint}
 			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
 			style="left: {xFromTime(inPoint, rowWidth())}px"
@@ -163,6 +165,8 @@
 			role="slider"
 			tabindex="-1"
 			aria-label={m.timeline_trim_out()}
+			aria-valuemin={0}
+			aria-valuemax={1}
 			aria-valuenow={outPoint}
 			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
 			style="left: {xFromTime(outPoint, rowWidth())}px"
