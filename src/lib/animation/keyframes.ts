@@ -12,6 +12,8 @@ export type Track = {
 	paramId: string;
 	enabled: boolean;
 	keyframes: Keyframe[];
+	inPoint?: number;
+	outPoint?: number;
 };
 
 export const EASY_EASE_OUT: Handle = { dx: 1 / 3, dy: 0 };
@@ -79,6 +81,8 @@ function sampleSegment(a: Keyframe, b: Keyframe, t: number): number {
 }
 
 export function sampleTrack(track: Track, t: number): number | null {
+	if (track.inPoint != null && t < track.inPoint) return null;
+	if (track.outPoint != null && t > track.outPoint) return null;
 	const kfs = sortKeyframes(track.keyframes);
 	if (kfs.length === 0) return null;
 	if (kfs.length === 1) return kfs[0].value;

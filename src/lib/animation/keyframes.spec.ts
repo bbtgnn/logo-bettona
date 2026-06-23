@@ -81,6 +81,29 @@ describe('keyframes pure', () => {
 		const tr = track([kf(0, 0), kf(0.3, 30), kf(1, 100)]);
 		expect(sampleTrack(tr, 0.3)).toBeCloseTo(30, 6);
 	});
+
+	it('returns null before inPoint (strict)', () => {
+		const t: Track = { ...track([kf(0, 0), kf(1, 1)]), inPoint: 0.25 };
+		expect(sampleTrack(t, 0.1)).toBeNull();
+	});
+
+	it('returns null after outPoint (strict)', () => {
+		const t: Track = { ...track([kf(0, 0), kf(1, 1)]), outPoint: 0.75 };
+		expect(sampleTrack(t, 0.9)).toBeNull();
+	});
+
+	it('samples normally exactly at inPoint and outPoint', () => {
+		const t: Track = { ...track([kf(0, 0), kf(1, 1)]), inPoint: 0.25, outPoint: 0.75 };
+		expect(sampleTrack(t, 0.25)).toBeCloseTo(0.25);
+		expect(sampleTrack(t, 0.75)).toBeCloseTo(0.75);
+		expect(sampleTrack(t, 0.5)).toBeCloseTo(0.5);
+	});
+
+	it('with no in/out bounds keeps full-range behavior', () => {
+		const t = track([kf(0, 0), kf(1, 1)]);
+		expect(sampleTrack(t, 0)).toBeCloseTo(0);
+		expect(sampleTrack(t, 1)).toBeCloseTo(1);
+	});
 });
 
 describe('keyframes bezier', () => {
