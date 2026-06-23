@@ -116,7 +116,7 @@ describe('buildRingWaveParams', () => {
 
 describe('buildRingMorphParams', () => {
 	function ringWithMorph(): Ring {
-		return { secondaryTemplatePath: { cmds: [], crds: [] }, morphT: 0.3 } as Ring;
+		return { secondaryTemplatePath: { cmds: [], crds: [] }, morphT: 0.3 } as unknown as Ring;
 	}
 
 	it('builds a param only for rings with a morph target', () => {
