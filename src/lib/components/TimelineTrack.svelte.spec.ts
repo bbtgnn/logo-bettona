@@ -1,5 +1,5 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import TimelineTrack from './TimelineTrack.svelte';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from '$lib/state/keyframes.svelte';
@@ -80,5 +80,25 @@ describe('TimelineTrack', () => {
 		);
 		// Single keyframe (value 0) now drives the param everywhere → preview updates from 99.
 		expect(kaleidoscope.globalRotation).toBe(0);
+	});
+
+	it('renders In and Out trim handles for the track', async () => {
+		keyframes.ensureTrack('trim.param');
+		keyframes.setTrackEnabled('trim.param', true);
+		render(TimelineTrack, { paramId: 'trim.param', label: 'Trim' });
+		await expect.element(page.getByTestId('trim-in-trim.param')).toBeInTheDocument();
+		await expect.element(page.getByTestId('trim-out-trim.param')).toBeInTheDocument();
+	});
+
+	it('dragging the In handle calls setTrackInPoint', async () => {
+		const spy = vi.spyOn(keyframes, 'setTrackInPoint');
+		keyframes.ensureTrack('trim.drag');
+		keyframes.setTrackEnabled('trim.drag', true);
+		render(TimelineTrack, { paramId: 'trim.drag', label: 'Trim' });
+		const handle = page.getByTestId('trim-in-trim.drag').element() as HTMLElement;
+		handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 10 }));
+		handle.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 40 }));
+		handle.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+		expect(spy).toHaveBeenCalled();
 	});
 });

@@ -19,9 +19,13 @@
 
 	let rowEl = $state<HTMLDivElement>();
 	let draggingId: string | null = null;
+	let trimming: 'in' | 'out' | null = null;
 
 	const kfs = $derived(keyframes.tracks[paramId]?.keyframes ?? []);
 	const selectedKf = $derived(kfs.find((k) => k.id === selectedId) ?? null);
+	const trk = $derived(keyframes.tracks[paramId]);
+	const inPoint = $derived(trk?.inPoint ?? 0);
+	const outPoint = $derived(trk?.outPoint ?? 1);
 
 	function rowWidth(): number {
 		return rowEl?.clientWidth ?? 0;
@@ -68,6 +72,29 @@
 		const el = e.currentTarget as HTMLElement;
 		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
 	}
+
+	function onTrimDown(e: PointerEvent, which: 'in' | 'out') {
+		e.stopPropagation();
+		trimming = which;
+		try {
+			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		} catch {
+			// best-effort capture
+		}
+	}
+	function onTrimMove(e: PointerEvent) {
+		if (!trimming || !rowEl) return;
+		const rect = rowEl.getBoundingClientRect();
+		const t = timeFromX(e.clientX - rect.left, rect.width);
+		if (trimming === 'in') keyframes.setTrackInPoint(paramId, t);
+		else keyframes.setTrackOutPoint(paramId, t);
+		refreshPreview();
+	}
+	function onTrimUp(e: PointerEvent) {
+		trimming = null;
+		const el = e.currentTarget as HTMLElement;
+		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+	}
 </script>
 
 <div class="flex items-center gap-2">
@@ -105,6 +132,44 @@
 				onpointerup={onDiamondUp}
 			></button>
 		{/each}
+		{#if inPoint > 0}
+			<div
+				class="pointer-events-none absolute top-0 bottom-0 left-0 rounded-l-md bg-background/60"
+				style="width: {xFromTime(inPoint, rowWidth())}px"
+			></div>
+		{/if}
+		{#if outPoint < 1}
+			<div
+				class="pointer-events-none absolute top-0 right-0 bottom-0 rounded-r-md bg-background/60"
+				style="width: {rowWidth() - xFromTime(outPoint, rowWidth())}px"
+			></div>
+		{/if}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			data-testid="trim-in-{paramId}"
+			role="slider"
+			tabindex="-1"
+			aria-label={m.timeline_trim_in()}
+			aria-valuenow={inPoint}
+			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
+			style="left: {xFromTime(inPoint, rowWidth())}px"
+			onpointerdown={(e) => onTrimDown(e, 'in')}
+			onpointermove={onTrimMove}
+			onpointerup={onTrimUp}
+		></div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			data-testid="trim-out-{paramId}"
+			role="slider"
+			tabindex="-1"
+			aria-label={m.timeline_trim_out()}
+			aria-valuenow={outPoint}
+			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
+			style="left: {xFromTime(outPoint, rowWidth())}px"
+			onpointerdown={(e) => onTrimDown(e, 'out')}
+			onpointermove={onTrimMove}
+			onpointerup={onTrimUp}
+		></div>
 		{#if selectedKf}
 			<div
 				class="pointer-events-none absolute top-0 bottom-0 w-px bg-sky-400/60"

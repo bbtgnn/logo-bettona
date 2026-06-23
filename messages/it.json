@@ -128,6 +128,8 @@
 	"timeline_add_keyframe": "Aggiungi keyframe",
 	"timeline_keyframe": "Keyframe",
 	"timeline_scrub_playhead": "Trascina per spostare il marcatore",
+	"timeline_trim_in": "Inizio taglio",
+	"timeline_trim_out": "Fine taglio",
 	"common_apply": "Applica",
 	"common_cancel": "Annulla",
 	"common_ok": "OK",

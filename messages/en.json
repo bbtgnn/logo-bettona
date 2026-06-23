@@ -128,6 +128,8 @@
 	"timeline_add_keyframe": "Add keyframe",
 	"timeline_keyframe": "Keyframe",
 	"timeline_scrub_playhead": "Drag to move the playhead",
+	"timeline_trim_in": "Trim start",
+	"timeline_trim_out": "Trim end",
 	"common_apply": "Apply",
 	"common_cancel": "Cancel",
 	"common_ok": "OK",
