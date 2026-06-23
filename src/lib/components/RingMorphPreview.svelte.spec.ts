@@ -78,6 +78,28 @@ describe('RingMorphPreview', () => {
 		await expect.element(btn).toHaveTextContent('Try');
 	});
 
+	it('re-renders without error when morphT changes', async () => {
+		const { container, rerender } = render(RingMorphPreview, {
+			path: PATH,
+			secondaryPath: PATH,
+			morphT: 0,
+			baseRadius: 5,
+			ringIncrement: 2
+		});
+		await vi.waitFor(() => {
+			expect(container.querySelector('[data-testid="ring-morph-preview-canvas"]')).not.toBeNull();
+		});
+		await rerender({
+			path: PATH,
+			secondaryPath: PATH,
+			morphT: 0.8,
+			baseRadius: 5,
+			ringIncrement: 2
+		});
+		expect(container.querySelector('[data-testid="ring-morph-preview-canvas"]')).not.toBeNull();
+		expect(container.querySelector('[data-testid="ring-morph-preview-placeholder"]')).toBeNull();
+	});
+
 	it('cancels the animation loop on unmount (no orphan rAF)', async () => {
 		const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
 		const { unmount } = render(RingMorphPreview, {
