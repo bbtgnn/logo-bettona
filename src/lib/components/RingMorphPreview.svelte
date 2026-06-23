@@ -138,6 +138,8 @@
 		bind:this={canvas}
 		width={size}
 		height={size}
+		style:width="{size}px"
+		style:height="{size}px"
 		aria-hidden="true"
 		data-testid="ring-morph-preview-canvas"
 	></canvas>

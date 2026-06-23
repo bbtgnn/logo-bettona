@@ -57,6 +57,23 @@ describe('RingMorphPreview', () => {
 		});
 	});
 
+	it('pins the canvas to an explicit CSS size so flex layouts cannot stretch it', async () => {
+		const { container } = render(RingMorphPreview, {
+			path: PATH,
+			baseRadius: 5,
+			ringIncrement: 2,
+			size: 160
+		});
+		await vi.waitFor(() => {
+			expect(container.querySelector('[data-testid="ring-morph-preview-canvas"]')).not.toBeNull();
+		});
+		const el = container.querySelector(
+			'[data-testid="ring-morph-preview-canvas"]'
+		) as HTMLCanvasElement;
+		expect(el.style.width).toBe('160px');
+		expect(el.style.height).toBe('160px');
+	});
+
 	it('hides the Try button unless showTry is set', async () => {
 		render(RingMorphPreview, { path: PATH, baseRadius: 5, ringIncrement: 2 });
 		expect(page.getByTestId('ring-morph-preview-try').query()).toBeNull();

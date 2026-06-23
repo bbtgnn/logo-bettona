@@ -89,14 +89,18 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			{#if !ring.secondaryTemplatePath}
+			<div class="flex flex-col gap-1">
+				<span class="text-xs text-muted-foreground">{m.animate_morph_primary_label()}</span>
 				<RingMorphPreview
 					path={ring.templatePath}
 					copies={ring.copies}
 					baseRadius={composition.baseRadius}
 					ringIncrement={composition.ringIncrement}
-					size={200}
+					size={160}
 				/>
+			</div>
+
+			{#if !ring.secondaryTemplatePath}
 				<Button
 					variant="outline"
 					size="sm"
@@ -118,17 +122,6 @@
 					size={200}
 					showTry
 				/>
-
-				<div class="flex flex-col gap-1">
-					<span class="text-xs text-muted-foreground">{m.animate_morph_primary_label()}</span>
-					<RingMorphPreview
-						path={ring.templatePath}
-						copies={ring.copies}
-						baseRadius={composition.baseRadius}
-						ringIncrement={composition.ringIncrement}
-						size={120}
-					/>
-				</div>
 
 				<RingCanvas
 					templatePath={ring.secondaryTemplatePath}

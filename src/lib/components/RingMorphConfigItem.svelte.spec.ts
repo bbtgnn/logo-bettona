@@ -48,14 +48,16 @@ describe('RingMorphConfigItem', () => {
 		expect(composition.rings[0].secondaryTemplatePath).toBeNull();
 	});
 
-	it('shows a primary-only preview above Create morph when there is no target', async () => {
+	it('shows the primary reference above Create morph when there is no target', async () => {
 		render(RingMorphConfigItem, { ring: composition.rings[0], index: 0 });
 		await userEvent.click(page.getByRole('button', { name: /Ring 1/ }));
 		expect(page.getByTestId('ring-morph-preview-canvas').query()).not.toBeNull();
+		// The primary reference label is shown even before a target exists.
+		await expect.element(page.getByText('Primary (reference)')).toBeInTheDocument();
 		await expect
 			.element(page.getByRole('button', { name: 'Create morph target' }))
 			.toBeInTheDocument();
-		// No Try button before a target exists.
+		// No morph result / Try button before a target exists.
 		expect(page.getByTestId('ring-morph-preview-try').query()).toBeNull();
 	});
 
