@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockComposition = {
 	rings: [
-		{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-		{ secondaryTemplatePath: null, morphT: 0 }
+		{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+		{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 	]
 };
 
@@ -49,8 +49,8 @@ describe('animation controller', () => {
 		rafCallbacks.length = 0;
 		installRafMock();
 		mockComposition.rings = [
-			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-			{ secondaryTemplatePath: null, morphT: 0 }
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 		];
 	});
 
@@ -128,7 +128,7 @@ describe('animation controller', () => {
 		flushNextAnimationFrame(300);
 		expect(animation.animationState.isPlaying).toBe(true);
 
-		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
+		mockComposition.rings.push({ id: 'ring-c', secondaryTemplatePath: null, morphT: 0 });
 		animation.handleCompositionChanged();
 		expect(animation.animationState.isPlaying).toBe(true);
 
@@ -191,8 +191,8 @@ describe('animation runtime integration', () => {
 		vi.clearAllMocks();
 		rafCallbacks.length = 0;
 		mockComposition.rings = [
-			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-			{ secondaryTemplatePath: null, morphT: 0 }
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 		];
 	});
 
@@ -450,16 +450,22 @@ describe('setAnimationFps', () => {
 describe('ring morph create/remove (a morph IS keyframes)', () => {
 	beforeEach(() => {
 		vi.resetModules();
+		mockComposition.rings = [
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
+		];
 	});
 
 	it('createRingMorph seeds an armed bezier 0→1 morphT track', async () => {
 		const animation = await import('./animation');
 		const { keyframes } = await import('./keyframes.svelte');
-		keyframes.deleteTrack('ring.0.morphT');
+		const { composition } = await import('./composition');
+		const id = `ring.${composition.rings[0].id}.morphT`;
+		keyframes.deleteTrack(id);
 
 		animation.createRingMorph(0);
 
-		const track = keyframes.tracks['ring.0.morphT'];
+		const track = keyframes.tracks[id];
 		expect(track?.enabled).toBe(true);
 		const sorted = [...track.keyframes].sort((a, b) => a.time - b.time);
 		expect(sorted.map((k) => [k.time, k.value])).toEqual([
@@ -472,10 +478,12 @@ describe('ring morph create/remove (a morph IS keyframes)', () => {
 	it('removeRingMorph deletes the morphT track', async () => {
 		const animation = await import('./animation');
 		const { keyframes } = await import('./keyframes.svelte');
+		const { composition } = await import('./composition');
+		const id = `ring.${composition.rings[0].id}.morphT`;
 		animation.createRingMorph(0);
-		expect(keyframes.tracks['ring.0.morphT']).toBeDefined();
+		expect(keyframes.tracks[id]).toBeDefined();
 
 		animation.removeRingMorph(0);
-		expect(keyframes.tracks['ring.0.morphT']).toBeUndefined();
+		expect(keyframes.tracks[id]).toBeUndefined();
 	});
 });

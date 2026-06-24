@@ -515,7 +515,9 @@ export function stopAnimation(resetProgress = true) {
  */
 export function createRingMorph(index: number): void {
 	createRingMorphTarget(index);
-	const id = `ring.${index}.morphT`;
+	const ring = composition.rings[index];
+	if (!ring) return;
+	const id = `ring.${ring.id}.morphT`;
 	keyframes.ensureTrack(id);
 	keyframes.setTrackEnabled(id, true);
 	keyframes.addKeyframe(id, { time: 0, value: 0, interp: 'bezier' });
@@ -524,8 +526,9 @@ export function createRingMorph(index: number): void {
 }
 
 export function removeRingMorph(index: number): void {
+	const ring = composition.rings[index];
 	removeRingMorphTarget(index);
-	keyframes.deleteTrack(`ring.${index}.morphT`);
+	if (ring) keyframes.deleteTrack(`ring.${ring.id}.morphT`);
 	refreshPreview();
 }
 
