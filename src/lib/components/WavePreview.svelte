@@ -1,7 +1,7 @@
 <script lang="ts">
 	import paper from 'paper';
 	import type { Path, Ring } from '$lib/types';
-	import { applyWaveToPath } from '$lib/geometry/wave';
+	import { composeRingTemplate } from '$lib/geometry/compose-ring';
 	import { buildRingPath } from '$lib/geometry/bend';
 
 	// Parametric, audio-free preview of the wave the sliders sculpt. It renders the
@@ -80,7 +80,13 @@
 
 				// reach: full-amplitude wave on the primary template, translucent fill.
 				const reach = buildRingPath(
-					{ ...baseRing, templatePath: applyWaveToPath(template, { amplitude, crests, phase }) },
+					{
+						...baseRing,
+						templatePath: composeRingTemplate({
+							...baseRing,
+							wave: { amplitude, crests, phase }
+						}).path
+					},
 					PREVIEW_RADIUS,
 					scope
 				);
