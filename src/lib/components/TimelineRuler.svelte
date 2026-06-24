@@ -6,6 +6,7 @@
 		formatSeconds,
 		snapProgressToFps
 	} from '$lib/animation/timeline-geometry';
+	import { draggable } from '$lib/actions/draggable';
 
 	let rulerEl = $state<HTMLDivElement>();
 	// Measured reactively so ticks and the density threshold respond to zoom/resize.
@@ -43,24 +44,6 @@
 		if (shiftKey) p = snapProgressToFps(p, animationState.durationSec, animationState.fps);
 		scrubTo(p);
 	}
-
-	function onPointerDown(e: PointerEvent) {
-		scrubFromEvent(e.clientX, e.shiftKey);
-		try {
-			rulerEl?.setPointerCapture(e.pointerId);
-		} catch {
-			// No active pointer (e.g. a synthetic event) — capture is best-effort.
-		}
-	}
-
-	function onPointerMove(e: PointerEvent) {
-		if (!rulerEl?.hasPointerCapture(e.pointerId)) return;
-		scrubFromEvent(e.clientX, e.shiftKey);
-	}
-
-	function onPointerUp(e: PointerEvent) {
-		if (rulerEl?.hasPointerCapture(e.pointerId)) rulerEl.releasePointerCapture(e.pointerId);
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -69,9 +52,10 @@
 	bind:clientWidth={rulerWidth}
 	data-testid="timeline-ruler"
 	class="relative h-7 w-full cursor-col-resize rounded-md bg-muted/40 select-none"
-	onpointerdown={onPointerDown}
-	onpointermove={onPointerMove}
-	onpointerup={onPointerUp}
+	use:draggable={{
+		onStart: (e) => scrubFromEvent(e.clientX, e.shiftKey),
+		onMove: (e) => scrubFromEvent(e.clientX, e.shiftKey)
+	}}
 >
 	{#each frameIndices as f (f)}
 		<div
