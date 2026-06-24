@@ -1,8 +1,7 @@
 import paper from 'paper';
-import type { Composition } from '$lib/types';
+import type { Composition, Ring } from '$lib/types';
 import { buildRingPath } from './bend';
-import { interpolatePath, validatePathCompatibility } from './path-morph';
-import { applyWaveToPath } from './wave';
+import { composeRingTemplate } from './compose-ring';
 
 type RenderViewport = {
 	width: number;
@@ -168,34 +167,13 @@ export function createRenderPipeline(): {
 					throw new Error('ring copies must be greater than zero');
 				}
 
-				let effectiveRing = ring;
-				if (!input.ignoreMorph && ring.templatePath && ring.secondaryTemplatePath) {
-					const compatibility = validatePathCompatibility(
-						ring.templatePath,
-						ring.secondaryTemplatePath
-					);
-					if (compatibility.ok) {
-						effectiveRing = {
-							...ring,
-							templatePath: interpolatePath(
-								ring.templatePath,
-								ring.secondaryTemplatePath,
-								ring.morphT ?? 0
-							)
-						};
-					} else {
-						warnings.push(`Ring ${i} morph fallback: ${compatibility.reason}`);
-					}
+				// Template-space prep (morph → wave) is pure; zone deformation stays in
+				// polar space inside buildRingPath below. See compose-ring.ts / ADR-0001.
+				const composed = composeRingTemplate(ring, { ignoreMorph: input.ignoreMorph });
+				if (composed.morphWarning) {
+					warnings.push(`Ring ${i} morph fallback: ${composed.morphWarning}`);
 				}
-
-				// Apply the cymatic wave to the (already morph-interpolated) template
-				// BEFORE bend mirrors/tiles it, so the ripple is coherent on every copy.
-				if (effectiveRing.wave && effectiveRing.wave.amplitude > 0 && effectiveRing.templatePath) {
-					effectiveRing = {
-						...effectiveRing,
-						templatePath: applyWaveToPath(effectiveRing.templatePath, effectiveRing.wave)
-					};
-				}
+				let effectiveRing: Ring = { ...ring, templatePath: composed.path };
 
 				// Zone deformation (audioZones mode) is applied inside buildRingPath in final
 				// polar space, driven by ring.zoneDrive. Strip the drive when measuring the
