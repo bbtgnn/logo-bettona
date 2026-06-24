@@ -1,8 +1,8 @@
 <script lang="ts">
 	import paper from 'paper';
-	import { onMount } from 'svelte';
 	import type { Composition, Path } from '$lib/types';
 	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
+	import { paperCanvas } from './paper-canvas.svelte';
 
 	let {
 		path,
@@ -22,18 +22,10 @@
 		size?: number;
 	} = $props();
 
-	let canvas = $state<HTMLCanvasElement | null>(null);
 	let hasError = $state(false);
+	const pipeline = createRenderPipeline();
 
-	onMount(() => {
-		if (!canvas) {
-			hasError = true;
-			return;
-		}
-
-		const scope = new paper.PaperScope();
-		scope.setup(canvas);
-
+	function draw(scope: paper.PaperScope) {
 		const composition: Composition = {
 			baseRadius,
 			ringIncrement,
@@ -52,25 +44,14 @@
 			monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
 			fullPalettes: []
 		};
-
-		const pipeline = createRenderPipeline();
-
 		try {
-			pipeline.render({
-				composition,
-				scope,
-				viewport: { width: size, height: size, padding: 20 }
-			});
+			scope.project.clear();
+			pipeline.render({ composition, scope, viewport: { width: size, height: size, padding: 20 } });
+			hasError = false;
 		} catch {
 			hasError = true;
 		}
-
-		return () => {
-			pipeline.dispose();
-			scope.project.clear();
-			scope.view.remove();
-		};
-	});
+	}
 </script>
 
 {#if hasError}
@@ -84,7 +65,7 @@
 	</div>
 {:else}
 	<canvas
-		bind:this={canvas}
+		{@attach paperCanvas(draw, { dispose: () => pipeline.dispose() })}
 		width={size}
 		height={size}
 		aria-hidden="true"
