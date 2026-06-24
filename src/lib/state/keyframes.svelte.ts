@@ -63,6 +63,12 @@ export const keyframes = {
 	deleteTrack(paramId: string) {
 		delete state.tracks[paramId];
 	},
+	deleteTracksForRing(ringId: string) {
+		const prefix = `ring.${ringId}.`;
+		for (const key of Object.keys(state.tracks)) {
+			if (key.startsWith(prefix)) delete state.tracks[key];
+		}
+	},
 	addKeyframe(paramId: string, init: { time: number; value: number; interp?: Interp }): string {
 		const t = track(paramId);
 		const kf: Keyframe = {

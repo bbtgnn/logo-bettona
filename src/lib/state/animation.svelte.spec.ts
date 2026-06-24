@@ -15,7 +15,10 @@ vi.mock('./composition', () => ({
 	setRingZoneDrive: vi.fn(),
 	updateRing: vi.fn(),
 	createRingMorphTarget: vi.fn(),
-	removeRingMorphTarget: vi.fn()
+	removeRingMorphTarget: vi.fn(),
+	removeRing: vi.fn((index: number) => {
+		mockComposition.rings = mockComposition.rings.filter((_, i) => i !== index);
+	})
 }));
 
 const rafCallbacks: FrameRequestCallback[] = [];
@@ -485,5 +488,32 @@ describe('ring morph create/remove (a morph IS keyframes)', () => {
 
 		animation.removeRingMorph(0);
 		expect(keyframes.tracks[id]).toBeUndefined();
+	});
+});
+
+describe('removeRing also deletes the ring tracks', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		mockComposition.rings = [
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
+		];
+	});
+
+	it('drops the removed ring tracks and leaves siblings intact', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { composition } = await import('./composition');
+
+		const victim = composition.rings[0].id;
+		const survivor = composition.rings[1].id;
+		keyframes.ensureTrack(`ring.${victim}.morphT`);
+		keyframes.ensureTrack(`ring.${survivor}.morphT`);
+
+		animation.removeRing(0);
+
+		expect(keyframes.tracks[`ring.${victim}.morphT`]).toBeUndefined();
+		expect(keyframes.tracks[`ring.${survivor}.morphT`]).toBeDefined();
+		expect(composition.rings.some((r) => r.id === victim)).toBe(false);
 	});
 });

@@ -2,6 +2,7 @@ import {
 	composition,
 	createRingMorphTarget,
 	removeRingMorphTarget,
+	removeRing as removeRingFromComposition,
 	setRingMorphT,
 	setRingWave,
 	setRingZoneDrive,
@@ -529,6 +530,18 @@ export function removeRingMorph(index: number): void {
 	const ring = composition.rings[index];
 	removeRingMorphTarget(index);
 	if (ring) keyframes.deleteTrack(`ring.${ring.id}.morphT`);
+	refreshPreview();
+}
+
+/**
+ * Delete a ring AND its keyframe tracks. composition.ts stays pure geometry; the
+ * "tracks die with the ring" policy lives here, where keyframe state is reachable.
+ * Tracks key off the stable ring id, so siblings (whose indices shift) are untouched.
+ */
+export function removeRing(index: number): void {
+	const ring = composition.rings[index];
+	removeRingFromComposition(index);
+	if (ring) keyframes.deleteTracksForRing(ring.id);
 	refreshPreview();
 }
 

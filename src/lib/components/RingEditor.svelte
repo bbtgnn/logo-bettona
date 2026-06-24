@@ -8,12 +8,12 @@
 	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
 	import {
 		updateRing,
-		removeRing,
 		setRingExpanded,
 		isRingExpanded,
 		colorMode,
 		updateRingPathVariant
 	} from '$lib/state/composition';
+	import { removeRing } from '$lib/state/animation';
 	import { importSvg } from '$lib/geometry/svg-import';
 	import { saveEntry } from '$lib/state/path-library';
 	import { m } from '$lib/paraglide/messages';

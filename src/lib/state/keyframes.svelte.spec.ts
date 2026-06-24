@@ -108,4 +108,18 @@ describe('keyframes store', () => {
 		keyframes.deleteTrack('t.del');
 		expect(keyframes.tracks['t.del']).toBeUndefined();
 	});
+
+	it('deleteTracksForRing removes every track for that ring id only', () => {
+		keyframes.ensureTrack('ring.aaa.morphT');
+		keyframes.ensureTrack('ring.aaa.wave.crests');
+		keyframes.ensureTrack('ring.bbb.morphT');
+		keyframes.ensureTrack('kaleidoscope.globalRotation');
+
+		keyframes.deleteTracksForRing('aaa');
+
+		expect(keyframes.tracks['ring.aaa.morphT']).toBeUndefined();
+		expect(keyframes.tracks['ring.aaa.wave.crests']).toBeUndefined();
+		expect(keyframes.tracks['ring.bbb.morphT']).toBeDefined();
+		expect(keyframes.tracks['kaleidoscope.globalRotation']).toBeDefined();
+	});
 });
