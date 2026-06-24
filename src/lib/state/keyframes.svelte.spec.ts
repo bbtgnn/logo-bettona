@@ -3,7 +3,7 @@ import { flushSync } from 'svelte';
 import { localStorageSync } from 'rune-sync/localstorage';
 import { keyframes, KALEIDO_GLOBAL_ROTATION as ROT } from './keyframes.svelte';
 
-const PERSIST_KEY = 'kaleidoscope-keyframes';
+const PERSIST_KEY = 'bettona-keyframes';
 
 describe('keyframes store', () => {
 	beforeEach(() => {

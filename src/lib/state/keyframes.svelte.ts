@@ -14,7 +14,10 @@ import {
 
 export const KALEIDO_GLOBAL_ROTATION = 'kaleidoscope.globalRotation';
 
-const PERSIST_KEY = 'kaleidoscope-keyframes';
+// Renamed from the legacy 'kaleidoscope-keyframes' key: tracks now key off stable
+// ring ids (ring.<id>.*), so the old index-keyed (ring.N.*) data is abandoned by
+// design rather than migrated.
+const PERSIST_KEY = 'bettona-keyframes';
 const SAME_TIME_EPS = 1e-4;
 
 type TracksState = { tracks: Record<string, Track> };
