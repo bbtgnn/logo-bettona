@@ -303,6 +303,7 @@ Rewrite `src/lib/components/RingMorphPreview.svelte`'s scope machinery to use `p
 
 ```svelte
 <script lang="ts">
+	import paper from 'paper';
 	import type { Composition, Path } from '$lib/types';
 	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
 	import { paperCanvas } from './paper-canvas.svelte';
@@ -340,7 +341,7 @@ Rewrite `src/lib/components/RingMorphPreview.svelte`'s scope machinery to use `p
 	// mirrors the live morphT prop.
 	const effectiveMorphT = $derived(playing ? playT : morphT);
 
-	function draw(scope: import('paper').PaperScope) {
+	function draw(scope: paper.PaperScope) {
 		if (!path) {
 			hasError = true;
 			return;
