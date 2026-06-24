@@ -21,6 +21,7 @@
 	} from '$lib/animation/timeline-geometry';
 	import { m } from '$lib/paraglide/messages';
 	import type { Interp } from '$lib/animation/keyframes';
+	import { draggable } from '$lib/actions/draggable';
 	import TimelineRuler from './TimelineRuler.svelte';
 	import TimelineTrack from './TimelineTrack.svelte';
 	import KeyframeGraphEditor from './KeyframeGraphEditor.svelte';
@@ -114,34 +115,13 @@
 	);
 
 	// Dragging the playhead handle scrubs against the lane column (same column the ruler
-	// and tracks measure, so the playhead, ticks and keyframes stay in register). A plain
-	// flag drives the drag rather than pointer-capture state so a release outside the
-	// handle still ends the gesture. Shift snaps to the nearest frame, like the ruler.
-	let scrubbingPlayhead = false;
+	// and tracks measure, so the playhead, ticks and keyframes stay in register). Shift
+	// snaps to the nearest frame, like the ruler.
 	function playheadTimeFromClientX(clientX: number, shiftKey: boolean): number {
 		const rect = laneColEl?.getBoundingClientRect();
 		if (!rect) return animationState.progress;
 		const p = timeFromX(clientX - rect.left, rect.width);
 		return shiftKey ? snapProgressToFps(p, animationState.durationSec, animationState.fps) : p;
-	}
-	function onPlayheadPointerDown(e: PointerEvent) {
-		e.stopPropagation();
-		scrubbingPlayhead = true;
-		scrubTo(playheadTimeFromClientX(e.clientX, e.shiftKey));
-		try {
-			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		} catch {
-			// No active pointer (e.g. a synthetic event) — capture is best-effort.
-		}
-	}
-	function onPlayheadPointerMove(e: PointerEvent) {
-		if (!scrubbingPlayhead) return;
-		scrubTo(playheadTimeFromClientX(e.clientX, e.shiftKey));
-	}
-	function onPlayheadPointerUp(e: PointerEvent) {
-		scrubbingPlayhead = false;
-		const el = e.currentTarget as HTMLElement;
-		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
 	}
 
 	// Editable current-time field (non-audio mode). While not focused it mirrors the live
@@ -361,9 +341,13 @@
 								data-testid="playhead-handle"
 								aria-label={m.timeline_scrub_playhead()}
 								class="pointer-events-auto absolute top-0 left-1/2 h-7 w-3 -translate-x-1/2 cursor-grab"
-								onpointerdown={onPlayheadPointerDown}
-								onpointermove={onPlayheadPointerMove}
-								onpointerup={onPlayheadPointerUp}
+								use:draggable={{
+									onStart: (e) => {
+										e.stopPropagation();
+										scrubTo(playheadTimeFromClientX(e.clientX, e.shiftKey));
+									},
+									onMove: (e) => scrubTo(playheadTimeFromClientX(e.clientX, e.shiftKey))
+								}}
 							>
 								<span
 									class="absolute top-0 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 rounded-sm bg-primary"
