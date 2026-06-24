@@ -190,6 +190,7 @@ Rewrite `src/lib/components/RingPreview.svelte` so the scope lifecycle goes thro
 
 ```svelte
 <script lang="ts">
+	import paper from 'paper';
 	import type { Composition, Path } from '$lib/types';
 	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
 	import { paperCanvas } from './paper-canvas.svelte';
@@ -215,7 +216,7 @@ Rewrite `src/lib/components/RingPreview.svelte` so the scope lifecycle goes thro
 	let hasError = $state(false);
 	const pipeline = createRenderPipeline();
 
-	function draw(scope: import('paper').PaperScope) {
+	function draw(scope: paper.PaperScope) {
 		const composition: Composition = {
 			baseRadius,
 			ringIncrement,
