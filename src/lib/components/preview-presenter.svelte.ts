@@ -12,7 +12,7 @@ import { exportStatus } from '$lib/state/export-status.svelte';
 // Offscreen square tile rendered as the kaleidoscope source.
 const TILE_PX = 600;
 // Rest mark fills this fraction of the frame, leaving headroom for petals to open
-// toward the edge. Coupled with BASS_REACH (zones.ts).
+// toward the edge. Coupled with ZONE_BASS_REACH (bend.ts), the polar-space zone push.
 const REST_FRACTION = 0.45;
 // Longest side of the canvas in pixels; the aspect ratio sets the other side.
 const CANVAS_LONG_SIDE = 600;
