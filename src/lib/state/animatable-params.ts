@@ -138,7 +138,7 @@ export function buildRingWaveParams(
 			deps.updateRing(index, { waveConfig: { ...resolved(), ...patch } });
 		params.push(
 			{
-				id: `ring.${index}.wave.crests`,
+				id: `ring.${ring.id}.wave.crests`,
 				label: `${label} · crests`,
 				min: 1,
 				max: 8,
@@ -147,7 +147,7 @@ export function buildRingWaveParams(
 				set: (v) => patchWave({ crests: v })
 			},
 			{
-				id: `ring.${index}.wave.amplitudeGain`,
+				id: `ring.${ring.id}.wave.amplitudeGain`,
 				label: `${label} · amplitude`,
 				min: 0,
 				max: 1,
@@ -156,7 +156,7 @@ export function buildRingWaveParams(
 				set: (v) => patchWave({ amplitudeGain: v })
 			},
 			{
-				id: `ring.${index}.wave.phaseSpeed`,
+				id: `ring.${ring.id}.wave.phaseSpeed`,
 				label: `${label} · phase`,
 				min: 0,
 				max: 6,
@@ -183,7 +183,7 @@ export function buildRingMorphParams(
 	rings.forEach((ring, index) => {
 		if (ring.secondaryTemplatePath == null) return;
 		params.push({
-			id: `ring.${index}.morphT`,
+			id: `ring.${ring.id}.morphT`,
 			label: `${deps.ringLabel(index)} · morph`,
 			min: 0,
 			max: 1,

@@ -82,12 +82,13 @@ describe('buildRingWaveParams', () => {
 
 	function ringWithOverride(): Ring {
 		return {
+			id: 'r-wave-test',
 			waveConfig: { crests: 2, amplitudeGain: 0.4, phaseSpeed: 1 }
 		} as Ring;
 	}
 
 	it('builds per-ring descriptors only for rings with a wave override', () => {
-		const rings = [ringWithOverride(), {} as Ring];
+		const rings = [ringWithOverride(), { id: 'r-empty' } as Ring];
 		const params = buildRingWaveParams(rings, {
 			updateRing: () => {},
 			globalDefault: () => globalDefault,
@@ -95,52 +96,97 @@ describe('buildRingWaveParams', () => {
 		});
 		// ring 0 has override → 3 params; ring 1 has none → 0 params
 		expect(params.map((p) => p.id)).toEqual([
-			'ring.0.wave.crests',
-			'ring.0.wave.amplitudeGain',
-			'ring.0.wave.phaseSpeed'
+			'ring.r-wave-test.wave.crests',
+			'ring.r-wave-test.wave.amplitudeGain',
+			'ring.r-wave-test.wave.phaseSpeed'
 		]);
 	});
 
 	it('set patches the ring waveConfig via updateRing, preserving siblings', () => {
-		const ring = ringWithOverride();
+		const r = ringWithOverride();
 		const calls: Array<[number, Partial<Ring>]> = [];
-		const params = buildRingWaveParams([ring], {
+		const params = buildRingWaveParams([r], {
 			updateRing: (i, patch) => calls.push([i, patch]),
 			globalDefault: () => globalDefault,
 			ringLabel: (i) => `Ring ${i + 1}`
 		});
-		params.find((p) => p.id === 'ring.0.wave.crests')!.set(6);
+		params.find((p) => p.id === 'ring.r-wave-test.wave.crests')!.set(6);
 		expect(calls).toEqual([[0, { waveConfig: { crests: 6, amplitudeGain: 0.4, phaseSpeed: 1 } }]]);
 	});
 });
 
 describe('buildRingMorphParams', () => {
 	function ringWithMorph(): Ring {
-		return { secondaryTemplatePath: { cmds: [], crds: [] }, morphT: 0.3 } as unknown as Ring;
+		return { id: 'r-morph-test', secondaryTemplatePath: { cmds: [], crds: [] }, morphT: 0.3 } as unknown as Ring;
 	}
 
 	it('builds a param only for rings with a morph target', () => {
-		const rings = [ringWithMorph(), {} as Ring];
+		const rings = [ringWithMorph(), { id: 'r-empty' } as Ring];
 		const params = buildRingMorphParams(rings, {
 			setMorphT: () => {},
 			ringLabel: (i) => `Ring ${i + 1}`
 		});
-		expect(params.map((p) => p.id)).toEqual(['ring.0.morphT']);
+		expect(params.map((p) => p.id)).toEqual(['ring.r-morph-test.morphT']);
 		expect(params[0].min).toBe(0);
 		expect(params[0].max).toBe(1);
 		expect(params[0].step).toBe(0.01);
 	});
 
 	it('get reads live morphT; set routes through setMorphT with the ring index', () => {
-		const rings = [{} as Ring, ringWithMorph()];
+		const rings = [{ id: 'r-empty' } as Ring, ringWithMorph()];
 		const calls: Array<[number, number]> = [];
 		const params = buildRingMorphParams(rings, {
 			setMorphT: (i, v) => calls.push([i, v]),
 			ringLabel: (i) => `Ring ${i + 1}`
 		});
-		expect(params[0].id).toBe('ring.1.morphT');
+		expect(params[0].id).toBe('ring.r-morph-test.morphT');
 		expect(params[0].get()).toBe(0.3);
 		params[0].set(0.8);
 		expect(calls).toEqual([[1, 0.8]]);
+	});
+});
+
+const ring = (over: Partial<Ring>): Ring =>
+	({
+		id: 'r-abc',
+		copies: 8,
+		color: '#000',
+		templatePath: { cmds: ['M'], crds: [0, 0] },
+		secondaryTemplatePath: null,
+		morphT: 0,
+		ringHeight: 0.1,
+		...over
+	}) as Ring;
+
+describe('per-ring param ids carry the ring id, not the index', () => {
+	it('morph param id is ring.<id>.morphT', () => {
+		const rings = [ring({ id: 'r-abc', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] } })];
+		const params = buildRingMorphParams(rings, {
+			setMorphT: () => {},
+			ringLabel: () => 'Ring 1'
+		});
+		expect(params.map((p) => p.id)).toEqual(['ring.r-abc.morphT']);
+	});
+
+	it('wave param ids are ring.<id>.wave.*', () => {
+		const rings = [
+			ring({ id: 'r-xyz', waveConfig: { crests: 2, amplitudeGain: 0.5, phaseSpeed: 1 } })
+		];
+		const params = buildRingWaveParams(rings, {
+			updateRing: () => {},
+			globalDefault: () => ({ crests: 1, amplitudeGain: 0, phaseSpeed: 0 }),
+			ringLabel: () => 'Ring 1'
+		});
+		expect(params.map((p) => p.id)).toEqual([
+			'ring.r-xyz.wave.crests',
+			'ring.r-xyz.wave.amplitudeGain',
+			'ring.r-xyz.wave.phaseSpeed'
+		]);
+	});
+
+	it('id is stable when the ring moves to a new index', () => {
+		const moved = [ring({ id: 'pad' }), ring({ id: 'r-abc', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] } })];
+		const params = buildRingMorphParams(moved, { setMorphT: () => {}, ringLabel: () => 'x' });
+		expect(params.map((p) => p.id)).toEqual(['ring.r-abc.morphT']);
 	});
 });
