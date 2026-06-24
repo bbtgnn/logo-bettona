@@ -4,6 +4,7 @@
 	import { animationState, refreshPreview } from '$lib/state/animation';
 	import { timeFromX, xFromTime, formatSeconds } from '$lib/animation/timeline-geometry';
 	import { m } from '$lib/paraglide/messages';
+	import { draggable } from '$lib/actions/draggable';
 
 	let {
 		paramId,
@@ -18,8 +19,6 @@
 	} = $props();
 
 	let rowEl = $state<HTMLDivElement>();
-	let draggingId: string | null = null;
-	let trimming: 'in' | 'out' | null = null;
 
 	const kfs = $derived(keyframes.tracks[paramId]?.keyframes ?? []);
 	const selectedKf = $derived(kfs.find((k) => k.id === selectedId) ?? null);
@@ -45,55 +44,6 @@
 		const id = keyframes.addKeyframe(paramId, { time: animationState.progress, value: 0 });
 		onselect?.(id);
 		refreshPreview();
-	}
-
-	function onDiamondDown(e: PointerEvent, id: string) {
-		e.stopPropagation();
-		onselect?.(id);
-		draggingId = id;
-		try {
-			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		} catch {
-			// No active pointer (e.g. a synthetic event) — capture is best-effort.
-		}
-	}
-
-	function onDiamondMove(e: PointerEvent) {
-		if (!draggingId || !rowEl) return;
-		const rect = rowEl.getBoundingClientRect();
-		keyframes.moveKeyframe(paramId, draggingId, {
-			time: timeFromX(e.clientX - rect.left, rect.width)
-		});
-		refreshPreview();
-	}
-
-	function onDiamondUp(e: PointerEvent) {
-		draggingId = null;
-		const el = e.currentTarget as HTMLElement;
-		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-	}
-
-	function onTrimDown(e: PointerEvent, which: 'in' | 'out') {
-		e.stopPropagation();
-		trimming = which;
-		try {
-			(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-		} catch {
-			// best-effort capture
-		}
-	}
-	function onTrimMove(e: PointerEvent) {
-		if (!trimming || !rowEl) return;
-		const rect = rowEl.getBoundingClientRect();
-		const t = timeFromX(e.clientX - rect.left, rect.width);
-		if (trimming === 'in') keyframes.setTrackInPoint(paramId, t);
-		else keyframes.setTrackOutPoint(paramId, t);
-		refreshPreview();
-	}
-	function onTrimUp(e: PointerEvent) {
-		trimming = null;
-		const el = e.currentTarget as HTMLElement;
-		if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
 	}
 </script>
 
@@ -127,9 +77,20 @@
 					? 'ring-2 ring-sky-400'
 					: ''}"
 				style="left: {xFromTime(kf.time, rowWidth())}px"
-				onpointerdown={(e) => onDiamondDown(e, kf.id)}
-				onpointermove={onDiamondMove}
-				onpointerup={onDiamondUp}
+				use:draggable={{
+					onStart: (e) => {
+						e.stopPropagation();
+						onselect?.(kf.id);
+					},
+					onMove: (e) => {
+						if (!rowEl) return;
+						const rect = rowEl.getBoundingClientRect();
+						keyframes.moveKeyframe(paramId, kf.id, {
+							time: timeFromX(e.clientX - rect.left, rect.width)
+						});
+						refreshPreview();
+					}
+				}}
 			></button>
 		{/each}
 		{#if inPoint > 0}
@@ -155,9 +116,15 @@
 			aria-valuenow={inPoint}
 			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
 			style="left: {xFromTime(inPoint, rowWidth())}px"
-			onpointerdown={(e) => onTrimDown(e, 'in')}
-			onpointermove={onTrimMove}
-			onpointerup={onTrimUp}
+			use:draggable={{
+				onStart: (e) => e.stopPropagation(),
+				onMove: (e) => {
+					if (!rowEl) return;
+					const rect = rowEl.getBoundingClientRect();
+					keyframes.setTrackInPoint(paramId, timeFromX(e.clientX - rect.left, rect.width));
+					refreshPreview();
+				}
+			}}
 		></div>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
@@ -170,9 +137,15 @@
 			aria-valuenow={outPoint}
 			class="absolute top-0 bottom-0 w-1.5 -translate-x-1/2 cursor-ew-resize bg-amber-400/70"
 			style="left: {xFromTime(outPoint, rowWidth())}px"
-			onpointerdown={(e) => onTrimDown(e, 'out')}
-			onpointermove={onTrimMove}
-			onpointerup={onTrimUp}
+			use:draggable={{
+				onStart: (e) => e.stopPropagation(),
+				onMove: (e) => {
+					if (!rowEl) return;
+					const rect = rowEl.getBoundingClientRect();
+					keyframes.setTrackOutPoint(paramId, timeFromX(e.clientX - rect.left, rect.width));
+					refreshPreview();
+				}
+			}}
 		></div>
 		{#if selectedKf}
 			<div
