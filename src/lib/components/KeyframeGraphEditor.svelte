@@ -3,6 +3,7 @@
 	import { refreshPreview } from '$lib/state/animation';
 	import { sampleTrack, type Track } from '$lib/animation/keyframes';
 	import { xFromTime, timeFromX, yFromValue, valueFromY } from '$lib/animation/timeline-geometry';
+	import { draggable } from '$lib/actions/draggable';
 
 	let { paramId, min, max }: { paramId: string; min: number; max: number } = $props();
 
@@ -10,8 +11,6 @@
 	const H = 160;
 
 	let svgEl = $state<SVGSVGElement>();
-	let dragKind: 'point' | 'handle' | null = null;
-	let dragId: string | null = null;
 
 	const track = $derived<Track>(
 		keyframes.tracks[paramId] ?? { paramId, enabled: false, keyframes: [] }
@@ -29,58 +28,6 @@
 		}
 		return pts.join(' ');
 	});
-
-	function capture(e: PointerEvent) {
-		try {
-			svgEl?.setPointerCapture(e.pointerId);
-		} catch {
-			// No active pointer (e.g. a synthetic event) — capture is best-effort.
-		}
-	}
-
-	function onPointDown(e: PointerEvent, id: string) {
-		e.stopPropagation();
-		dragKind = 'point';
-		dragId = id;
-		capture(e);
-	}
-
-	function onHandleDown(e: PointerEvent, id: string) {
-		e.stopPropagation();
-		dragKind = 'handle';
-		dragId = id;
-		capture(e);
-	}
-
-	function onMove(e: PointerEvent) {
-		if (!dragKind || !dragId || !svgEl) return;
-		// Pointer coords are CSS pixels relative to the rendered box; map using the
-		// element's actual size, not the viewBox units (W/H), which only drive drawing.
-		const rect = svgEl.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
-		if (dragKind === 'point') {
-			keyframes.moveKeyframe(paramId, dragId, {
-				time: timeFromX(x, rect.width),
-				value: valueFromY(y, min, max, rect.height)
-			});
-		} else {
-			const kf = kfs.find((k) => k.id === dragId);
-			if (!kf) return;
-			const dx = Math.max(0, Math.min(1, timeFromX(x, rect.width) - kf.time));
-			const span = max - min || 1;
-			const dy = (valueFromY(y, min, max, rect.height) - kf.value) / span;
-			keyframes.setKeyframeHandle(paramId, dragId, 'out', { dx, dy });
-		}
-		// Reflect the edit in the paused preview; tick only applies while playing.
-		refreshPreview();
-	}
-
-	function onUp(e: PointerEvent) {
-		dragKind = null;
-		dragId = null;
-		if (svgEl?.hasPointerCapture(e.pointerId)) svgEl.releasePointerCapture(e.pointerId);
-	}
 </script>
 
 <div class="flex flex-col gap-1">
@@ -101,8 +48,6 @@
 			data-testid="graph-{paramId}"
 			viewBox="0 0 {W} {H}"
 			class="h-40 w-full rounded bg-muted/40 text-foreground"
-			onpointermove={onMove}
-			onpointerup={onUp}
 		>
 			<polyline
 				data-testid="graph-curve"
@@ -134,7 +79,23 @@
 						cy={hy}
 						r="4"
 						class="cursor-pointer fill-primary"
-						onpointerdown={(e) => onHandleDown(e, kf.id)}
+						use:draggable={{
+							onStart: (e) => e.stopPropagation(),
+							onMove: (e) => {
+								if (!svgEl) return;
+								const kf2 = kfs.find((k) => k.id === kf.id);
+								if (!kf2) return;
+								const rect = svgEl.getBoundingClientRect();
+								const dx = Math.max(
+									0,
+									Math.min(1, timeFromX(e.clientX - rect.left, rect.width) - kf2.time)
+								);
+								const span = max - min || 1;
+								const dy = (valueFromY(e.clientY - rect.top, min, max, rect.height) - kf2.value) / span;
+								keyframes.setKeyframeHandle(paramId, kf.id, 'out', { dx, dy });
+								refreshPreview();
+							}
+						}}
 					/>
 				{/if}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -145,7 +106,18 @@
 					width="8"
 					height="8"
 					class="cursor-pointer fill-foreground"
-					onpointerdown={(e) => onPointDown(e, kf.id)}
+					use:draggable={{
+						onStart: (e) => e.stopPropagation(),
+						onMove: (e) => {
+							if (!svgEl) return;
+							const rect = svgEl.getBoundingClientRect();
+							keyframes.moveKeyframe(paramId, kf.id, {
+								time: timeFromX(e.clientX - rect.left, rect.width),
+								value: valueFromY(e.clientY - rect.top, min, max, rect.height)
+							});
+							refreshPreview();
+						}
+					}}
 				/>
 			{/each}
 		</svg>

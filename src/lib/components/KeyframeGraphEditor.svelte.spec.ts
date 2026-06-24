@@ -46,7 +46,7 @@ describe('KeyframeGraphEditor', () => {
 		const rect = svg.getBoundingClientRect();
 		const pt = page.getByTestId(`graph-pt-${id}`).element() as SVGElement;
 		pt.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
-		svg.dispatchEvent(
+		pt.dispatchEvent(
 			new PointerEvent('pointermove', {
 				bubbles: true,
 				pointerId: 1,
@@ -54,7 +54,7 @@ describe('KeyframeGraphEditor', () => {
 				clientY: rect.top
 			})
 		);
-		svg.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
+		pt.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 }));
 		const moved = keyframes.tracks[ROT].keyframes.find((k) => k.id === id)!;
 		expect(moved.time).toBeCloseTo(0.5, 1);
 		expect(moved.value).toBeCloseTo(360, 0);
