@@ -8,7 +8,7 @@ By contrast, the **morph** and **wave** transforms *do* operate on the authored 
 
 ## Considered options
 
-- **Template-space path transform (rejected).** Translating anchors in normalized template `(x, y)` before bend reads cleanly and would make zones composable alongside morph/wave. It was tried (`zones.ts`) and abandoned: `buildRingPath` normalizes the template bounding box, so a radial push applied in template space is **re-absorbed by that normalization** — the tip never escapes the thin ring band. See `bend.ts` header comment and `zones.ts` `BASS_REACH` note.
+- **Template-space path transform (rejected).** Translating anchors in normalized template `(x, y)` before bend reads cleanly and would make zones composable alongside morph/wave. It was tried (`zones.ts:applyZonesToPath`, since deleted) and abandoned: `buildRingPath` normalizes the template bounding box, so a radial push applied in template space is **re-absorbed by that normalization** — the tip never escapes the thin ring band. See the `bend.ts` header comment for the live polar-space rationale.
 - **Polar-space deformation inside bend (chosen).** Pushing `radius`/`angle` after the polar mapping lets the tip travel toward the reserved edge, which is the whole point.
 
 ## Consequences
