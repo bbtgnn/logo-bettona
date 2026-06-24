@@ -119,8 +119,9 @@ export function buildAudioZonesParams(deps: {
 }
 
 // Per-ring wave overrides are DYNAMIC: a ring only contributes params while its
-// `waveConfig` override is on, and ids carry the live index. Build from the current
-// rings array every call — never cache indices across add/remove.
+// `waveConfig` override is on. Ids carry the stable `ring.id`, so a track survives
+// reorder/delete; the get/set closures still address the live array by index, so
+// build from the current rings array every call.
 export function buildRingWaveParams(
 	rings: Ring[],
 	deps: {
@@ -170,8 +171,9 @@ export function buildRingWaveParams(
 }
 
 // Per-ring morph is DYNAMIC like wave overrides: a ring contributes a morphT param
-// only while it has a morph target (`secondaryTemplatePath`). Built from the live rings
-// array every call — ids carry the live index, never cached across add/remove.
+// only while it has a morph target (`secondaryTemplatePath`). Ids carry the stable
+// `ring.id`; the get/set closures address the live array by index, so build from the
+// live rings array every call.
 export function buildRingMorphParams(
 	rings: Ring[],
 	deps: {
