@@ -17,7 +17,7 @@ The keyframe animation for one animatable param, keyed by its param id and store
 _Avoid_: channel, curve, lane.
 
 **Layer**:
-A global on/off animation source over the whole timeline (audioBars, audioZones, kaleidoscope, dataSeries). Note the word currently spans three different mechanisms (runtime driver / keyframe gate / placeholder) — see the architecture review. Distinct from a Ring.
+A global on/off animation source over the whole timeline. The word spans three mechanisms, made explicit by `LAYER_KIND` in `animation.svelte.ts`: **driver** (audioBars, audioZones — register + activate a runtime driver), **gate** (kaleidoscope — its flag gates whether its `<layer>.*` keyframe params apply), **inert** (dataSeries — a parked placeholder, shown as unavailable, never runs). Distinct from a Ring.
 _Avoid_: track, effect.
 
 **Template space / polar space**:

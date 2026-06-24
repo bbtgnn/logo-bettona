@@ -35,7 +35,32 @@ import { m } from '$lib/paraglide/messages';
 export type AnimationLayer = 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope';
 export type AnimationLayers = Record<AnimationLayer, boolean>;
 
-const AUDIO_LAYERS: AnimationLayer[] = ['audioBars', 'audioZones'];
+// What each layer IS — the single source for the three behaviours that used to be
+// scattered string special-cases across setLayerEnabled / syncActiveDrivers / applyKeyframes:
+//  - 'driver' → registers + activates a runtime driver (and today is audio-source backed)
+//  - 'gate'   → not a driver; its flag gates whether its `<layer>.*` keyframe params apply
+//  - 'inert'  → placeholder, never runs (dataSeries — the UI shows it as unavailable)
+export type LayerKind = 'driver' | 'gate' | 'inert';
+
+const LAYER_KIND: Record<AnimationLayer, LayerKind> = {
+	audioBars: 'driver',
+	audioZones: 'driver',
+	kaleidoscope: 'gate',
+	dataSeries: 'inert'
+};
+
+const ALL_LAYERS = Object.keys(LAYER_KIND) as AnimationLayer[];
+// Driver layers are the only ones the runtime activates; today every driver is
+// audio-source backed, so "no driver layer left → stop the audio source". The cast
+// is sound: a 'driver'-kind layer is by construction a runtime AnimationDriverType.
+const DRIVER_LAYERS = ALL_LAYERS.filter((l) => LAYER_KIND[l] === 'driver') as AnimationDriverType[];
+const GATE_LAYERS = ALL_LAYERS.filter((l) => LAYER_KIND[l] === 'gate');
+
+// Narrowing predicate: a 'driver'-kind layer is a runtime AnimationDriverType, so
+// guarding on this lets `runtime.setActive(layer, …)` type-check without a cast.
+function isDriverLayer(layer: AnimationLayer): layer is AnimationDriverType {
+	return LAYER_KIND[layer] === 'driver';
+}
 
 export type AnimationState = {
 	layers: AnimationLayers;
@@ -184,18 +209,16 @@ function cleanupCurrentAnimation() {
 	}
 }
 
-// Mirror the runtime's active set onto the current layer flags. dataSeries is a
-// placeholder (never runs); kaleidoscope is gated in applyKeyframes, not a driver.
+// Mirror the runtime's active set onto the current layer flags. Only driver layers
+// are activated; gate (kaleidoscope) and inert (dataSeries) layers never are.
 function syncActiveDrivers(): void {
-	runtime.setActive('audioBars', animationState.layers.audioBars);
-	runtime.setActive('audioZones', animationState.layers.audioZones);
+	for (const l of DRIVER_LAYERS) runtime.setActive(l, animationState.layers[l]);
 }
 
 function stopInternal(resetProgress = true) {
 	audioSource.stop();
 	cleanupCurrentAnimation();
-	runtime.setActive('audioBars', false);
-	runtime.setActive('audioZones', false);
+	for (const l of DRIVER_LAYERS) runtime.setActive(l, false);
 	if (resetProgress) {
 		applyMorphT(0);
 		animationState.progress = 0;
@@ -299,9 +322,10 @@ export function getAllAnimatableParams(): AnimatableParam[] {
  * are rounded/clamped by their setters.
  */
 export function applyKeyframes(progress: number): void {
-	const kaleidoOn = animationState.layers.kaleidoscope;
 	for (const p of getAllAnimatableParams()) {
-		if (!kaleidoOn && p.id.startsWith('kaleidoscope.')) continue;
+		// A gate layer's `<layer>.*` params apply only while that layer is on.
+		const gate = GATE_LAYERS.find((l) => p.id.startsWith(`${l}.`));
+		if (gate && !animationState.layers[gate]) continue;
 		const v = keyframes.sampleParam(p.id, progress);
 		if (v !== null) p.set(v);
 	}
@@ -340,7 +364,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
-	if (animationState.layers.audioBars || animationState.layers.audioZones) return false;
+	if (DRIVER_LAYERS.some((l) => animationState.layers[l])) return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -437,16 +461,16 @@ export function setLayerEnabled(layer: AnimationLayer, on: boolean): void {
 
 	animationState.layers = { ...animationState.layers, [layer]: on };
 
-	// Turning off the last active audio layer tears down the live audio source,
+	// Turning off the last active driver layer tears down the live audio source,
 	// preserving the old single-mode teardown behaviour.
-	if ((layer === 'audioBars' || layer === 'audioZones') && !on) {
-		const anyAudioLeft = AUDIO_LAYERS.some((l) => animationState.layers[l]);
-		if (!anyAudioLeft) audioSource.stop();
+	if (isDriverLayer(layer) && !on) {
+		const anyDriverLeft = DRIVER_LAYERS.some((l) => animationState.layers[l]);
+		if (!anyDriverLeft) audioSource.stop();
 	}
 
-	// dataSeries is a placeholder (never runs); kaleidoscope is gated in
-	// applyKeyframes, not a driver. The shared clock keeps running across toggles.
-	if (layer !== 'dataSeries' && layer !== 'kaleidoscope' && animationState.isPlaying) {
+	// Only driver layers touch the runtime; gate (kaleidoscope) and inert
+	// (dataSeries) layers don't. The shared clock keeps running across toggles.
+	if (isDriverLayer(layer) && animationState.isPlaying) {
 		runtime.setActive(layer, on);
 	}
 }
@@ -567,7 +591,7 @@ export function handleCompositionChanged() {
 
 	// Active driver layers own their per-ring frame output semantics:
 	// topology updates should be absorbed without forcing a playback reset.
-	if (animationState.layers.audioBars || animationState.layers.audioZones) {
+	if (DRIVER_LAYERS.some((l) => animationState.layers[l])) {
 		lastRingCount = composition.rings.length;
 		animatedIndices = currentIndices;
 		return;
