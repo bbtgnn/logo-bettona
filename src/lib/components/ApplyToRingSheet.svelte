@@ -66,7 +66,7 @@
 						value={ringIndex}
 						onchange={(e) => (ringIndex = Number((e.target as HTMLSelectElement).value))}
 					>
-						{#each rings as _ring, i (i)}
+						{#each rings as ring, i (ring.id)}
 							<option value={i}>{m.editor_ring_label({ index: i + 1 })}</option>
 						{/each}
 					</select>

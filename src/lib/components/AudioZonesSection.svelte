@@ -107,7 +107,7 @@
 					<p class="text-[11px] font-medium text-muted-foreground">
 						{m.animate_zones_per_ring()}
 					</p>
-					{#each composition.rings as ring, i (i)}
+					{#each composition.rings as ring, i (ring.id)}
 						<RingZoneConfigItem
 							{ring}
 							index={i}

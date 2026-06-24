@@ -109,7 +109,7 @@
 
 				<div class="flex flex-col gap-1">
 					<p class="text-[11px] font-medium text-muted-foreground">{m.animate_wave_per_ring()}</p>
-					{#each composition.rings as ring, i (i)}
+					{#each composition.rings as ring, i (ring.id)}
 						<RingWaveConfigItem {ring} index={i} globalDefault={globalWaveDefault} />
 					{/each}
 				</div>

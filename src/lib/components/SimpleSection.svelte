@@ -15,7 +15,7 @@
 			{#if composition.rings.length === 0}
 				<p class="text-[11px] text-muted-foreground">{m.animate_simple_empty()}</p>
 			{:else}
-				{#each composition.rings as ring, i (i)}
+				{#each composition.rings as ring, i (ring.id)}
 					<RingMorphConfigItem {ring} index={i} />
 				{/each}
 			{/if}

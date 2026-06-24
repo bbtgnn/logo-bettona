@@ -50,7 +50,7 @@
 			</p>
 		{:else}
 			<div class="space-y-0.5">
-				{#each composition.rings as ring, i (i)}
+				{#each composition.rings as ring, i (ring.id)}
 					<RingEditor
 						{ring}
 						index={i}
