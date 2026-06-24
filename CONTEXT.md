@@ -19,3 +19,7 @@ _Avoid_: channel, curve, lane.
 **Layer**:
 A global on/off animation source over the whole timeline (audioBars, audioZones, kaleidoscope, dataSeries). Note the word currently spans three different mechanisms (runtime driver / keyframe gate / placeholder) — see the architecture review. Distinct from a Ring.
 _Avoid_: track, effect.
+
+**Template space / polar space**:
+A Ring's effect transforms run in two stages. **Template space** = the authored `(x, y)` bezier before bend; morph and wave apply here (unified in `composeRingTemplate`, pure). **Polar space** = after `buildRingPath` (`bend.ts`) maps `x → angle`, `y → radius`; zone deformation applies here, driven by `ring.zoneDrive`. Zone is polar-only by necessity — a template-space version is re-absorbed by bend's bbox normalization (see ADR-0001).
+_Avoid_: world space, screen space.
