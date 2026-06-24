@@ -1,8 +1,8 @@
 <script lang="ts">
 	import paper from 'paper';
-	import { onMount } from 'svelte';
 	import type { Composition, Path } from '$lib/types';
 	import { createRenderPipeline } from '$lib/geometry/render-pipeline';
+	import { paperCanvas } from './paper-canvas.svelte';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { m } from '$lib/paraglide/messages';
 
@@ -26,22 +26,20 @@
 		showTry?: boolean;
 	} = $props();
 
-	let canvas = $state<HTMLCanvasElement | null>(null);
 	let hasError = $state(false);
 	let playing = $state(false);
 	let playT = $state(0);
-
-	let scope: paper.PaperScope | undefined;
-	let pipeline: ReturnType<typeof createRenderPipeline> | undefined;
 	let rafId: number | null = null;
+
+	const pipeline = createRenderPipeline();
 
 	// While the Try loop runs it overrides the slider pose; otherwise the preview
 	// mirrors the live morphT prop.
 	const effectiveMorphT = $derived(playing ? playT : morphT);
 
-	function renderPreview() {
-		if (!scope || !pipeline || !path) {
-			hasError = !path;
+	function draw(scope: paper.PaperScope) {
+		if (!path) {
+			hasError = true;
 			return;
 		}
 		const comp: Composition = {
@@ -71,33 +69,10 @@
 		}
 	}
 
-	onMount(() => {
-		if (!canvas) {
-			hasError = true;
-			return;
-		}
-		scope = new paper.PaperScope();
-		scope.setup(canvas);
-		pipeline = createRenderPipeline();
-		renderPreview();
-		return () => {
-			if (rafId !== null) cancelAnimationFrame(rafId);
-			pipeline?.dispose();
-			scope?.project.clear();
-			scope?.view.remove();
-		};
-	});
-
-	// Re-render whenever the inputs (or the Try-driven pose) change. Guarded so an
-	// early run before onMount setup is a no-op (onMount does the first render).
-	$effect(() => {
-		void path;
-		void secondaryPath;
-		void copies;
-		void size;
-		void effectiveMorphT;
-		renderPreview();
-	});
+	function disposePreview() {
+		if (rafId !== null) cancelAnimationFrame(rafId);
+		pipeline.dispose();
+	}
 
 	function stopTry() {
 		playing = false;
@@ -136,7 +111,7 @@
 	</div>
 {:else}
 	<canvas
-		bind:this={canvas}
+		{@attach paperCanvas(draw, { dispose: disposePreview })}
 		width={size}
 		height={size}
 		style:width="{size}px"
@@ -147,12 +122,7 @@
 {/if}
 
 {#if showTry}
-	<Button
-		variant="outline"
-		size="sm"
-		onclick={toggleTry}
-		data-testid="ring-morph-preview-try"
-	>
+	<Button variant="outline" size="sm" onclick={toggleTry} data-testid="ring-morph-preview-try">
 		{playing ? m.animate_morph_stop() : m.animate_morph_try()}
 	</Button>
 {/if}
