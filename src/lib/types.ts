@@ -35,7 +35,7 @@ export type Ring = {
 	secondaryTemplatePath: Path | null;
 	morphT: number;
 	ringHeight: number;
-	wave?: WaveState | null; // absent/null → no wave → renders identical to today
+	wave?: WaveState | null; // transient; stripped from persistence. absent/null → no wave
 	waveConfig?: WaveConfig | null; // null/absent = inherit global AudioBarsConfig default
 	zoneConfig?: ZoneIntensity | null; // persisted; null = inherit global default
 	zoneDrive?: ZoneDrive | null; // transient; stripped from persistence
