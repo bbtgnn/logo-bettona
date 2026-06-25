@@ -75,3 +75,10 @@ export function duplicateEntry(source: PathLibraryEntry): PathLibraryEntry {
 	pathLibrary.entries = [...pathLibrary.entries, copy];
 	return copy;
 }
+
+/** Replaces the path of a user entry (deep-copied). Builtins and unknown ids: no-op. */
+export function updateEntryPath(id: string, path: Path): void {
+	pathLibrary.entries = pathLibrary.entries.map((e) =>
+		e.id === id && !e.builtin ? { ...e, path: clonePath(path) } : e
+	);
+}
