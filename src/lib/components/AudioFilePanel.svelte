@@ -3,6 +3,7 @@
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { animationState, audioSource, togglePlay } from '$lib/state/animation';
 	import { m } from '$lib/paraglide/messages';
+	import { draggable } from '$lib/actions/draggable';
 
 	// ── canvas ref and rAF state ─────────────────────────────────────────────
 	let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -119,7 +120,7 @@
 		return (x / canvasEl.width) * audioSource.getDuration();
 	}
 
-	function handlePointerDown(e: PointerEvent) {
+	function onDragStart(e: PointerEvent) {
 		const duration = audioSource.getDuration();
 		if (duration === 0 || !canvasEl) return;
 		const rect = canvasEl.getBoundingClientRect();
@@ -135,10 +136,9 @@
 			dragMode = 'seek';
 			audioSource.seek(canvasXToTime(e.clientX));
 		}
-		canvasEl.setPointerCapture(e.pointerId);
 	}
 
-	function handlePointerMove(e: PointerEvent) {
+	function onDragMove(e: PointerEvent) {
 		if (!dragMode) return;
 		const t = canvasXToTime(e.clientX);
 		const region = audioSource.getRegion();
@@ -151,7 +151,7 @@
 		}
 	}
 
-	function handlePointerUp() {
+	function onDragEnd() {
 		dragMode = null;
 	}
 
@@ -252,9 +252,7 @@
 		<canvas
 			bind:this={canvasEl}
 			class="h-16 w-full cursor-crosshair rounded border border-border bg-muted/30"
-			onpointerdown={handlePointerDown}
-			onpointermove={handlePointerMove}
-			onpointerup={handlePointerUp}
+			use:draggable={{ onStart: onDragStart, onMove: onDragMove, onEnd: onDragEnd }}
 		></canvas>
 
 		<!-- Transport + region controls -->
