@@ -1,5 +1,6 @@
 import { lsSync } from 'rune-sync/localstorage';
 import type { Path, PathLibrary, PathLibraryEntry, Ring } from '$lib/types';
+import { BUILTIN_CURVES } from './builtin-curves';
 
 export const pathLibrary = lsSync<PathLibrary>('path-library', { entries: [] });
 
@@ -45,4 +46,32 @@ export function applyEntryToRing(ring: Ring, entry: PathLibraryEntry, slot: Appl
 	if (slot === 'both') {
 		ring.secondaryTemplatePath = entry.secondaryPath ? clonePath(entry.secondaryPath) : null;
 	}
+}
+
+/**
+ * Seeds the 10 builtin default curves into the library if missing. Idempotent:
+ * a builtin already present (matched by id) is skipped, user entries are untouched.
+ * Called once on the Tracciati landing.
+ */
+export function seedBuiltinCurves(): void {
+	const present = new Set(pathLibrary.entries.map((e) => e.id));
+	const missing = BUILTIN_CURVES.filter((c) => !present.has(c.id));
+	if (missing.length === 0) return;
+	pathLibrary.entries = [...missing, ...pathLibrary.entries];
+}
+
+/**
+ * Duplicates a curve (builtin or user) into a fresh, editable user entry.
+ * The source — notably a protected builtin — is never mutated. Used by "Edita".
+ */
+export function duplicateEntry(source: PathLibraryEntry): PathLibraryEntry {
+	const copy: PathLibraryEntry = {
+		id: crypto.randomUUID(),
+		name: `${source.name} (copia)`,
+		createdAt: Date.now(),
+		path: clonePath(source.path),
+		secondaryPath: source.secondaryPath ? clonePath(source.secondaryPath) : null
+	};
+	pathLibrary.entries = [...pathLibrary.entries, copy];
+	return copy;
 }
