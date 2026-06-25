@@ -16,7 +16,7 @@ vi.mock('./composition', () => ({
 	updateRing: vi.fn(),
 	createRingMorphTarget: vi.fn(),
 	removeRingMorphTarget: vi.fn(),
-	removeRing: vi.fn((index: number) => {
+	removeRingFromComposition: vi.fn((index: number) => {
 		mockComposition.rings = mockComposition.rings.filter((_, i) => i !== index);
 	})
 }));

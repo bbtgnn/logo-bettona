@@ -128,7 +128,13 @@ export function addRing() {
 	applyColorMode();
 }
 
-export function removeRing(index: number) {
+/**
+ * Geometry-only half of ring deletion: drops the ring from the composition but
+ * leaves keyframe Tracks untouched (composition.ts never reaches keyframe state).
+ * The complete door is `removeRing` in animation.svelte.ts, which also deletes the
+ * ring's Tracks. Name mirrors `removeRingMorphTarget` — both are the partial half.
+ */
+export function removeRingFromComposition(index: number) {
 	composition.rings = composition.rings.filter((_, i) => i !== index);
 	applyColorMode();
 }

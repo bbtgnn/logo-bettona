@@ -2,7 +2,7 @@ import {
 	composition,
 	createRingMorphTarget,
 	removeRingMorphTarget,
-	removeRing as removeRingFromComposition,
+	removeRingFromComposition,
 	setRingMorphT,
 	setRingWave,
 	setRingZoneDrive,
