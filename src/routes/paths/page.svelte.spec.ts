@@ -2,41 +2,31 @@ import { page } from 'vitest/browser';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import PathsPage from './+page.svelte';
-import { pathLibrary, updateEntryPath } from '$lib/state/path-library';
-import { composition } from '$lib/state/composition-persistence.svelte';
+import { pathLibrary } from '$lib/state/path-library';
 
-describe('Tracciati page', () => {
-	beforeEach(() => {
+describe('Tracciati v2 page', () => {
+	beforeEach(async () => {
 		pathLibrary.entries = [];
-		composition.rings = [];
+		// The shadcn Sidebar renders an off-canvas Sheet (closed by default) below the
+		// `md` breakpoint, which hides SidebarContent (and its testids) from the DOM.
+		// Force a desktop-sized viewport so the sidebar's inline content renders.
+		await page.viewport(1280, 800);
 	});
 
-	it('seeds the 10 builtin curves and renders them in the grid', async () => {
+	it('seeds builtins and lists them as selectable base curves', async () => {
 		render(PathsPage);
-		await expect.element(page.getByTestId('curve-card-builtin-0')).toBeInTheDocument();
-		await expect.element(page.getByTestId('curve-card-builtin-9')).toBeInTheDocument();
+		await expect.element(page.getByTestId('base-curve-builtin-0')).toBeInTheDocument();
+		await expect.element(page.getByTestId('base-curve-builtin-9')).toBeInTheDocument();
 	});
 
-	it('adds a ring and updates the counter when a curve is used', async () => {
+	it('creates a custom curve from the Create button', async () => {
 		render(PathsPage);
-		await page.getByTestId('curve-card-builtin-0').click();
-		await page.getByTestId('curve-use-builtin-0').click();
-		expect(composition.rings).toHaveLength(1);
-		await expect.element(page.getByTestId('tracciati-ring-count')).toBeInTheDocument();
+		await page.getByTestId('tracciati-create').click();
+		expect(pathLibrary.entries.filter((e) => !e.builtin)).toHaveLength(1);
 	});
 
-	it('Done commits the live edited path, not the pre-edit snapshot', async () => {
+	it('shows a preview of the selected curve', async () => {
 		render(PathsPage);
-		await page.getByTestId('curve-card-builtin-0').click();
-		await page.getByTestId('curve-edit-builtin-0').click();
-		// The test runner's viewport is mobile-width, so the shadcn Sidebar renders
-		// its content inside an offcanvas Sheet that must be opened explicitly.
-		await page.getByRole('button', { name: 'Toggle Sidebar' }).click();
-		const draft = pathLibrary.entries.find((e) => !e.builtin)!;
-		const EDITED = { cmds: ['M', 'L'] as ('M' | 'L')[], crds: [1, 1, 9, 9] };
-		updateEntryPath(draft.id, EDITED); // simulate the canvas live-save
-		await page.getByTestId('curve-editor-done').click();
-		const ring = composition.rings[composition.rings.length - 1];
-		expect(ring.templatePath).toEqual(EDITED);
+		await expect.element(page.getByTestId('tracciati-preview')).toBeInTheDocument();
 	});
 });
