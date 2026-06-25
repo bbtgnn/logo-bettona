@@ -22,10 +22,16 @@
 	});
 
 	let mode = $state<'grid' | 'editing'>('grid');
-	let editingEntry = $state<PathLibraryEntry | null>(null);
+	let editingId = $state<string | null>(null);
 
 	const builtins = $derived(pathLibrary.entries.filter((e) => e.builtin));
 	const mine = $derived(pathLibrary.entries.filter((e) => !e.builtin));
+	// Re-points to the live store entry by id, instead of caching a snapshot object,
+	// so edits made through CurveEditorPanel (which replaces entries immutably) are
+	// reflected here without going stale.
+	const editingEntry = $derived(
+		editingId ? (pathLibrary.entries.find((e) => e.id === editingId) ?? null) : null
+	);
 
 	function handleUse(entry: PathLibraryEntry) {
 		addRingWithPath(entry.path, entry.secondaryPath);
@@ -33,20 +39,24 @@
 
 	function handleEdit(entry: PathLibraryEntry) {
 		// A builtin edit duplicates into an editable user copy; a user curve edits in place.
-		editingEntry = entry.builtin ? duplicateEntry(entry) : entry;
+		editingId = entry.builtin ? duplicateEntry(entry).id : entry.id;
 		mode = 'editing';
 	}
 
 	function handleCancelEdit() {
 		// The copy persists (draft); just return to the grid.
 		mode = 'grid';
-		editingEntry = null;
+		editingId = null;
 	}
 
-	function handleDoneEdit(entry: PathLibraryEntry) {
-		addRingWithPath(entry.path, entry.secondaryPath);
+	function handleDoneEdit() {
+		// Read the live derived entry rather than trusting a passed snapshot, so the
+		// committed ring always carries the latest edited path.
+		if (editingEntry) {
+			addRingWithPath(editingEntry.path, editingEntry.secondaryPath);
+		}
 		mode = 'grid';
-		editingEntry = null;
+		editingId = null;
 	}
 </script>
 
