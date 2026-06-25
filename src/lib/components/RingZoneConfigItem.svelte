@@ -1,11 +1,9 @@
 <script lang="ts">
-	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
-	import { Label } from '$lib/shadcn/ui/label/index.js';
-	import { CaretDown, CaretRight } from 'phosphor-svelte';
 	import { updateRing } from '$lib/state/composition';
 	import { resolveZoneIntensity } from '$lib/geometry/zones';
 	import { m } from '$lib/paraglide/messages';
 	import ZonePreview from './ZonePreview.svelte';
+	import RingOverrideConfigItem from './RingOverrideConfigItem.svelte';
 	import type { Ring, ZoneIntensity } from '$lib/types';
 
 	let {
@@ -18,118 +16,66 @@
 		globalDefault: ZoneIntensity;
 	} = $props();
 
-	let open = $state(false);
-
 	const hasOverride = $derived(ring.zoneConfig != null);
 	const resolved = $derived(resolveZoneIntensity(ring, globalDefault));
+
+	function setOverride(enabled: boolean) {
+		updateRing(index, { zoneConfig: enabled ? { ...globalDefault } : null });
+	}
+
+	const sliders = $derived(
+		hasOverride
+			? [
+					{
+						id: `ring-bass-${index}`,
+						label: m.animate_ring_zone_bass(),
+						min: 0,
+						max: 1,
+						step: 0.01,
+						value: ring.zoneConfig!.bass,
+						oninput: (v: number) =>
+							updateRing(index, { zoneConfig: { ...ring.zoneConfig!, bass: v } })
+					},
+					{
+						id: `ring-mid-${index}`,
+						label: m.animate_ring_zone_mid(),
+						min: 0,
+						max: 1,
+						step: 0.01,
+						value: ring.zoneConfig!.mid,
+						oninput: (v: number) =>
+							updateRing(index, { zoneConfig: { ...ring.zoneConfig!, mid: v } })
+					},
+					{
+						id: `ring-treble-${index}`,
+						label: m.animate_ring_zone_treble(),
+						min: 0,
+						max: 1,
+						step: 0.01,
+						value: ring.zoneConfig!.treble,
+						oninput: (v: number) =>
+							updateRing(index, { zoneConfig: { ...ring.zoneConfig!, treble: v } })
+					}
+				]
+			: []
+	);
 </script>
 
-<div class="rounded border bg-background" data-testid="ring-zone-config-{index}">
-	<Collapsible.Collapsible bind:open>
-		<div class="flex items-center gap-1 px-2 py-1.5">
-			<Collapsible.CollapsibleTrigger
-				class="flex flex-1 items-center gap-1 text-left text-sm font-medium hover:text-foreground"
-			>
-				{#if open}
-					<CaretDown size={14} />
-				{:else}
-					<CaretRight size={14} />
-				{/if}
-				{m.editor_ring_label({ index: index + 1 })}
-				{#if hasOverride}
-					<span
-						class="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] font-normal text-muted-foreground"
-						>{m.animate_custom()}</span
-					>
-				{/if}
-			</Collapsible.CollapsibleTrigger>
-		</div>
-
-		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			<ZonePreview
-				template={ring.templatePath ?? null}
-				copies={ring.copies ?? 1}
-				ringHeight={ring.ringHeight ?? 0.4}
-				intensity={resolved}
-			/>
-
-			<div class="flex items-center gap-2">
-				<input
-					id="zone-override-{index}"
-					type="checkbox"
-					checked={hasOverride}
-					onchange={(e) => {
-						if ((e.target as HTMLInputElement).checked) {
-							updateRing(index, { zoneConfig: { ...globalDefault } });
-						} else {
-							updateRing(index, { zoneConfig: null });
-						}
-					}}
-					class="h-4 w-4 cursor-pointer rounded border-input"
-				/>
-				<Label for="zone-override-{index}" class="cursor-pointer text-xs"
-					>{m.animate_customize_zones()}</Label
-				>
-			</div>
-
-			{#if hasOverride}
-				<div class="flex flex-col gap-1">
-					<Label for="ring-bass-{index}" class="text-xs">{m.animate_ring_zone_bass()}</Label>
-					<input
-						id="ring-bass-{index}"
-						type="range"
-						min="0"
-						max="1"
-						step="0.01"
-						value={ring.zoneConfig!.bass}
-						oninput={(e) =>
-							updateRing(index, {
-								zoneConfig: {
-									...ring.zoneConfig!,
-									bass: Number((e.target as HTMLInputElement).value)
-								}
-							})}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="ring-mid-{index}" class="text-xs">{m.animate_ring_zone_mid()}</Label>
-					<input
-						id="ring-mid-{index}"
-						type="range"
-						min="0"
-						max="1"
-						step="0.01"
-						value={ring.zoneConfig!.mid}
-						oninput={(e) =>
-							updateRing(index, {
-								zoneConfig: {
-									...ring.zoneConfig!,
-									mid: Number((e.target as HTMLInputElement).value)
-								}
-							})}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<Label for="ring-treble-{index}" class="text-xs">{m.animate_ring_zone_treble()}</Label>
-					<input
-						id="ring-treble-{index}"
-						type="range"
-						min="0"
-						max="1"
-						step="0.01"
-						value={ring.zoneConfig!.treble}
-						oninput={(e) =>
-							updateRing(index, {
-								zoneConfig: {
-									...ring.zoneConfig!,
-									treble: Number((e.target as HTMLInputElement).value)
-								}
-							})}
-					/>
-				</div>
-			{/if}
-		</Collapsible.CollapsibleContent>
-	</Collapsible.Collapsible>
-</div>
+<RingOverrideConfigItem
+	{index}
+	{hasOverride}
+	onToggle={setOverride}
+	overrideId="zone-override-{index}"
+	customizeLabel={m.animate_customize_zones()}
+	testid="ring-zone-config-{index}"
+	{sliders}
+>
+	{#snippet preview()}
+		<ZonePreview
+			template={ring.templatePath ?? null}
+			copies={ring.copies ?? 1}
+			ringHeight={ring.ringHeight ?? 0.4}
+			intensity={resolved}
+		/>
+	{/snippet}
+</RingOverrideConfigItem>
