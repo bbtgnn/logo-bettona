@@ -10,4 +10,10 @@ describe('WorkspaceNav', () => {
 		await expect.element(page.getByTestId('nav-animate')).toHaveAttribute('href', '/animate');
 		await expect.element(page.getByTestId('nav-paths')).toHaveAttribute('href', '/paths');
 	});
+
+	it('lists Tracciati first in the nav', async () => {
+		render(WorkspaceNav);
+		const links = Array.from(document.querySelectorAll('a[data-testid^="nav-"]'));
+		expect(links[0]?.getAttribute('data-testid')).toBe('nav-paths');
+	});
 });

@@ -3,9 +3,9 @@
 	import { m } from '$lib/paraglide/messages';
 
 	const tabs = [
+		{ href: '/paths', label: () => m.nav_paths(), testid: 'nav-paths' },
 		{ href: '/editor', label: () => m.nav_editor(), testid: 'nav-editor' },
-		{ href: '/animate', label: () => m.nav_animate(), testid: 'nav-animate' },
-		{ href: '/paths', label: () => m.nav_paths(), testid: 'nav-paths' }
+		{ href: '/animate', label: () => m.nav_animate(), testid: 'nav-animate' }
 	];
 
 	const pathname = $derived(page.url?.pathname ?? '');
