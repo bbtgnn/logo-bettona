@@ -5,11 +5,23 @@ import AudioZonesSection from './AudioZonesSection.svelte';
 import { animationState, setLayerEnabled } from '$lib/state/animation';
 import { keyframes } from '$lib/state/keyframes.svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
+import { composition } from '$lib/state/composition-persistence.svelte';
 
 describe('AudioZonesSection', () => {
 	beforeEach(() => {
 		switchLocale('en');
 		setLayerEnabled('audioZones', false);
+		composition.rings = [
+			{
+				id: 'ring-zones-test-0',
+				copies: 8,
+				color: '#000000',
+				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 10, 10] },
+				secondaryTemplatePath: null,
+				morphT: 0,
+				ringHeight: 0.12
+			}
+		];
 	});
 
 	afterEach(() => {
