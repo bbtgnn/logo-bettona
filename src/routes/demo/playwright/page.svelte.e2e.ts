@@ -7,7 +7,7 @@ test('has expected h1', async ({ page }) => {
 
 test('creates and removes ring morph target controls', async ({ page }) => {
 	// Add a fresh ring in the Editor.
-	await page.goto('/');
+	await page.goto('/editor');
 	await page.getByRole('button', { name: 'Add Ring' }).click();
 
 	// Morph now lives in the Animate → Morph section, which is open by default.

@@ -12,7 +12,7 @@ test('tabs navigate between Editor, Animate and Paths', async ({ page }) => {
 	await expect(page).toHaveURL(/\/paths$/);
 });
 
-test('root redirects to /editor', async ({ page }) => {
+test('root redirects to /paths', async ({ page }) => {
 	await page.goto('/');
-	await expect(page).toHaveURL(/\/editor$/);
+	await expect(page).toHaveURL(/\/paths$/);
 });
