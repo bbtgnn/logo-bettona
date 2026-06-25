@@ -191,14 +191,5 @@
 	"tracciati_create_curve": "Create curve",
 	"tracciati_points_editor": "Points editor",
 	"tracciati_duplicate": "Duplicate",
-	"tracciati_use": "Use",
-	"tracciati_edit": "Edit",
-	"tracciati_preview_on_ring": "Preview on ring",
-	"tracciati_ring_count": "{count} rings",
-	"tracciati_go_to_editor": "Go to editor",
-	"tracciati_edit_title": "Edit curve",
-	"tracciati_curve_name": "Curve name",
-	"tracciati_cancel": "Cancel",
-	"tracciati_done": "Done",
-	"tracciati_empty_mine": "Your edited curves will appear here."
+	"tracciati_curve_name": "Curve name"
 }

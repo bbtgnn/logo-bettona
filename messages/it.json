@@ -191,14 +191,5 @@
 	"tracciati_create_curve": "Crea curva",
 	"tracciati_points_editor": "Editor punti",
 	"tracciati_duplicate": "Duplica",
-	"tracciati_use": "Usa",
-	"tracciati_edit": "Edita",
-	"tracciati_preview_on_ring": "Anteprima sull'anello",
-	"tracciati_ring_count": "{count} anelli",
-	"tracciati_go_to_editor": "Vai all'editor",
-	"tracciati_edit_title": "Modifica curva",
-	"tracciati_curve_name": "Nome curva",
-	"tracciati_cancel": "Annulla",
-	"tracciati_done": "Fatto",
-	"tracciati_empty_mine": "Le tue curve modificate compariranno qui."
+	"tracciati_curve_name": "Nome curva"
 }
