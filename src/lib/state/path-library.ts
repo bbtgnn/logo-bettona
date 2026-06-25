@@ -82,3 +82,22 @@ export function updateEntryPath(id: string, path: Path): void {
 		e.id === id && !e.builtin ? { ...e, path: clonePath(path) } : e
 	);
 }
+
+// Seed shape for a brand-new custom curve: a simple arch in the same coordinate
+// space (~0..180) as the builtin curves. Q is fine for display; once edited the
+// RingCanvas emits L/C segments.
+const SEED_ARC: Path = { cmds: ['M', 'Q'], crds: [20, 100, 100, 40, 180, 100] };
+
+/** Creates and saves a new custom curve seeded from a simple arc. */
+export function createCurveFromArc(): PathLibraryEntry {
+	const count = pathLibrary.entries.filter((e) => !e.builtin).length;
+	const entry: PathLibraryEntry = {
+		id: crypto.randomUUID(),
+		name: `Nuova curva ${count + 1}`,
+		createdAt: Date.now(),
+		path: clonePath(SEED_ARC),
+		secondaryPath: null
+	};
+	pathLibrary.entries = [...pathLibrary.entries, entry];
+	return entry;
+}
