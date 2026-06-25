@@ -185,5 +185,17 @@
 	"colors_background": "Background",
 	"colors_delete_palette": "Delete palette",
 	"colors_new_palette": "New palette",
-	"colors_reshuffle": "Reshuffle colors"
+	"colors_reshuffle": "Reshuffle colors",
+	"tracciati_default_group": "Default curves",
+	"tracciati_mine_group": "My curves",
+	"tracciati_use": "Use",
+	"tracciati_edit": "Edit",
+	"tracciati_preview_on_ring": "Preview on ring",
+	"tracciati_ring_count": "{count} rings",
+	"tracciati_go_to_editor": "Go to editor",
+	"tracciati_edit_title": "Edit curve",
+	"tracciati_curve_name": "Curve name",
+	"tracciati_cancel": "Cancel",
+	"tracciati_done": "Done",
+	"tracciati_empty_mine": "Your edited curves will appear here."
 }

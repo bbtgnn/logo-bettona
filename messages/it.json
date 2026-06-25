@@ -185,5 +185,17 @@
 	"colors_background": "Sfondo",
 	"colors_delete_palette": "Elimina tavolozza",
 	"colors_new_palette": "Nuova tavolozza",
-	"colors_reshuffle": "Rimescola colori"
+	"colors_reshuffle": "Rimescola colori",
+	"tracciati_default_group": "Curve di default",
+	"tracciati_mine_group": "Le mie curve",
+	"tracciati_use": "Usa",
+	"tracciati_edit": "Edita",
+	"tracciati_preview_on_ring": "Anteprima sull'anello",
+	"tracciati_ring_count": "{count} anelli",
+	"tracciati_go_to_editor": "Vai all'editor",
+	"tracciati_edit_title": "Modifica curva",
+	"tracciati_curve_name": "Nome curva",
+	"tracciati_cancel": "Annulla",
+	"tracciati_done": "Fatto",
+	"tracciati_empty_mine": "Le tue curve modificate compariranno qui."
 }
