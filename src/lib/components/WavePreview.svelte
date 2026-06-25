@@ -1,8 +1,9 @@
 <script lang="ts">
 	import paper from 'paper';
 	import type { Path, Ring } from '$lib/types';
-	import { applyWaveToPath } from '$lib/geometry/wave';
+	import { composeRingTemplate } from '$lib/geometry/compose-ring';
 	import { buildRingPath } from '$lib/geometry/bend';
+	import { paperCanvas, fitPreviewToView } from './paper-canvas.svelte';
 
 	// Parametric, audio-free preview of the wave the sliders sculpt. It renders the
 	// SAME bent ring the engine does (buildRingPath), so ringHeight, copies and the
@@ -44,66 +45,50 @@
 		return () => cancelAnimationFrame(raf);
 	});
 
-	function fitToView(scope: paper.PaperScope) {
-		const items = scope.project.activeLayer.children;
-		if (items.length === 0) return;
-		let bounds = items[0].bounds.clone();
-		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
-		if (bounds.width === 0 || bounds.height === 0) return;
-		const padding = 14;
-		const available = Math.min(scope.view.size.width, scope.view.size.height) - padding * 2;
-		if (available <= 0) return;
-		const scale = available / Math.max(bounds.width, bounds.height);
-		scope.project.activeLayer.scale(scale, bounds.center);
-		scope.project.activeLayer.position = scope.view.center;
-	}
+	function draw(scope: paper.PaperScope) {
+		scope.project.clear();
 
-	function setupCanvas(canvas: HTMLCanvasElement) {
-		const scope = new paper.PaperScope();
-		scope.setup(canvas);
+		if (template) {
+			const baseRing: Ring = {
+				id: 'wave-preview-ring',
+				copies: Math.max(1, Math.floor(copies)),
+				color: '#000000',
+				templatePath: template,
+				secondaryTemplatePath: null,
+				morphT: 0,
+				ringHeight
+			};
 
-		// Redraw on any parameter or phase change — paper.js only, no $state writes.
-		$effect(() => {
-			scope.activate();
-			scope.project.clear();
-
-			if (template) {
-				const baseRing: Ring = {
-					copies: Math.max(1, Math.floor(copies)),
-					color: '#000000',
-					templatePath: template,
-					secondaryTemplatePath: null,
-					morphT: 0,
-					ringHeight
-				};
-
-				// reach: full-amplitude wave on the primary template, translucent fill.
-				const reach = buildRingPath(
-					{ ...baseRing, templatePath: applyWaveToPath(template, { amplitude, crests, phase }) },
-					PREVIEW_RADIUS,
-					scope
-				);
-				if (reach) {
-					reach.fillColor = new paper.Color(0, 0, 0, 0.18);
-					reach.strokeColor = null;
-				}
-
-				// rest: silent shape, crisp outline (strokeScaling off so fit doesn't fatten it).
-				const rest = buildRingPath(baseRing, PREVIEW_RADIUS, scope);
-				if (rest) {
-					rest.fillColor = null;
-					rest.strokeColor = new paper.Color(0, 0, 0);
-					rest.strokeWidth = 1;
-					rest.strokeScaling = false;
-				}
-
-				fitToView(scope);
+			// reach: full-amplitude wave on the primary template, translucent fill.
+			const reach = buildRingPath(
+				{
+					...baseRing,
+					templatePath: composeRingTemplate({
+						...baseRing,
+						wave: { amplitude, crests, phase }
+					}).path
+				},
+				PREVIEW_RADIUS,
+				scope
+			);
+			if (reach) {
+				reach.fillColor = new paper.Color(0, 0, 0, 0.18);
+				reach.strokeColor = null;
 			}
 
-			scope.view.update();
-		});
+			// rest: silent shape, crisp outline (strokeScaling off so fit doesn't fatten it).
+			const rest = buildRingPath(baseRing, PREVIEW_RADIUS, scope);
+			if (rest) {
+				rest.fillColor = null;
+				rest.strokeColor = new paper.Color(0, 0, 0);
+				rest.strokeWidth = 1;
+				rest.strokeScaling = false;
+			}
 
-		return () => scope.project.clear();
+			fitPreviewToView(scope);
+		}
+
+		scope.view.update();
 	}
 </script>
 
@@ -118,5 +103,5 @@
 	{#if !template}
 		<span class="text-xs text-muted-foreground">Add a ring path to preview the wave</span>
 	{/if}
-	<canvas {@attach setupCanvas} width="200" height="200" class="h-full w-full"></canvas>
+	<canvas {@attach paperCanvas(draw)} width="200" height="200" class="h-full w-full"></canvas>
 </div>

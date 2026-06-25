@@ -12,6 +12,7 @@
 		reshuffle
 	} from '$lib/state/composition';
 	import { parseHexColors } from '$lib/color/apply';
+	import { m } from '$lib/paraglide/messages';
 
 	function paletteToInput(colors: string[]): string {
 		return colors.join(', ');
@@ -27,17 +28,20 @@
 <div class="flex flex-col gap-2">
 	{#each composition.fullPalettes as palette, i (i)}
 		<div
-			class="flex items-center gap-2 rounded border p-1.5 cursor-pointer transition-colors {colorMode.palette === i ? 'border-foreground bg-muted' : 'border-border hover:border-muted-foreground'}"
+			class="flex cursor-pointer items-center gap-2 rounded border p-1.5 transition-colors {colorMode.palette ===
+			i
+				? 'border-foreground bg-muted'
+				: 'border-border hover:border-muted-foreground'}"
 			role="button"
 			tabindex="0"
 			aria-pressed={colorMode.palette === i}
 			onclick={() => setActivePalette(i)}
 			onkeydown={(e) => e.key === 'Enter' && setActivePalette(i)}
 		>
-			<div class="flex gap-1 flex-1 flex-wrap">
+			<div class="flex flex-1 flex-wrap gap-1">
 				{#each palette.colors as color (color)}
 					<div
-						class="h-5 w-5 rounded-sm border border-border flex-shrink-0"
+						class="h-5 w-5 flex-shrink-0 rounded-sm border border-border"
 						style="background-color: {color}"
 					></div>
 				{/each}
@@ -45,10 +49,13 @@
 			<Button
 				variant="ghost"
 				size="icon"
-				class="h-5 w-5 text-muted-foreground hover:text-destructive flex-shrink-0"
+				class="h-5 w-5 flex-shrink-0 text-muted-foreground hover:text-destructive"
 				disabled={composition.fullPalettes.length <= 1}
-				onclick={(e) => { e.stopPropagation(); removeFullPalette(i); }}
-				aria-label="Delete palette"
+				onclick={(e) => {
+					e.stopPropagation();
+					removeFullPalette(i);
+				}}
+				aria-label={m.colors_delete_palette()}
 			>
 				<Trash size={12} />
 			</Button>
@@ -62,9 +69,9 @@
 				value={paletteToInput(active.colors)}
 				oninput={handleInput}
 				placeholder="#000000, #ffffff"
-				class="text-xs font-mono"
+				class="font-mono text-xs"
 			/>
-			<div class="flex gap-1 flex-wrap">
+			<div class="flex flex-wrap gap-1">
 				{#each active.colors as color (color)}
 					<div
 						class="h-5 w-5 rounded-sm border border-border"
@@ -77,10 +84,22 @@
 	{/if}
 
 	<div class="flex gap-2">
-		<Button variant="outline" size="sm" class="flex-1 gap-1 text-xs" onclick={() => addFullPalette()}>
-			<Plus size={12} /> New palette
+		<Button
+			variant="outline"
+			size="sm"
+			class="flex-1 gap-1 text-xs"
+			onclick={() => addFullPalette()}
+		>
+			<Plus size={12} />
+			{m.colors_new_palette()}
 		</Button>
-		<Button variant="outline" size="sm" class="gap-1 text-xs" onclick={reshuffle} title="Reshuffle colors">
+		<Button
+			variant="outline"
+			size="sm"
+			class="gap-1 text-xs"
+			onclick={reshuffle}
+			title={m.colors_reshuffle()}
+		>
 			<Shuffle size={12} />
 		</Button>
 	</div>

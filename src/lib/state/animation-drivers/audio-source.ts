@@ -126,6 +126,12 @@ export type AudioSource = {
 	getRegion(): { start: number; end: number };
 	setLoopRegion(enabled: boolean): void;
 	isLoopRegion(): boolean;
+	/**
+	 * Taps the live analyser into a fresh MediaStreamAudioDestinationNode and returns its
+	 * stream, for muxing into a video export. Returns null when no audio graph exists yet
+	 * (mode 'off', or before any source started). Call `dispose()` to unhook the tap.
+	 */
+	createRecordingStream(): { stream: MediaStream; dispose: () => void } | null;
 };
 
 type CreateAudioSourceDeps = {
@@ -365,6 +371,16 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		return reduceToZones(buffer, audioContext.sampleRate, analyser.fftSize, cfg.inputGain);
 	}
 
+	function createRecordingStream(): { stream: MediaStream; dispose: () => void } | null {
+		if (!audioContext || !analyser) return null;
+		const dest = audioContext.createMediaStreamDestination();
+		analyser.connect(dest);
+		return {
+			stream: dest.stream,
+			dispose: () => analyser?.disconnect(dest)
+		};
+	}
+
 	return {
 		setMode,
 		loadFile,
@@ -383,6 +399,7 @@ export function createAudioSource(deps: CreateAudioSourceDeps): AudioSource {
 		setRegion,
 		getRegion,
 		setLoopRegion,
-		isLoopRegion
+		isLoopRegion,
+		createRecordingStream
 	};
 }

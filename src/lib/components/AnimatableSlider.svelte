@@ -1,0 +1,56 @@
+<script lang="ts">
+	import { keyframes } from '$lib/state/keyframes.svelte';
+	import { animationState, refreshPreview } from '$lib/state/animation';
+	import { m } from '$lib/paraglide/messages';
+	import type { AnimatableParam } from '$lib/state/animatable-params';
+
+	let { param, animatable = true }: { param: AnimatableParam; animatable?: boolean } = $props();
+
+	$effect(() => {
+		if (animatable) keyframes.ensureTrack(param.id);
+	});
+	const armed = $derived(animatable && (keyframes.tracks[param.id]?.enabled ?? false));
+
+	function onInput(e: Event) {
+		const value = Number((e.target as HTMLInputElement).value);
+		if (armed) {
+			keyframes.upsertKeyframeAtTime(param.id, animationState.progress, value);
+			refreshPreview();
+		} else {
+			param.set(value);
+		}
+	}
+</script>
+
+<div class="flex flex-col gap-1">
+	<div class="flex items-center gap-2">
+		{#if animatable}
+			<button
+				type="button"
+				aria-label={m.editor_animate_param({ label: param.label })}
+				aria-pressed={armed}
+				title={m.editor_animate_this_param()}
+				class="grid h-5 w-5 shrink-0 place-items-center rounded text-xs {armed
+					? 'bg-primary text-primary-foreground'
+					: 'bg-muted text-muted-foreground'}"
+				onclick={() => keyframes.setTrackEnabled(param.id, !armed)}
+			>
+				⏱
+			</button>
+		{/if}
+		<!-- Plain span (NOT a <label for>) so the input's accessible name is the aria-label
+		     EXACTLY (param.label), with no value text appended. Keeps exact-match label
+		     queries unambiguous against the "Anima {label}" stopwatch button. -->
+		<span class="text-xs">{param.label} ({param.get()})</span>
+	</div>
+	<input
+		id="k-{param.id}"
+		aria-label={param.label}
+		type="range"
+		min={param.min}
+		max={param.max}
+		step={param.step}
+		value={param.get()}
+		oninput={onInput}
+	/>
+</div>

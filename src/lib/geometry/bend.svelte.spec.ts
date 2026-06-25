@@ -17,6 +17,7 @@ const rectPath: Path = {
 };
 
 const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
+	id: 'test-ring',
 	copies: 4,
 	color: '#000000',
 	ringHeight: 0.5,

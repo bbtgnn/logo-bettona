@@ -16,45 +16,44 @@ function clamp01(value: number): number {
 
 export function createAnimationRuntime(deps: RuntimeDeps) {
 	const drivers = new Map<AnimationDriverType, AnimationDriver>();
-	let mode: AnimationDriverType | null = null;
+	const active = new Set<AnimationDriverType>();
 
 	function registerDriver(type: AnimationDriverType, driver: AnimationDriver): void {
 		const previousDriver = drivers.get(type);
 		drivers.set(type, driver);
-		// Contract: activating a mode before registration is allowed;
-		// registering that active mode later initializes it immediately.
-		// If replacing an active driver, dispose previous then init new exactly once.
-		if (mode === type) {
+		// Contract preserved: registering a driver whose type is already active
+		// disposes the previous (if any) and inits the new exactly once.
+		if (active.has(type)) {
 			previousDriver?.dispose();
 			driver.init();
 		}
 	}
 
-	function setMode(nextMode: AnimationDriverType | null): void {
-		if (mode === nextMode) return;
-		if (mode) {
-			drivers.get(mode)?.dispose();
-		}
-		mode = nextMode;
-		if (mode) {
-			drivers.get(mode)?.init();
+	function setActive(type: AnimationDriverType, on: boolean): void {
+		if (on === active.has(type)) return;
+		if (on) {
+			active.add(type);
+			drivers.get(type)?.init();
+		} else {
+			active.delete(type);
+			drivers.get(type)?.dispose();
 		}
 	}
 
 	function tick(nowMs: number): void {
-		if (!mode) return;
-
-		const frame = drivers.get(mode)?.frame(nowMs) ?? {};
-		for (const [rawIndex, rawT] of Object.entries(frame)) {
-			const index = Number(rawIndex);
-			if (!Number.isInteger(index) || index < 0) continue;
-			deps.applyRingT(index, clamp01(rawT));
+		for (const type of active) {
+			const frame = drivers.get(type)?.frame(nowMs) ?? {};
+			for (const [rawIndex, rawT] of Object.entries(frame)) {
+				const index = Number(rawIndex);
+				if (!Number.isInteger(index) || index < 0) continue;
+				deps.applyRingT(index, clamp01(rawT));
+			}
 		}
 	}
 
 	return {
 		registerDriver,
-		setMode,
+		setActive,
 		tick
 	};
 }

@@ -7,17 +7,21 @@
 	import type { ApplySlot } from '$lib/state/path-library';
 	import { composition } from '$lib/state/composition';
 	import RingPreview from './RingPreview.svelte';
+	import { m } from '$lib/paraglide/messages';
+	import { untrack } from 'svelte';
 
 	let {
 		open = $bindable(false),
-		onapply
+		onapply,
+		slots = ['template', 'secondary', 'both']
 	}: {
 		open?: boolean;
 		onapply: (entry: PathLibraryEntry, slot: ApplySlot) => void;
+		slots?: ApplySlot[];
 	} = $props();
 
 	let selected = $state<PathLibraryEntry | null>(null);
-	let slotRaw = $state<ApplySlot>('template');
+	let slotRaw = $state<ApplySlot>(untrack(() => slots[0] ?? 'template'));
 	let hoveredId = $state<string | null>(null);
 
 	// Auto-correct: if selected entry has no secondaryPath, 'both' is invalid
@@ -30,7 +34,7 @@
 	$effect(() => {
 		if (!open) {
 			selected = null;
-			slotRaw = 'template';
+			slotRaw = slots[0] ?? 'template';
 		}
 	});
 
@@ -44,14 +48,14 @@
 <Sheet.Root bind:open>
 	<Sheet.Content side="right" class="w-[420px] sm:w-[480px]">
 		<Sheet.Header>
-			<Sheet.Title>Carica da libreria</Sheet.Title>
-			<Sheet.Description>Scegli un path salvato e lo slot da sovrascrivere.</Sheet.Description>
+			<Sheet.Title>{m.library_title()}</Sheet.Title>
+			<Sheet.Description>{m.library_desc()}</Sheet.Description>
 		</Sheet.Header>
 
 		<div class="mt-4 space-y-4">
 			{#if pathLibrary.entries.length === 0}
 				<p class="text-sm text-muted-foreground" data-testid="library-picker-empty">
-					Libreria vuota. Salva prima dal Ring Editor.
+					{m.library_empty()}
 				</p>
 			{:else if !selected}
 				<ul class="grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="library-picker-grid">
@@ -94,48 +98,58 @@
 						<div class="text-sm font-medium">{selected.name}</div>
 					</div>
 
-					<fieldset class="space-y-2">
-						<legend class="text-xs font-medium">Slot</legend>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="radio"
-								name="apply-slot"
-								value="template"
-								checked={slot === 'template'}
-								onchange={() => (slotRaw = 'template')}
-							/>
-							Template
-						</label>
-						<label class="flex items-center gap-2 text-sm">
-							<input
-								type="radio"
-								name="apply-slot"
-								value="secondary"
-								checked={slot === 'secondary'}
-								onchange={() => (slotRaw = 'secondary')}
-							/>
-							Secondary
-						</label>
-						<label
-							class="flex items-center gap-2 text-sm"
-							class:opacity-50={!selected.secondaryPath}
-						>
-							<input
-								type="radio"
-								name="apply-slot"
-								value="both"
-								disabled={!selected.secondaryPath}
-								checked={slot === 'both'}
-								onchange={() => (slotRaw = 'both')}
-							/>
-							Entrambi
-						</label>
-					</fieldset>
+					{#if slots.length > 1}
+						<fieldset class="space-y-2">
+							<legend class="text-xs font-medium">{m.common_slot()}</legend>
+							{#if slots.includes('template')}
+								<label class="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="apply-slot"
+										value="template"
+										checked={slot === 'template'}
+										onchange={() => (slotRaw = 'template')}
+									/>
+									{m.slot_primary()}
+								</label>
+							{/if}
+							{#if slots.includes('secondary')}
+								<label class="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="apply-slot"
+										value="secondary"
+										checked={slot === 'secondary'}
+										onchange={() => (slotRaw = 'secondary')}
+									/>
+									{m.slot_secondary()}
+								</label>
+							{/if}
+							{#if slots.includes('both')}
+								<label
+									class="flex items-center gap-2 text-sm"
+									class:opacity-50={!selected.secondaryPath}
+								>
+									<input
+										type="radio"
+										name="apply-slot"
+										value="both"
+										disabled={!selected.secondaryPath}
+										checked={slot === 'both'}
+										onchange={() => (slotRaw = 'both')}
+									/>
+									{m.slot_both()}
+								</label>
+							{/if}
+						</fieldset>
+					{/if}
 
 					<div class="flex justify-end gap-2">
-						<Button variant="outline" size="sm" onclick={() => (selected = null)}>Indietro</Button>
+						<Button variant="outline" size="sm" onclick={() => (selected = null)}
+							>{m.common_back()}</Button
+						>
 						<Button size="sm" onclick={confirm} data-testid="library-picker-confirm">
-							Applica
+							{m.common_apply()}
 						</Button>
 					</div>
 				</div>

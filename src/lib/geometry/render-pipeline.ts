@@ -1,9 +1,7 @@
 import paper from 'paper';
-import type { Composition } from '$lib/types';
+import type { Composition, Ring } from '$lib/types';
 import { buildRingPath } from './bend';
-import { interpolatePath, validatePathCompatibility } from './path-morph';
-import { applyWaveToPath } from './wave';
-import { applyZonesToPath } from './zones';
+import { composeRingTemplate } from './compose-ring';
 
 type RenderViewport = {
 	width: number;
@@ -22,6 +20,21 @@ export type RenderInput = {
 	 * shape is the petal the user actually authored, not a residual morph blend.
 	 */
 	ignoreMorph?: boolean;
+	/**
+	 * When set (finite, > 0), apply this fixed scale + recenter in the finalize phase
+	 * instead of the bounds-derived `fitToView`. Lets audioZones hold a stable scale so
+	 * opening petals extend toward the canvas edge instead of being re-fitted away.
+	 */
+	fitScale?: number;
+	/** When true, skip zone deformation so the rest pose can be measured. */
+	ignoreZoneDrive?: boolean;
+	/**
+	 * When set, render twice: first measure the rest pose with zone drive ignored, then
+	 * render the deformed pose at a fixed scale that leaves `fraction` headroom for opening
+	 * petals. Hides the two-pass ordering behind the interface so every caller — the visible
+	 * canvas and the kaleidoscope tile alike — gets the same stable audioZones scale.
+	 */
+	restFit?: { fraction: number };
 };
 
 export type RenderResult = {
@@ -29,6 +42,8 @@ export type RenderResult = {
 	skippedCount: number;
 	warnings: string[];
 	renderDurationMs: number;
+	/** Max side of the united layer bounds BEFORE fitting; 0 when empty. */
+	boundSide: number;
 };
 
 export class RenderPipelineError extends Error {
@@ -42,6 +57,22 @@ function toPipelineError(error: unknown, context: string): RenderPipelineError {
 	if (error instanceof RenderPipelineError) return error;
 	const details = error instanceof Error ? error.message : String(error);
 	return new RenderPipelineError(`${context}: ${details}`);
+}
+
+/**
+ * Fixed render scale for a rest pose: places the mark at `restFraction` of the
+ * available square, leaving headroom for petals to open. Returns 1 (no scaling)
+ * for a degenerate bound or viewport.
+ */
+export function computeRestScale(
+	boundSide: number,
+	viewport: { width: number; height: number; padding?: number },
+	restFraction: number
+): number {
+	const padding = viewport.padding ?? 32;
+	const available = Math.min(viewport.width, viewport.height) - padding * 2;
+	if (!Number.isFinite(boundSide) || boundSide <= 0 || available <= 0) return 1;
+	return (available * restFraction) / boundSide;
 }
 
 export function createRenderPipeline(): {
@@ -81,15 +112,15 @@ export function createRenderPipeline(): {
 		}
 	}
 
-	function fitToView(scope: paper.PaperScope, viewport: RenderViewport): void {
-		const allItems = scope.project.activeLayer.children;
-		if (allItems.length === 0) return;
+	function unionBounds(scope: paper.PaperScope): paper.Rectangle | null {
+		const items = scope.project.activeLayer.children;
+		if (items.length === 0) return null;
+		let bounds = items[0].bounds.clone();
+		for (let i = 1; i < items.length; i++) bounds = bounds.unite(items[i].bounds);
+		return bounds;
+	}
 
-		let bounds = allItems[0].bounds.clone();
-		for (let i = 1; i < allItems.length; i++) {
-			bounds = bounds.unite(allItems[i].bounds);
-		}
-
+	function fitToView(scope: paper.PaperScope, viewport: RenderViewport, bounds: paper.Rectangle): void {
 		if (bounds.width === 0 || bounds.height === 0) return;
 
 		const padding = viewport.padding ?? 32;
@@ -101,7 +132,12 @@ export function createRenderPipeline(): {
 		scope.project.activeLayer.position = scope.view.bounds.center;
 	}
 
-	function render(input: RenderInput): RenderResult {
+	function applyFixedScale(scope: paper.PaperScope, fitScale: number, bounds: paper.Rectangle): void {
+		scope.project.activeLayer.scale(fitScale, bounds.center);
+		scope.project.activeLayer.position = scope.view.bounds.center;
+	}
+
+	function renderOnce(input: RenderInput): RenderResult {
 		const startedAt = performance.now();
 		try {
 			assertScope(input.scope);
@@ -131,41 +167,19 @@ export function createRenderPipeline(): {
 					throw new Error('ring copies must be greater than zero');
 				}
 
-				let effectiveRing = ring;
-				if (!input.ignoreMorph && ring.templatePath && ring.secondaryTemplatePath) {
-					const compatibility = validatePathCompatibility(
-						ring.templatePath,
-						ring.secondaryTemplatePath
-					);
-					if (compatibility.ok) {
-						effectiveRing = {
-							...ring,
-							templatePath: interpolatePath(
-								ring.templatePath,
-								ring.secondaryTemplatePath,
-								ring.morphT ?? 0
-							)
-						};
-					} else {
-						warnings.push(`Ring ${i} morph fallback: ${compatibility.reason}`);
-					}
+				// Template-space prep (morph → wave) is pure; zone deformation stays in
+				// polar space inside buildRingPath below. See compose-ring.ts / ADR-0001.
+				const composed = composeRingTemplate(ring, { ignoreMorph: input.ignoreMorph });
+				if (composed.morphWarning) {
+					warnings.push(`Ring ${i} morph fallback: ${composed.morphWarning}`);
 				}
+				let effectiveRing: Ring = { ...ring, templatePath: composed.path };
 
-				// Apply the cymatic wave to the (already morph-interpolated) template
-				// BEFORE bend mirrors/tiles it, so the ripple is coherent on every copy.
-				if (effectiveRing.wave && effectiveRing.wave.amplitude > 0 && effectiveRing.templatePath) {
-					effectiveRing = {
-						...effectiveRing,
-						templatePath: applyWaveToPath(effectiveRing.templatePath, effectiveRing.wave)
-					};
-				}
-
-				// Apply zone deformation (audioZones mode) BEFORE bend mirrors/tiles — same slot as wave.
-				if (effectiveRing.zoneDrive && effectiveRing.templatePath) {
-					effectiveRing = {
-						...effectiveRing,
-						templatePath: applyZonesToPath(effectiveRing.templatePath, effectiveRing.zoneDrive)
-					};
+				// Zone deformation (audioZones mode) is applied inside buildRingPath in final
+				// polar space, driven by ring.zoneDrive. Strip the drive when measuring the
+				// rest pose so the fixed scale is taken from the undeformed shape.
+				if (input.ignoreZoneDrive && effectiveRing.zoneDrive) {
+					effectiveRing = { ...effectiveRing, zoneDrive: null };
 				}
 
 				const radius = composition.baseRadius + composition.ringIncrement * i;
@@ -187,8 +201,17 @@ export function createRenderPipeline(): {
 			}
 		}
 
+		let boundSide = 0;
 		try {
-			fitToView(scope, viewport);
+			const bounds = unionBounds(scope);
+			boundSide = bounds ? Math.max(bounds.width, bounds.height) : 0;
+			if (bounds) {
+				if (input.fitScale && Number.isFinite(input.fitScale) && input.fitScale > 0) {
+					applyFixedScale(scope, input.fitScale, bounds);
+				} else {
+					fitToView(scope, viewport, bounds);
+				}
+			}
 			scope.view.update();
 		} catch (error) {
 			throw toPipelineError(error, 'Render pipeline failed during finalize phase');
@@ -198,8 +221,26 @@ export function createRenderPipeline(): {
 			renderedCount,
 			skippedCount,
 			warnings,
-			renderDurationMs: performance.now() - startedAt
+			renderDurationMs: performance.now() - startedAt,
+			boundSide
 		};
+	}
+
+	function render(input: RenderInput): RenderResult {
+		if (input.restFit && input.restFit.fraction > 0) {
+			// First pass: measure the rest pose (zone drive ignored, no fixed scale).
+			const rest = renderOnce({
+				...input,
+				ignoreZoneDrive: true,
+				fitScale: undefined,
+				restFit: undefined
+			});
+			// Second pass: render the deformed pose at the headroom-derived fixed scale so
+			// opening petals extend toward the reserved edge instead of being re-fitted away.
+			const fitScale = computeRestScale(rest.boundSide, input.viewport, input.restFit.fraction);
+			return renderOnce({ ...input, fitScale, restFit: undefined });
+		}
+		return renderOnce(input);
 	}
 
 	function dispose(): void {

@@ -1,22 +1,69 @@
-import { composition, setRingMorphT, setRingWave, setRingZoneDrive } from './composition';
+import {
+	composition,
+	createRingMorphTarget,
+	removeRingMorphTarget,
+	removeRingFromComposition,
+	setRingMorphT,
+	setRingWave,
+	setRingZoneDrive,
+	updateRing
+} from './composition';
 import { createAudioBarsDriver } from './animation-drivers/audio-bars-driver';
 import { createAudioZonesDriver } from './animation-drivers/audio-zones-driver';
 import { createDataSeriesDriver } from './animation-drivers/data-series-driver';
-import { createSimpleDriver } from './animation-drivers/simple-driver';
 import { createAnimationRuntime } from './animation-drivers/runtime';
 import { createFallbackBars } from './animation-drivers/fallback-bars';
 import { createAudioSource } from './animation-drivers/audio-source';
+import { demoZones } from './animation-drivers/demo-zones';
 import type {
 	AnimationDriverType,
 	AudioBarsConfig,
 	DataSeriesConfig
 } from './animation-drivers/types';
 import type { AudioZonesConfig, ZoneIntensity } from '$lib/types';
+import { keyframes } from './keyframes.svelte';
+import { KALEIDO_PARAMS } from './kaleidoscope-params';
+import {
+	buildAudioBarsParams,
+	buildAudioZonesParams,
+	buildRingWaveParams,
+	buildRingMorphParams,
+	type AnimatableParam
+} from './animatable-params';
+import { m } from '$lib/paraglide/messages';
 
-export type AnimationMode = AnimationDriverType | null;
+export type AnimationLayer = 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope';
+export type AnimationLayers = Record<AnimationLayer, boolean>;
+
+// What each layer IS — the single source for the three behaviours that used to be
+// scattered string special-cases across setLayerEnabled / syncActiveDrivers / applyKeyframes:
+//  - 'driver' → registers + activates a runtime driver (and today is audio-source backed)
+//  - 'gate'   → not a driver; its flag gates whether its `<layer>.*` keyframe params apply
+//  - 'inert'  → placeholder, never runs (dataSeries — the UI shows it as unavailable)
+export type LayerKind = 'driver' | 'gate' | 'inert';
+
+const LAYER_KIND: Record<AnimationLayer, LayerKind> = {
+	audioBars: 'driver',
+	audioZones: 'driver',
+	kaleidoscope: 'gate',
+	dataSeries: 'inert'
+};
+
+const ALL_LAYERS = Object.keys(LAYER_KIND) as AnimationLayer[];
+// Driver layers are the only ones the runtime activates; today every driver is
+// audio-source backed, so "no driver layer left → stop the audio source". The cast
+// is sound: a 'driver'-kind layer is by construction a runtime AnimationDriverType.
+const DRIVER_LAYERS = ALL_LAYERS.filter((l) => LAYER_KIND[l] === 'driver') as AnimationDriverType[];
+const GATE_LAYERS = ALL_LAYERS.filter((l) => LAYER_KIND[l] === 'gate');
+
+// Narrowing predicate: a 'driver'-kind layer is a runtime AnimationDriverType, so
+// guarding on this lets `runtime.setActive(layer, …)` type-check without a cast.
+function isDriverLayer(layer: AnimationLayer): layer is AnimationDriverType {
+	return LAYER_KIND[layer] === 'driver';
+}
 
 export type AnimationState = {
-	mode: AnimationMode;
+	layers: AnimationLayers;
 	isPlaying: boolean;
 	isPaused: boolean;
 	progress: number;
@@ -25,6 +72,7 @@ export type AnimationState = {
 	audioSource: 'demo' | 'mic' | 'file' | 'off';
 	dataSeries: DataSeriesConfig;
 	durationSec: number;
+	fps: number;
 	loop: boolean;
 	alternate: boolean;
 	elapsedMs: number;
@@ -51,7 +99,7 @@ const defaultDataSeriesConfig: DataSeriesConfig = {
 };
 
 export const animationState = $state<AnimationState>({
-	mode: 'simple',
+	layers: { audioBars: false, audioZones: false, dataSeries: false, kaleidoscope: true },
 	isPlaying: false,
 	isPaused: false,
 	progress: 0,
@@ -60,6 +108,7 @@ export const animationState = $state<AnimationState>({
 	audioSource: 'demo',
 	dataSeries: defaultDataSeriesConfig,
 	durationSec: 3,
+	fps: 30,
 	loop: false,
 	alternate: false,
 	elapsedMs: 0
@@ -83,15 +132,6 @@ const audioSource = createAudioSource({
 	getRingCount: () => composition.rings.length,
 	getConfig: () => animationState.audioBars
 });
-
-runtime.registerDriver(
-	'simple',
-	createSimpleDriver({
-		getRingCount: () => composition.rings.length,
-		getDurationSec: () => animationState.durationSec,
-		getLoop: () => animationState.loop
-	})
-);
 
 runtime.registerDriver(
 	'audioBars',
@@ -122,14 +162,8 @@ runtime.registerDriver(
 		getRing: (index) => composition.rings[index],
 		readZones: () => {
 			switch (animationState.audioSource) {
-				case 'demo': {
-					const t = performance.now() / 1000;
-					return {
-						bass: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 0.7))),
-						mid: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.1 + 1.0))),
-						treble: Math.max(0, Math.min(1, 0.5 + 0.5 * Math.sin(t * 1.9 + 2.1)))
-					};
-				}
+				case 'demo':
+					return demoZones(performance.now());
 				case 'mic':
 				case 'file':
 					return audioSource.readZones();
@@ -175,10 +209,16 @@ function cleanupCurrentAnimation() {
 	}
 }
 
+// Mirror the runtime's active set onto the current layer flags. Only driver layers
+// are activated; gate (kaleidoscope) and inert (dataSeries) layers never are.
+function syncActiveDrivers(): void {
+	for (const l of DRIVER_LAYERS) runtime.setActive(l, animationState.layers[l]);
+}
+
 function stopInternal(resetProgress = true) {
 	audioSource.stop();
 	cleanupCurrentAnimation();
-	runtime.setMode(null);
+	for (const l of DRIVER_LAYERS) runtime.setActive(l, false);
 	if (resetProgress) {
 		applyMorphT(0);
 		animationState.progress = 0;
@@ -190,14 +230,124 @@ function stopInternal(resetProgress = true) {
 	animationState.isPaused = false;
 }
 
-function hasRunnableMode(): boolean {
-	return animationState.mode !== null;
-}
-
+// Refresh the morph-ring bookkeeping (animatedIndices/lastRingCount) so a later
+// stop zeroes the rings that were actually morphing.
 function hasMorphTargets(): boolean {
 	animatedIndices = getMorphRingIndices();
 	lastRingCount = composition.rings.length;
 	return animatedIndices.length > 0;
+}
+
+// Audio registries. Labels are getter objects so each param's `label` resolves the
+// current locale lazily (the {#key currentLocale()} root re-render re-reads them on
+// a language switch), mirroring KALEIDO_PARAMS.
+const AUDIO_BARS_PARAMS = buildAudioBarsParams({
+	getConfig: () => animationState.audioBars,
+	setConfig: setAudioBarsConfig,
+	labels: {
+		get inputGain() {
+			return m.animate_input_gain();
+		},
+		get waveCrests() {
+			return m.animate_wave_crests();
+		},
+		get waveAmplitudeGain() {
+			return m.animate_amplitude_gain();
+		},
+		get wavePhaseSpeed() {
+			return m.animate_phase_speed();
+		},
+		get smoothing() {
+			return m.animate_smoothing();
+		}
+	}
+});
+
+const AUDIO_ZONES_PARAMS = buildAudioZonesParams({
+	getIntensity: () => animationState.audioZones.defaultIntensity,
+	setIntensity: setAudioZonesDefaultIntensity,
+	labels: {
+		get bass() {
+			return m.animate_zone_bass();
+		},
+		get mid() {
+			return m.animate_zone_mid();
+		},
+		get treble() {
+			return m.animate_zone_treble();
+		}
+	}
+});
+
+// The static audio registries, surfaced for the section UIs so each slider can carry
+// a ⏱ stopwatch via AnimatableSlider (same param objects the apply-loop walks).
+export function getAudioBarsParams(): AnimatableParam[] {
+	return AUDIO_BARS_PARAMS;
+}
+export function getAudioZonesParams(): AnimatableParam[] {
+	return AUDIO_ZONES_PARAMS;
+}
+
+/**
+ * Every keyframable param across all registries, resolved against live state.
+ * Per-ring wave params are rebuilt each call from `composition.rings` so they
+ * track ring add/remove without stale indices.
+ */
+export function getAllAnimatableParams(): AnimatableParam[] {
+	const globalDefault = {
+		crests: animationState.audioBars.waveCrests,
+		amplitudeGain: animationState.audioBars.waveAmplitudeGain,
+		phaseSpeed: animationState.audioBars.wavePhaseSpeed
+	};
+	return [
+		...KALEIDO_PARAMS,
+		...AUDIO_BARS_PARAMS,
+		...AUDIO_ZONES_PARAMS,
+		...buildRingWaveParams(composition.rings, {
+			updateRing,
+			globalDefault: () => globalDefault,
+			ringLabel: (i) => m.editor_ring_label({ index: i + 1 })
+		}),
+		...buildRingMorphParams(composition.rings, {
+			setMorphT: setRingMorphT,
+			ringLabel: (i) => m.editor_ring_label({ index: i + 1 })
+		})
+	];
+}
+
+/**
+ * Applies every armed keyframe track at the given normalized progress. Walks every
+ * registry (kaleidoscope + audio + per-ring wave). A disabled/empty track returns
+ * null and leaves the static slider value in place. Discrete params (sectors/repeat)
+ * are rounded/clamped by their setters.
+ */
+export function applyKeyframes(progress: number): void {
+	for (const p of getAllAnimatableParams()) {
+		// A gate layer's `<layer>.*` params apply only while that layer is on.
+		const gate = GATE_LAYERS.find((l) => p.id.startsWith(`${l}.`));
+		if (gate && !animationState.layers[gate]) continue;
+		const v = keyframes.sampleParam(p.id, progress);
+		if (v !== null) p.set(v);
+	}
+}
+
+/**
+ * Move the playhead to a normalized position and drive the preview to it. This is the
+ * scrubbing entry point; tick() does the same continuously while playing.
+ */
+export function scrubTo(progress: number): void {
+	animationState.progress = clamp01(progress);
+	applyKeyframes(animationState.progress);
+}
+
+/**
+ * Re-drive the kaleidoscope preview from the current playhead after a keyframe edit.
+ * No-op while playing — tick() already applies every frame. Owns the "only when paused"
+ * rule so the keyframe-editing UI never has to repeat it.
+ */
+export function refreshPreview(): void {
+	if (animationState.isPlaying) return;
+	applyKeyframes(animationState.progress);
 }
 
 function getProgressFromElapsed(elapsedMs: number): number {
@@ -214,7 +364,7 @@ function getProgressFromElapsed(elapsedMs: number): number {
 }
 
 function hasCompleted(elapsedMs: number): boolean {
-	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') return false;
+	if (DRIVER_LAYERS.some((l) => animationState.layers[l])) return false;
 	if (animationState.loop) return false;
 	const durationMs = Math.max(0.1, animationState.durationSec) * 1000;
 	const cycles = Math.max(0, elapsedMs / durationMs);
@@ -235,13 +385,11 @@ function tick(nowMs: number) {
 	animationState.elapsedMs = logicalElapsedMs;
 	const progress = getProgressFromElapsed(logicalElapsedMs);
 
-	if (hasRunnableMode()) {
-		runtime.tick(logicalElapsedMs);
-		animationState.progress = progress;
-	} else {
-		applyMorphT(progress);
-		animationState.progress = progress;
-	}
+	runtime.tick(logicalElapsedMs);
+	animationState.progress = progress;
+
+	// Keyframes ride the same clock regardless of which layers drive.
+	applyKeyframes(progress);
 
 	if (hasCompleted(logicalElapsedMs)) {
 		animationState.isPlaying = false;
@@ -257,17 +405,15 @@ function tick(nowMs: number) {
 
 function startNewAnimation() {
 	lastRingCount = composition.rings.length;
-	if (!hasRunnableMode() && !hasMorphTargets()) {
-		stopInternal(true);
-		return;
-	}
+	// Sync the morph-ring bookkeeping so a stop still zeroes the right rings.
+	hasMorphTargets();
+	// Play is always activatable: the timeline always runs the clock, regardless of
+	// whether any layer drives or any keyframe track is armed.
 	animationState.progress = 0;
 	lastTickNowMs = null;
 	logicalElapsedMs = 0;
 	animationState.elapsedMs = 0;
-	if (animationState.mode) {
-		runtime.setMode(animationState.mode);
-	}
+	syncActiveDrivers();
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
 	frameRequestId = requestAnimationFrame(tick);
@@ -294,6 +440,12 @@ export function setAnimationDurationSec(value: number) {
 	reconfigureCurrentAnimation();
 }
 
+const ALLOWED_FPS = [25, 30, 50, 60] as const;
+
+export function setAnimationFps(value: number) {
+	animationState.fps = (ALLOWED_FPS as readonly number[]).includes(value) ? value : 30;
+}
+
 export function setAnimationLoop(value: boolean) {
 	animationState.loop = value;
 	reconfigureCurrentAnimation();
@@ -304,16 +456,22 @@ export function setAnimationAlternate(value: boolean) {
 	reconfigureCurrentAnimation();
 }
 
-export function setAnimationMode(mode: AnimationMode): void {
-	if (animationState.mode === mode) return;
-	if (animationState.mode === 'audioBars' || animationState.mode === 'audioZones') {
-		audioSource.stop();
+export function setLayerEnabled(layer: AnimationLayer, on: boolean): void {
+	if (animationState.layers[layer] === on) return;
+
+	animationState.layers = { ...animationState.layers, [layer]: on };
+
+	// Turning off the last active driver layer tears down the live audio source,
+	// preserving the old single-mode teardown behaviour.
+	if (isDriverLayer(layer) && !on) {
+		const anyDriverLeft = DRIVER_LAYERS.some((l) => animationState.layers[l]);
+		if (!anyDriverLeft) audioSource.stop();
 	}
-	logicalElapsedMs = 0;
-	animationState.elapsedMs = 0;
-	animationState.mode = mode;
-	if (animationState.isPlaying) {
-		runtime.setMode(mode);
+
+	// Only driver layers touch the runtime; gate (kaleidoscope) and inert
+	// (dataSeries) layers don't. The shared clock keeps running across toggles.
+	if (isDriverLayer(layer) && animationState.isPlaying) {
+		runtime.setActive(layer, on);
 	}
 }
 
@@ -363,13 +521,8 @@ export function togglePlay() {
 		return;
 	}
 
-	if (!hasRunnableMode() && !hasMorphTargets()) {
-		stopInternal(true);
-		return;
-	}
-	if (animationState.mode) {
-		runtime.setMode(animationState.mode);
-	}
+	// Resume is unconditional — the clock always runs (Play is always activatable).
+	syncActiveDrivers();
 	animationState.isPlaying = true;
 	animationState.isPaused = false;
 	frameRequestId = requestAnimationFrame(tick);
@@ -377,6 +530,54 @@ export function togglePlay() {
 
 export function stopAnimation(resetProgress = true) {
 	stopInternal(resetProgress);
+}
+
+/**
+ * Create a ring morph target and seed its default animation: an armed morphT track
+ * easing from 0 to 1 across the timeline (bezier ease-out/ease-in via addKeyframe's
+ * default handles). This is the "a morph IS keyframes" policy — composition.ts stays
+ * pure geometry; the keyframe seeding lives here.
+ */
+export function createRingMorph(index: number): void {
+	createRingMorphTarget(index);
+	const ring = composition.rings[index];
+	if (!ring) return;
+	const id = `ring.${ring.id}.morphT`;
+	keyframes.ensureTrack(id);
+	keyframes.setTrackEnabled(id, true);
+	keyframes.addKeyframe(id, { time: 0, value: 0, interp: 'bezier' });
+	keyframes.addKeyframe(id, { time: 1, value: 1, interp: 'bezier' });
+	refreshPreview();
+}
+
+export function removeRingMorph(index: number): void {
+	const ring = composition.rings[index];
+	removeRingMorphTarget(index);
+	if (ring) keyframes.deleteTrack(`ring.${ring.id}.morphT`);
+	refreshPreview();
+}
+
+/**
+ * Delete a ring AND its keyframe tracks. composition.ts stays pure geometry; the
+ * "tracks die with the ring" policy lives here, where keyframe state is reachable.
+ * Tracks key off the stable ring id, so siblings (whose indices shift) are untouched.
+ */
+export function removeRing(index: number): void {
+	const ring = composition.rings[index];
+	removeRingFromComposition(index);
+	if (ring) keyframes.deleteTracksForRing(ring.id);
+	refreshPreview();
+}
+
+/**
+ * Audio stream for a video export, tapped from the live source. Only real sources
+ * (mic/file) yield a stream; demo/off return null (no real audio to record).
+ */
+export function getExportAudioStream(): { stream: MediaStream; dispose: () => void } | null {
+	if (animationState.audioSource === 'mic' || animationState.audioSource === 'file') {
+		return audioSource.createRecordingStream();
+	}
+	return null;
 }
 
 export function handleCompositionChanged() {
@@ -388,9 +589,9 @@ export function handleCompositionChanged() {
 		return;
 	}
 
-	// Driver modes own their per-ring frame output semantics:
+	// Active driver layers own their per-ring frame output semantics:
 	// topology updates should be absorbed without forcing a playback reset.
-	if (animationState.mode) {
+	if (DRIVER_LAYERS.some((l) => animationState.layers[l])) {
 		lastRingCount = composition.rings.length;
 		animatedIndices = currentIndices;
 		return;

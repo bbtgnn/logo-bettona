@@ -29,16 +29,24 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 
 	// Save current path to library.
 	await page.getByTestId('ring-save-to-library-0').click();
-	await expect(page.getByTestId('ring-save-status-0')).toContainText(/Salvato come 'Path 1'/);
+	await expect(page.getByTestId('ring-save-status-0')).toContainText(/Saved as 'Path 1'/);
 
 	// Navigate to /paths and verify one entry.
-	await page.getByTestId('header-paths-link').click();
+	await page.getByTestId('nav-paths').click();
 	await expect(page).toHaveURL(/\/paths$/);
-	await expect(page.getByTestId('paths-grid').locator('li')).toHaveCount(1);
+	await expect(page.locator('[data-testid^="paths-card-"]')).toHaveCount(1);
+
+	// Apply the saved shape onto a ring from Paths (select card → Apply → confirm).
+	await page.locator('[data-testid^="paths-card-"]').first().click();
+	await page.getByTestId('paths-apply').click();
+	await page.getByTestId('apply-confirm').click();
+	await expect(page.getByRole('heading', { name: 'Apply to mark' })).toBeHidden({
+		timeout: 2000
+	});
 
 	// Go back to the editor.
-	await page.getByTestId('paths-back-link').click();
-	await expect(page).toHaveURL(/\/$/);
+	await page.getByTestId('nav-editor').click();
+	await expect(page).toHaveURL(/\/editor$/);
 
 	// Ensure Ring 1 is expanded (open it only if the save button is not visible).
 	const saveBtn = page.getByTestId('ring-save-to-library-0');
@@ -54,7 +62,7 @@ test('save a ring path then load it back via the library', async ({ page }) => {
 	await page.getByTestId('library-picker-confirm').click();
 
 	// The sheet should close — assert via the sheet title heading.
-	await expect(page.getByRole('heading', { name: 'Carica da libreria' })).toBeHidden({
+	await expect(page.getByRole('heading', { name: 'Load from library' })).toBeHidden({
 		timeout: 2000
 	});
 });

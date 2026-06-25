@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import paper from 'paper';
 import type { Composition, Path } from '$lib/types';
-import { createRenderPipeline, RenderPipelineError } from './render-pipeline';
+import { createRenderPipeline, RenderPipelineError, computeRestScale } from './render-pipeline';
 
 let scope: paper.PaperScope;
 
@@ -37,8 +37,10 @@ const petalPath: Path = {
 const composition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
+	aspectRatio: '1:1',
 	rings: [
 		{
+			id: 'test-ring-0',
 			copies: 4,
 			color: '#ff0000',
 			templatePath: rectPath,
@@ -47,6 +49,7 @@ const composition: Composition = {
 			ringHeight: 0.4
 		},
 		{
+			id: 'test-ring-1',
 			copies: 4,
 			color: '#0000ff',
 			templatePath: rectPath,
@@ -55,7 +58,7 @@ const composition: Composition = {
 			ringHeight: 0.4
 		}
 	],
-	monochromePalettes: [{ main: '#000', bg: '#fff' }],
+	monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 	fullPalettes: [{ colors: ['#000', '#fff'] }]
 };
 
@@ -404,11 +407,13 @@ describe('createRenderPipeline().render', () => {
 
 	it('applies zoneDrive deformation when ring.zoneDrive is set', () => {
 		const pipeline = createRenderPipeline();
-		const drive = { bassPush: 5, midPush: 3, treblePush: 2 };
+		const drive = { bassPush: 5, midPush: 3, trebleRetract: 2, trebleVibrate: 1 };
 		const comp: Composition = {
 			baseRadius: 100,
 			ringIncrement: 60,
+			aspectRatio: '1:1',
 			rings: [{
+				id: 'test-ring',
 				copies: 4,
 				color: '#ff0000',
 				templatePath: petalPath,
@@ -417,7 +422,7 @@ describe('createRenderPipeline().render', () => {
 				ringHeight: 0.4,
 				zoneDrive: drive
 			}],
-			monochromePalettes: [{ main: '#000', bg: '#fff' }],
+			monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 			fullPalettes: [{ colors: ['#000', '#fff'] }]
 		};
 		// Should render without throwing and produce 1 rendered ring
@@ -432,7 +437,7 @@ describe('createRenderPipeline().render', () => {
 
 		const compWithDrive: Composition = {
 			...composition,
-			rings: [{ ...composition.rings[0], templatePath: petalPath, zoneDrive: { bassPush: 0, midPush: 0, treblePush: 0 } }]
+			rings: [{ ...composition.rings[0], templatePath: petalPath, zoneDrive: { bassPush: 0, midPush: 0, trebleRetract: 0, trebleVibrate: 0 } }]
 		};
 		const compNoDrive: Composition = {
 			...composition,
@@ -444,5 +449,110 @@ describe('createRenderPipeline().render', () => {
 
 		expect(r1.renderedCount).toBe(r2.renderedCount);
 		expect(r1.skippedCount).toBe(r2.skippedCount);
+	});
+});
+describe('computeRestScale', () => {
+	it('maps the rest bound to restFraction of the available square', () => {
+		// available = min(600,600) - 2*32 = 536; restFraction 0.5 → target 268; boundSide 134 → scale 2.
+		expect(computeRestScale(134, { width: 600, height: 600, padding: 32 }, 0.5)).toBeCloseTo(2, 6);
+	});
+
+	it('falls back to 1 for a degenerate bound or viewport', () => {
+		expect(computeRestScale(0, { width: 600, height: 600, padding: 32 }, 0.45)).toBe(1);
+		expect(computeRestScale(100, { width: 10, height: 10, padding: 32 }, 0.45)).toBe(1);
+		expect(computeRestScale(Number.NaN, { width: 600, height: 600 }, 0.45)).toBe(1);
+	});
+});
+
+describe('createRenderPipeline().render fixed scale', () => {
+	it('returns a positive boundSide and still renders without fitScale', () => {
+		const pipeline = createRenderPipeline();
+		const result = pipeline.render({
+			composition,
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		expect(result.boundSide).toBeGreaterThan(0);
+	});
+
+	it('with fitScale, scales the layer by exactly fitScale and skips bounds-fit', () => {
+		const pipeline = createRenderPipeline();
+		// Rest render to learn the un-fitted bound side.
+		const rest = pipeline.render({
+			composition,
+			scope,
+			ignoreZoneDrive: true,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const scale = 0.5;
+		pipeline.render({
+			composition,
+			scope,
+			fitScale: scale,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const b = scope.project.activeLayer.bounds;
+		expect(Math.max(b.width, b.height)).toBeCloseTo(rest.boundSide * scale, 4);
+	});
+
+	it('ignoreZoneDrive renders the rest pose (zoneDrive has no effect on boundSide)', () => {
+		const pipeline = createRenderPipeline();
+		const driven: Composition = {
+			...composition,
+			rings: composition.rings.map((r) => ({
+				...r,
+				templatePath: petalPath,
+				zoneDrive: { bassPush: 1, midPush: 1, trebleRetract: 1, trebleVibrate: 1 }
+			}))
+		};
+		const withDrive = pipeline.render({
+			composition: driven,
+			scope,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		const ignored = pipeline.render({
+			composition: driven,
+			scope,
+			ignoreZoneDrive: true,
+			viewport: { width: 600, height: 600, padding: 32 }
+		});
+		expect(ignored.boundSide).toBeLessThan(withDrive.boundSide);
+	});
+
+	it('restFit reproduces the manual measure-then-fix-scale two-pass', () => {
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const driven: Composition = {
+			...composition,
+			rings: composition.rings.map((r) => ({
+				...r,
+				templatePath: petalPath,
+				zoneDrive: { bassPush: 1, midPush: 1, trebleRetract: 1, trebleVibrate: 1 }
+			}))
+		};
+
+		// Manual two-pass: measure the rest pose, fix the scale with headroom, render deformed.
+		const manual = createRenderPipeline();
+		const rest = manual.render({ composition: driven, scope, ignoreZoneDrive: true, viewport });
+		const fitScale = computeRestScale(rest.boundSide, viewport, 0.45);
+		manual.render({ composition: driven, scope, fitScale, viewport });
+		const manualSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+
+		// restFit: the pipeline owns the two-pass.
+		const auto = createRenderPipeline();
+		auto.render({ composition: driven, scope, restFit: { fraction: 0.45 }, viewport });
+		const autoSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+
+		expect(autoSide).toBeCloseTo(manualSide, 4);
+	});
+
+	it('restFit with a non-positive fraction renders a single bounds-fit pass', () => {
+		const pipeline = createRenderPipeline();
+		const viewport = { width: 600, height: 600, padding: 32 };
+		const plain = pipeline.render({ composition, scope, viewport });
+		const plainSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+		pipeline.render({ composition, scope, restFit: { fraction: 0 }, viewport });
+		const zeroSide = Math.max(scope.project.activeLayer.bounds.width, scope.project.activeLayer.bounds.height);
+		expect(plain.boundSide).toBeGreaterThan(0);
+		expect(zeroSide).toBeCloseTo(plainSide, 4);
 	});
 });

@@ -1,5 +1,6 @@
 import { lsSync } from 'rune-sync/localstorage';
 import type {
+	AspectRatio,
 	ColorModeState,
 	ColorMode,
 	FullPalette,
@@ -11,13 +12,14 @@ import type {
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
 import { composition } from './composition-persistence.svelte';
+import { newRingId } from './ring-id';
 
 export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
 	palette: 0
 });
 
-const DEFAULT_RING: Ring = {
+const DEFAULT_RING: Omit<Ring, 'id'> = {
 	copies: 8,
 	color: '#000000',
 	templatePath: {
@@ -80,7 +82,7 @@ export function setActivePalette(index: number) {
 }
 
 export function addMonochromePalette(
-	palette: MonochromePalette = { main: '#000000', bg: '#ffffff' }
+	palette: MonochromePalette = { primary: '#000000', secondary: '#ffffff', background: '#ffffff' }
 ) {
 	composition.monochromePalettes = [...composition.monochromePalettes, palette];
 	colorMode.palette = composition.monochromePalettes.length - 1;
@@ -122,11 +124,17 @@ export function removeFullPalette(index: number) {
 }
 
 export function addRing() {
-	composition.rings = [...composition.rings, { ...DEFAULT_RING }];
+	composition.rings = [...composition.rings, { ...DEFAULT_RING, id: newRingId() }];
 	applyColorMode();
 }
 
-export function removeRing(index: number) {
+/**
+ * Geometry-only half of ring deletion: drops the ring from the composition but
+ * leaves keyframe Tracks untouched (composition.ts never reaches keyframe state).
+ * The complete door is `removeRing` in animation.svelte.ts, which also deletes the
+ * ring's Tracks. Name mirrors `removeRingMorphTarget` — both are the partial half.
+ */
+export function removeRingFromComposition(index: number) {
 	composition.rings = composition.rings.filter((_, i) => i !== index);
 	applyColorMode();
 }
@@ -180,8 +188,11 @@ export function removeRingMorphTarget(index: number) {
 export type UpdateRingPathVariantResult = { ok: true } | { ok: false; reason: string };
 
 /**
- * Updates primary or secondary template path. When both paths exist, enforces strict
- * structural compatibility; rejects the update without mutating state if incompatible.
+ * Updates primary or secondary template path. Editing the secondary enforces strict
+ * structural compatibility with the primary and rejects an incompatible update without
+ * mutating state. Editing the primary always succeeds: a structurally incompatible
+ * primary edit re-seeds the secondary from the new primary (stopgap, see the primary
+ * branch), keeping the morph pair interpolatable.
  */
 export function updateRingPathVariant(
 	index: number,
@@ -200,7 +211,14 @@ export function updateRingPathVariant(
 		if (path && ring.secondaryTemplatePath) {
 			const compatibility = validatePathCompatibility(path, ring.secondaryTemplatePath);
 			if (!compatibility.ok) {
-				return compatibility;
+				// Stopgap: a structural primary edit re-seeds the secondary from the new
+				// primary so the morph pair stays interpolatable, instead of rejecting the
+				// edit. Proper fix relocates morph editing to Animate (spec Animate #2).
+				const reseeded = { cmds: [...path.cmds], crds: [...path.crds] };
+				composition.rings = composition.rings.map((r, i) =>
+					i === index ? { ...r, templatePath: path, secondaryTemplatePath: reseeded } : r
+				);
+				return { ok: true };
 			}
 		}
 		composition.rings = composition.rings.map((r, i) =>
@@ -240,6 +258,15 @@ export function setBaseRadius(value: number) {
 
 export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
+}
+
+export function setAspectRatio(ratio: AspectRatio) {
+	composition.aspectRatio = ratio;
+}
+
+export function getCompositionBackgroundColor(): string {
+	const mono = composition.monochromePalettes[colorMode.palette];
+	return mono?.background ?? '#ffffff';
 }
 
 export function setRingExpanded(index: number, expanded: boolean) {

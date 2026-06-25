@@ -3,15 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockComposition = {
 	rings: [
-		{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-		{ secondaryTemplatePath: null, morphT: 0 }
+		{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+		{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 	]
 };
 
 vi.mock('./composition', () => ({
 	composition: mockComposition,
 	setRingMorphT: vi.fn(),
-	setRingWave: vi.fn()
+	setRingWave: vi.fn(),
+	setRingZoneDrive: vi.fn(),
+	updateRing: vi.fn(),
+	createRingMorphTarget: vi.fn(),
+	removeRingMorphTarget: vi.fn(),
+	removeRingFromComposition: vi.fn((index: number) => {
+		mockComposition.rings = mockComposition.rings.filter((_, i) => i !== index);
+	})
 }));
 
 const rafCallbacks: FrameRequestCallback[] = [];
@@ -45,8 +52,8 @@ describe('animation controller', () => {
 		rafCallbacks.length = 0;
 		installRafMock();
 		mockComposition.rings = [
-			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-			{ secondaryTemplatePath: null, morphT: 0 }
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 		];
 	});
 
@@ -72,9 +79,31 @@ describe('animation controller', () => {
 		expect(requestAnimationFrameMock).toHaveBeenCalled();
 	});
 
-	it('defaults to simple mode at startup', async () => {
+	it('defaults to kaleidoscope layer on, others off', async () => {
 		const animation = await import('./animation');
-		expect(animation.animationState.mode).toBe('simple');
+		expect(animation.animationState.layers.kaleidoscope).toBe(true);
+		expect(animation.animationState.layers.audioBars).toBe(false);
+		expect(animation.animationState.layers.audioZones).toBe(false);
+		expect(animation.animationState.layers.dataSeries).toBe(false);
+	});
+
+	it('setLayerEnabled toggles a layer independently of the others', async () => {
+		const animation = await import('./animation');
+		animation.setLayerEnabled('audioBars', true);
+		expect(animation.animationState.layers.audioBars).toBe(true);
+		expect(animation.animationState.layers.kaleidoscope).toBe(true);
+		animation.setLayerEnabled('audioBars', false);
+		expect(animation.animationState.layers.audioBars).toBe(false);
+		expect(animation.animationState.layers.kaleidoscope).toBe(true);
+	});
+
+	it('turning off the last audio layer stops the audio source', async () => {
+		const animation = await import('./animation');
+		const stopSpy = vi.spyOn(animation.audioSource, 'stop');
+		animation.setLayerEnabled('audioBars', true);
+		stopSpy.mockClear();
+		animation.setLayerEnabled('audioBars', false); // last audio layer off
+		expect(stopSpy).toHaveBeenCalled();
 	});
 
 	it('pauses when togglePlay is invoked while playing', async () => {
@@ -94,64 +123,20 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPaused).toBe(false);
 	});
 
-	it('resets when composition ring count changes during legacy playback', async () => {
+	it('keeps audio-driver playback running when composition topology changes', async () => {
 		const animation = await import('./animation');
-		animation.setAnimationMode(null);
-		animation.togglePlay();
-		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
-		animation.handleCompositionChanged();
-		expect(animation.animationState.isPlaying).toBe(false);
-		expect(animation.animationState.progress).toBe(0);
-	});
-
-	it('resets when animated ring targets become stale during legacy playback', async () => {
-		const animation = await import('./animation');
-		animation.setAnimationMode(null);
-		animation.togglePlay();
-		mockComposition.rings = [
-			{ secondaryTemplatePath: null, morphT: 0 },
-			{ secondaryTemplatePath: null, morphT: 0 }
-		];
-
-		animation.handleCompositionChanged();
-
-		expect(animation.animationState.isPlaying).toBe(false);
-		expect(animation.animationState.progress).toBe(0);
-	});
-
-	it('keeps driver playback running when composition topology changes', async () => {
-		const animation = await import('./animation');
-		animation.setAnimationMode('dataSeries');
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 10] },
-			speed: 1,
-			loop: false
-		});
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(300);
 		expect(animation.animationState.isPlaying).toBe(true);
-		expect(animation.animationState.progress).toBeCloseTo(0.1, 5);
 
-		mockComposition.rings.push({ secondaryTemplatePath: null, morphT: 0 });
+		mockComposition.rings.push({ id: 'ring-c', secondaryTemplatePath: null, morphT: 0 });
 		animation.handleCompositionChanged();
 		expect(animation.animationState.isPlaying).toBe(true);
 
 		flushNextAnimationFrame(600);
 		expect(animation.animationState.isPlaying).toBe(true);
-		expect(animation.animationState.progress).toBeCloseTo(0.2, 5);
-	});
-
-	it('keeps idle state when no ring has a morph target', async () => {
-		mockComposition.rings = [{ secondaryTemplatePath: null, morphT: 0 }];
-		const animation = await import('./animation');
-		animation.setAnimationMode(null);
-
-		animation.togglePlay();
-
-		expect(animation.animationState.isPlaying).toBe(false);
-		expect(animation.animationState.progress).toBe(0);
-		expect(requestAnimationFrameMock).not.toHaveBeenCalled();
 	});
 
 	it('updates progress in loop mode from animated morph value', async () => {
@@ -189,17 +174,16 @@ describe('animation controller', () => {
 		expect(animation.animationState.isPaused).toBe(false);
 	});
 
-	it('stores selected driver mode and accepts dataSeries config updates', async () => {
+	it('accepts dataSeries config updates (parked placeholder, not runnable)', async () => {
 		const animation = await import('./animation');
 
-		animation.setAnimationMode('dataSeries');
 		animation.setDataSeriesConfig({
 			seriesByRingIndex: {
 				0: [0, 1, 0.5]
 			}
 		});
 
-		expect(animation.animationState.mode).toBe('dataSeries');
+		expect(animation.animationState.layers.dataSeries).toBe(false);
 		expect(animation.animationState.dataSeries.seriesByRingIndex[0]).toEqual([0, 1, 0.5]);
 	});
 });
@@ -210,128 +194,9 @@ describe('animation runtime integration', () => {
 		vi.clearAllMocks();
 		rafCallbacks.length = 0;
 		mockComposition.rings = [
-			{ secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
-			{ secondaryTemplatePath: null, morphT: 0 }
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
 		];
-	});
-
-	it('setAnimationMode(mode) drives runtime mode while playing', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const { setRingMorphT } = await import('./composition');
-		const animation = await import('./animation');
-
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 10] },
-			speed: 1,
-			loop: false
-		});
-		animation.setAnimationMode('dataSeries');
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(500);
-
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
-		expect(animation.animationState.mode).toBe('dataSeries');
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('applies simple driver values when playing in default mode', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const animation = await import('./animation');
-		const { setRingMorphT } = await import('./composition');
-
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(600);
-
-		expect(animation.animationState.mode).toBe('simple');
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.2);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('simple non-loop reaches 1 at completion without wraparound reset', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const animation = await import('./animation');
-		const { setRingMorphT } = await import('./composition');
-
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(3000);
-
-		expect(animation.animationState.mode).toBe('simple');
-		expect(animation.animationState.isPlaying).toBe(false);
-		expect(animation.animationState.progress).toBe(1);
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 1);
-		expect(setRingMorphT.mock.calls.at(-1)?.[1]).toBe(1);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('setDataSeriesConfig updates are consumed dynamically by dataSeries driver', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const { setRingMorphT } = await import('./composition');
-		const animation = await import('./animation');
-
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 10] },
-			speed: 1,
-			loop: false
-		});
-		animation.setAnimationMode('dataSeries');
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(500);
-		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
-
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 20] },
-			speed: 2
-		});
-		flushNextAnimationFrame(750);
-		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 1);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('preserves pause/resume continuity in dataSeries mode', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const { setRingMorphT } = await import('./composition');
-		const animation = await import('./animation');
-
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 10] },
-			speed: 1,
-			loop: false
-		});
-		animation.setAnimationMode('dataSeries');
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(500);
-		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
-
-		animation.togglePlay();
-		animation.togglePlay();
-		flushNextAnimationFrame(10_500);
-
-		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.5);
-
-		flushNextAnimationFrame(10_750);
-		flushNextAnimationFrame(11_000);
-		expect(setRingMorphT).toHaveBeenLastCalledWith(0, 0.75);
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
 	});
 
 	it('applies alternate progression to controller progress path', async () => {
@@ -361,33 +226,10 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('dataSeries mode keeps untouched ring t when series is missing', async () => {
-		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
-		const { setRingMorphT } = await import('./composition');
-		const animation = await import('./animation');
-
-		animation.setDataSeriesConfig({
-			seriesByRingIndex: { 0: [0, 10] },
-			speed: 1,
-			loop: false
-		});
-		animation.setAnimationMode('dataSeries');
-		animation.togglePlay();
-		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(500);
-
-		expect(setRingMorphT).toHaveBeenCalledWith(0, 0.5);
-		expect(setRingMorphT).not.toHaveBeenCalledWith(1, expect.any(Number));
-
-		void requestAnimationFrameMock;
-		void cancelAnimationFrameMock;
-		vi.unstubAllGlobals();
-	});
-
-	it('audioBars mode does not stop after durationSec elapses', async () => {
+	it('audioBars layer does not stop after durationSec elapses', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		animation.setAnimationMode('audioBars');
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(3000); // default durationSec = 3 s
@@ -397,10 +239,10 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('elapsedMs increments each frame in audioBars mode', async () => {
+	it('elapsedMs increments each frame with an audio layer active', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		animation.setAnimationMode('audioBars');
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(1200);
@@ -413,7 +255,7 @@ describe('animation runtime integration', () => {
 	it('elapsedMs resets to 0 when stopAnimation is called', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		animation.setAnimationMode('audioBars');
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(1500);
@@ -425,10 +267,10 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('elapsedMs resets to 0 when simple animation completes naturally', async () => {
+	it('elapsedMs resets to 0 when the bare-clock animation completes naturally', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		// default mode is 'simple', durationSec = 3
+		// no driver layer enabled; default durationSec = 3
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
 		flushNextAnimationFrame(1000);
@@ -441,26 +283,237 @@ describe('animation runtime integration', () => {
 		vi.unstubAllGlobals();
 	});
 
-	it('switching from audioBars to simple mode while playing resets elapsed and does not instant-stop', async () => {
+	it('toggling a layer mid-play keeps the shared clock running (no elapsed reset)', async () => {
 		const { requestAnimationFrameMock, cancelAnimationFrameMock } = installRafMock();
 		const animation = await import('./animation');
-		animation.setAnimationMode('audioBars');
+		animation.setLayerEnabled('audioBars', true);
 		animation.togglePlay();
 		flushNextAnimationFrame(0);
-		flushNextAnimationFrame(10000); // 10 s > durationSec (3 s)
+		flushNextAnimationFrame(10000); // 10 s > durationSec (3 s); audio layer keeps it alive
 		expect(animation.animationState.elapsedMs).toBe(10000);
 		expect(animation.animationState.isPlaying).toBe(true);
 
-		// Switch to simple mode — should reset elapsed, NOT instantly stop
-		animation.setAnimationMode('simple');
-		expect(animation.animationState.elapsedMs).toBe(0);
+		// Enable another layer mid-play — the shared clock is NOT reset and
+		// playback continues (layers are independent; no exclusive-mode switch).
+		animation.setLayerEnabled('audioZones', true);
+		expect(animation.animationState.elapsedMs).toBe(10000);
 		expect(animation.animationState.isPlaying).toBe(true);
 
-		// One more frame to confirm simple mode runs normally
 		flushNextAnimationFrame(10100);
 		expect(animation.animationState.isPlaying).toBe(true);
 		void requestAnimationFrameMock;
 		void cancelAnimationFrameMock;
 		vi.unstubAllGlobals();
+	});
+});
+
+describe('kaleidoscope keyframe application', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('does nothing when the track is disabled (slider value stands)', async () => {
+		const animation = await import('./animation');
+		const { keyframes, KALEIDO_GLOBAL_ROTATION: ROT } = await import('./keyframes.svelte');
+		const { kaleidoscope, setGlobalRotation } = await import('./kaleidoscope.svelte');
+		setGlobalRotation(33);
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBe(33);
+	});
+
+	it('applies the sampled rotation when the track is enabled', async () => {
+		const animation = await import('./animation');
+		const { keyframes, KALEIDO_GLOBAL_ROTATION: ROT } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		keyframes.setTrackEnabled(ROT, true);
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 4);
+	});
+
+	it('applies multiple armed params at the same progress', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		const TILEROT = 'kaleidoscope.tileRotation';
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+		keyframes.addKeyframe(TILEROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(TILEROT, { time: 1, value: 100 });
+		keyframes.setTrackEnabled(TILEROT, true);
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.scale).toBeCloseTo(2, 4);
+		expect(kaleidoscope.tileRotation).toBeCloseTo(50, 4);
+	});
+
+	it('leaves an unarmed param at its static value while another is armed', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope, setOffsetDistance } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		setOffsetDistance(0.25); // unarmed
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.offsetDistance).toBe(0.25);
+	});
+
+	it('rounds a discrete (sectors) sample to a valid even value', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SECTORS = 'kaleidoscope.sectors';
+		keyframes.addKeyframe(SECTORS, { time: 0, value: 8 });
+		keyframes.addKeyframe(SECTORS, { time: 1, value: 12 });
+		keyframes.setTrackEnabled(SECTORS, true);
+		animation.applyKeyframes(0.5); // sample ~10
+		expect(kaleidoscope.sectors).toBe(10);
+		expect(kaleidoscope.sectors % 2).toBe(0);
+	});
+
+	// Characterization (locks the invariant the restructure relies on): audio
+	// reactivity is NOT exclusive with the kaleidoscope timeline. Keyframes ride
+	// the same clock regardless of which layers drive, so an armed track must still
+	// sample and apply even while an audio layer is active.
+	it('applies kaleidoscope keyframes even when the audioBars layer is active', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope } = await import('./kaleidoscope.svelte');
+		const SCALE = 'kaleidoscope.scale';
+		keyframes.addKeyframe(SCALE, { time: 0, value: 1 });
+		keyframes.addKeyframe(SCALE, { time: 1, value: 3 });
+		keyframes.setTrackEnabled(SCALE, true);
+
+		animation.setLayerEnabled('audioBars', true);
+		animation.applyKeyframes(0.5);
+
+		// Track still samples (not nulled out by the audio layer)...
+		expect(keyframes.sampleParam(SCALE, 0.5)).toBeCloseTo(2, 5);
+		// ...and the sampled value was applied to the live kaleidoscope param.
+		expect(kaleidoscope.scale).toBeCloseTo(2, 5);
+	});
+
+	// The kaleidoscope layer gates its own keyframe application: off → params hold
+	// their static slider value; on → they sample again.
+	it('layers.kaleidoscope=false skips kaleidoscope keyframe application', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { kaleidoscope, setGlobalRotation } = await import('./kaleidoscope.svelte');
+		const ROT = 'kaleidoscope.globalRotation';
+		setGlobalRotation(42);
+		keyframes.addKeyframe(ROT, { time: 0, value: 0 });
+		keyframes.addKeyframe(ROT, { time: 1, value: 360 });
+		keyframes.setTrackEnabled(ROT, true);
+
+		animation.setLayerEnabled('kaleidoscope', false);
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBe(42); // gated → static value stands
+
+		animation.setLayerEnabled('kaleidoscope', true);
+		animation.applyKeyframes(0.5);
+		expect(kaleidoscope.globalRotation).toBeCloseTo(180, 4);
+	});
+
+	// applyKeyframes now walks every registry, not just the kaleidoscope one: an
+	// armed audioBars param must sample and apply through its setter too.
+	it('drives an armed audioBars param through applyKeyframes', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const CRESTS = 'audioBars.waveCrests';
+		keyframes.addKeyframe(CRESTS, { time: 0, value: 1 });
+		keyframes.addKeyframe(CRESTS, { time: 1, value: 8 });
+		keyframes.setTrackEnabled(CRESTS, true);
+
+		animation.applyKeyframes(0.5);
+
+		expect(animation.animationState.audioBars.waveCrests).toBeCloseTo(4.5, 1);
+	});
+});
+
+describe('setAnimationFps', () => {
+	it('accepts an allowed frame rate', async () => {
+		const animation = await import('./animation');
+		animation.setAnimationFps(50);
+		expect(animation.animationState.fps).toBe(50);
+	});
+
+	it('falls back to 30 for a value outside the allowed set', async () => {
+		const animation = await import('./animation');
+		animation.setAnimationFps(42);
+		expect(animation.animationState.fps).toBe(30);
+	});
+});
+
+describe('ring morph create/remove (a morph IS keyframes)', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		mockComposition.rings = [
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
+		];
+	});
+
+	it('createRingMorph seeds an armed bezier 0→1 morphT track', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { composition } = await import('./composition');
+		const id = `ring.${composition.rings[0].id}.morphT`;
+		keyframes.deleteTrack(id);
+
+		animation.createRingMorph(0);
+
+		const track = keyframes.tracks[id];
+		expect(track?.enabled).toBe(true);
+		const sorted = [...track.keyframes].sort((a, b) => a.time - b.time);
+		expect(sorted.map((k) => [k.time, k.value])).toEqual([
+			[0, 0],
+			[1, 1]
+		]);
+		expect(sorted[0].interp).toBe('bezier');
+	});
+
+	it('removeRingMorph deletes the morphT track', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { composition } = await import('./composition');
+		const id = `ring.${composition.rings[0].id}.morphT`;
+		animation.createRingMorph(0);
+		expect(keyframes.tracks[id]).toBeDefined();
+
+		animation.removeRingMorph(0);
+		expect(keyframes.tracks[id]).toBeUndefined();
+	});
+});
+
+describe('removeRing also deletes the ring tracks', () => {
+	beforeEach(() => {
+		vi.resetModules();
+		mockComposition.rings = [
+			{ id: 'ring-a', secondaryTemplatePath: { cmds: ['M'], crds: [0, 0] }, morphT: 0 },
+			{ id: 'ring-b', secondaryTemplatePath: null, morphT: 0 }
+		];
+	});
+
+	it('drops the removed ring tracks and leaves siblings intact', async () => {
+		const animation = await import('./animation');
+		const { keyframes } = await import('./keyframes.svelte');
+		const { composition } = await import('./composition');
+
+		const victim = composition.rings[0].id;
+		const survivor = composition.rings[1].id;
+		keyframes.ensureTrack(`ring.${victim}.morphT`);
+		keyframes.ensureTrack(`ring.${survivor}.morphT`);
+
+		animation.removeRing(0);
+
+		expect(keyframes.tracks[`ring.${victim}.morphT`]).toBeUndefined();
+		expect(keyframes.tracks[`ring.${survivor}.morphT`]).toBeDefined();
+		expect(composition.rings.some((r) => r.id === victim)).toBe(false);
 	});
 });

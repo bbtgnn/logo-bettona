@@ -6,8 +6,10 @@
 	const HERO_COMPOSITION: Composition = {
 		baseRadius: 5,
 		ringIncrement: 2,
+		aspectRatio: '1:1',
 		rings: [
 			{
+				id: 'about-hero-ring-0',
 				copies: 8,
 				color: '#000000',
 				templatePath: {
@@ -27,6 +29,7 @@
 				ringHeight: 0.2
 			},
 			{
+				id: 'about-hero-ring-1',
 				copies: 8,
 				color: '#000000',
 				templatePath: {
@@ -46,7 +49,7 @@
 				ringHeight: 0.12
 			}
 		],
-		monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+		monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
 		fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
 	};
 

@@ -1,6 +1,17 @@
 import paper from 'paper';
 import type { Ring, Path } from '$lib/types';
 
+// Audio-zone deformation, applied in FINAL polar space (see buildRingPath). Radial
+// amounts are fractions of the ring radius so the tip travels outward toward the
+// reserved edge (like the old p5 sketch's spintaBassi), instead of being re-absorbed
+// by the template's bounding-box normalization. Tangential amounts are fractions of
+// the per-copy arc half-angle.
+const ZONE_BASS_REACH = 1.2; // outer tip: radial push outward
+const ZONE_MID_TANG = 0.35; // mid: tangential widening (± arc angle)
+const ZONE_MID_RADIAL = 0.15; // mid: slight radial push outward
+const ZONE_TREBLE_RETRACT = 0.3; // inner tip: radial retraction inward
+const ZONE_TREBLE_TANG = 0.1; // inner: small tangential lean
+
 /**
  * Builds the full closed paper.js path for one ring at the given radius.
  *
@@ -27,6 +38,17 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 
 	const segments = getSegments(ring.templatePath);
 
+	// Audio-zone roles by radial position: lowest Y (→ lowest ty → largest r) is the
+	// OUTER tip (bass), highest Y is the INNER tip (treble), the rest are MID. Roles are
+	// taken from the REST template (bbox is the rest shape), so they never shift mid-beat.
+	const drive = ring.zoneDrive ?? null;
+	let outerIdx = 0;
+	let innerIdx = 0;
+	for (let i = 1; i < segments.length; i++) {
+		if (segments[i].point.y < segments[outerIdx].point.y) outerIdx = i;
+		if (segments[i].point.y > segments[innerIdx].point.y) innerIdx = i;
+	}
+
 	// Transform anchor to polar, then to Cartesian
 	function anchorToPolar(x: number, y: number): { angle: number; r: number } {
 		const tx = (x - bbox.x) / bbox.width;
@@ -42,8 +64,24 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 
 	// Build one half-arc (spanning [0, alpha])
 	function buildHalfArc(mirror: boolean): paper.Segment[] {
-		return segments.map((seg) => {
-			const { angle: anchorAngle, r: anchorR } = anchorToPolar(seg.point.x, seg.point.y);
+		return segments.map((seg, idx) => {
+			let { angle: anchorAngle, r: anchorR } = anchorToPolar(seg.point.x, seg.point.y);
+
+			// Deform in final polar space: radial push escapes the thin ring band and
+			// travels toward the reserved edge; tangential widens the petal. Handles use
+			// the deformed angle/r below, so they follow the moved anchor cleanly.
+			if (drive) {
+				if (idx === outerIdx) {
+					anchorR += drive.bassPush * radius * ZONE_BASS_REACH;
+				} else if (idx === innerIdx) {
+					anchorR -= drive.trebleRetract * radius * ZONE_TREBLE_RETRACT;
+					anchorAngle += drive.trebleVibrate * alpha * ZONE_TREBLE_TANG;
+				} else {
+					anchorAngle += drive.midPush * alpha * ZONE_MID_TANG;
+					anchorR += drive.midPush * radius * ZONE_MID_RADIAL;
+				}
+			}
+
 			const sign = mirror ? -1 : 1;
 			const mappedAngle = sign * anchorAngle;
 			const anchorPos = polarToCartesian(mappedAngle, anchorR);

@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { flushSync } from 'svelte';
 import type { Composition } from '$lib/types';
-import { createPersistedComposition } from './composition-persistence.svelte';
+import { createPersistedComposition, normalizeComposition } from './composition-persistence.svelte';
+import { DEFAULT_COMPOSITION } from './default';
 
 function makeComposition(): Composition {
 	return {
 		baseRadius: 100,
 		ringIncrement: 60,
+		aspectRatio: '1:1',
 		rings: [
 			{
+				id: 'test-ring',
 				copies: 4,
 				color: '#000000',
 				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 10, 10] },
@@ -17,7 +20,7 @@ function makeComposition(): Composition {
 				ringHeight: 0.4
 			}
 		],
-		monochromePalettes: [{ main: '#000', bg: '#fff' }],
+		monochromePalettes: [{ primary: '#000', secondary: '#fff', background: '#fff' }],
 		fullPalettes: [{ colors: ['#000', '#fff'] }]
 	};
 }
@@ -128,7 +131,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 }
 			}));
 		});
 
@@ -141,7 +144,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 }
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 }
 			}));
 			state.baseRadius = 175; // force a write
 		});
@@ -171,7 +174,7 @@ describe('createPersistedComposition', () => {
 		flushSync(() => {
 			state.rings = state.rings.map((ring) => ({
 				...ring,
-				zoneDrive: { bassPush: 10, midPush: 5, treblePush: 3 },
+				zoneDrive: { bassPush: 10, midPush: 5, trebleRetract: 3, trebleVibrate: 2 },
 				zoneConfig: { bass: 0.9, mid: 0.5, treble: 0.1 }
 			}));
 			state.baseRadius = 175;
@@ -180,5 +183,25 @@ describe('createPersistedComposition', () => {
 		const stored = JSON.parse(localStorage.getItem(key) ?? '{}');
 		expect(stored.rings[0].zoneDrive).toBeUndefined();
 		expect(stored.rings[0].zoneConfig).toEqual({ bass: 0.9, mid: 0.5, treble: 0.1 });
+	});
+});
+
+describe('normalizeComposition', () => {
+	it('migrates a legacy {main,bg} palette to primary/secondary/background', () => {
+		const legacy = {
+			...DEFAULT_COMPOSITION,
+			monochromePalettes: [{ main: '#123456', bg: '#abcdef' }]
+		} as unknown as Parameters<typeof normalizeComposition>[0];
+		const out = normalizeComposition(legacy);
+		expect(out.monochromePalettes[0]).toEqual({
+			primary: '#123456',
+			secondary: '#abcdef',
+			background: '#abcdef'
+		});
+	});
+
+	it('leaves already-migrated palettes unchanged (idempotent)', () => {
+		const out = normalizeComposition(DEFAULT_COMPOSITION);
+		expect(out.monochromePalettes[0]).toEqual(DEFAULT_COMPOSITION.monochromePalettes[0]);
 	});
 });

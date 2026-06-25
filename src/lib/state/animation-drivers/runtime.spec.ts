@@ -8,7 +8,7 @@ describe('createAnimationRuntime', () => {
 			applyRingT: (index, t) => applied.push({ index, t })
 		});
 
-		runtime.setMode('dataSeries');
+		runtime.setActive('dataSeries', true);
 		runtime.registerDriver('dataSeries', {
 			init: () => undefined,
 			dispose: () => undefined,
@@ -31,14 +31,14 @@ describe('createAnimationRuntime', () => {
 		runtime.registerDriver('dataSeries', {
 			init: () => undefined,
 			dispose: () => undefined,
-			frame: () => {
+			frame: (): Record<number, number> => {
 				frameIndex += 1;
 				if (frameIndex === 1) return { 0: 0.2, 1: 0.8 };
 				return { 0: 0.4 };
 			}
 		});
 
-		runtime.setMode('dataSeries');
+		runtime.setActive('dataSeries', true);
 		runtime.tick(0);
 		runtime.tick(16);
 
@@ -49,23 +49,22 @@ describe('createAnimationRuntime', () => {
 		]);
 	});
 
-	it('mode null means no frame application', () => {
+	it('an empty active set means no frame application', () => {
 		const applyRingT = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT });
 
-		runtime.setMode(null);
 		runtime.tick(1000);
 
 		expect(applyRingT).not.toHaveBeenCalled();
 	});
 
-	it('auto-inits a driver registered for the currently active mode', () => {
+	it('auto-inits a driver registered for an already-active type', () => {
 		const init = vi.fn();
 		const frame = vi.fn(() => ({ 0: 0.4 }));
 		const applyRingT = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT });
 
-		runtime.setMode('dataSeries');
+		runtime.setActive('dataSeries', true);
 		runtime.registerDriver('dataSeries', {
 			init,
 			dispose: vi.fn(),
@@ -78,35 +77,37 @@ describe('createAnimationRuntime', () => {
 		expect(applyRingT).toHaveBeenCalledWith(0, 0.4);
 	});
 
-	it('disposes previous mode and inits next mode on switch', () => {
-		const audioInit = vi.fn();
-		const audioDispose = vi.fn();
-		const dataInit = vi.fn();
-		const dataDispose = vi.fn();
+	it('setActive(on) inits once and is idempotent; setActive(off) disposes once', () => {
+		const init = vi.fn();
+		const dispose = vi.fn();
 		const runtime = createAnimationRuntime({ applyRingT: vi.fn() });
+		runtime.registerDriver('audioZones', { init, dispose, frame: () => ({}) });
 
-		runtime.registerDriver('audioBars', {
-			init: audioInit,
-			dispose: audioDispose,
-			frame: () => ({})
-		});
-		runtime.registerDriver('dataSeries', {
-			init: dataInit,
-			dispose: dataDispose,
-			frame: () => ({})
-		});
+		runtime.setActive('audioZones', true);
+		runtime.setActive('audioZones', true);
+		expect(init).toHaveBeenCalledOnce();
 
-		runtime.setMode('audioBars');
-		runtime.setMode('dataSeries');
-		runtime.setMode(null);
-
-		expect(audioInit).toHaveBeenCalledOnce();
-		expect(audioDispose).toHaveBeenCalledOnce();
-		expect(dataInit).toHaveBeenCalledOnce();
-		expect(dataDispose).toHaveBeenCalledOnce();
+		runtime.setActive('audioZones', false);
+		runtime.setActive('audioZones', false);
+		expect(dispose).toHaveBeenCalledOnce();
 	});
 
-	it('disposes previous active driver when replacing same active mode', () => {
+	it('ticks every active driver; distinct-property drivers coexist', () => {
+		const applyRingT = vi.fn();
+		const runtime = createAnimationRuntime({ applyRingT });
+		runtime.registerDriver('audioZones', { init() {}, dispose() {}, frame: () => ({ 0: 0.5 }) });
+		const audioFrame = vi.fn(() => ({})); // audio self-applies wave, returns no morph map
+		runtime.registerDriver('audioBars', { init() {}, dispose() {}, frame: audioFrame });
+
+		runtime.setActive('audioZones', true);
+		runtime.setActive('audioBars', true);
+		runtime.tick(100);
+
+		expect(applyRingT).toHaveBeenCalledWith(0, 0.5);
+		expect(audioFrame).toHaveBeenCalledWith(100);
+	});
+
+	it('disposes previous active driver when replacing the same active type', () => {
 		const previousInit = vi.fn();
 		const previousDispose = vi.fn();
 		const nextInit = vi.fn();
@@ -118,7 +119,7 @@ describe('createAnimationRuntime', () => {
 			dispose: previousDispose,
 			frame: () => ({})
 		});
-		runtime.setMode('dataSeries');
+		runtime.setActive('dataSeries', true);
 		runtime.registerDriver('dataSeries', {
 			init: nextInit,
 			dispose: nextDispose,

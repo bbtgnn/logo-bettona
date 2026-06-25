@@ -4,31 +4,32 @@
 	import MonochromePaletteEditor from './MonochromePaletteEditor.svelte';
 	import FullPaletteEditor from './FullPaletteEditor.svelte';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
+	import { m } from '$lib/paraglide/messages';
 
-	//
+	const modes: ColorMode[] = ['monochrome', 'palette', 'manual'];
 
-	const modes: { value: ColorMode; label: string }[] = [
-		{ value: 'monochrome', label: 'Monochrome' },
-		{ value: 'palette', label: 'Palette' },
-		{ value: 'manual', label: 'Manual' }
-	];
+	function modeLabel(mode: ColorMode): string {
+		if (mode === 'monochrome') return m.editor_color_monochrome();
+		if (mode === 'palette') return m.editor_color_palette();
+		return m.editor_color_manual();
+	}
 </script>
 
 <SidebarCollapsible>
 	{#snippet trigger()}
-		Colors
+		{m.editor_colors()}
 	{/snippet}
 
 	{#snippet content()}
 		<div class="flex overflow-hidden rounded-md border border-input text-xs">
-			{#each modes as m (m.value)}
+			{#each modes as mode (mode)}
 				<button
-					class="flex-1 py-1 transition-colors {colorMode.mode === m.value
+					class="flex-1 py-1 transition-colors {colorMode.mode === mode
 						? 'bg-foreground text-background'
 						: 'hover:bg-muted'}"
-					onclick={() => setColorMode(m.value)}
+					onclick={() => setColorMode(mode)}
 				>
-					{m.label}
+					{modeLabel(mode)}
 				</button>
 			{/each}
 		</div>

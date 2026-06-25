@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Composition, ColorModeState, Path } from '$lib/types';
+import type { Composition, ColorModeState, Path, Ring } from '$lib/types';
 
 const initialComposition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 50,
+	aspectRatio: '1:1',
 	rings: [],
-	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+	monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
 	fullPalettes: [{ colors: ['#1a1a2e', '#16213e', '#0f3460', '#e94560'] }]
 };
 
@@ -98,5 +99,59 @@ describe('composition ring morph actions', () => {
 		if (result.ok) throw new Error('expected failure');
 		expect(result.reason).toBe('Path commands must match exactly to interpolate');
 		expect(compositionModule.composition.rings[0]).toEqual(before);
+	});
+
+	it('updateRingPathVariant re-seeds the secondary on a structural primary edit', async () => {
+		const compositionModule = await import('./composition');
+		compositionModule.addRing();
+		compositionModule.createRingMorphTarget(0); // secondary == primary
+		// Structurally different from the default primary (['M','C','C']).
+		const restructured: Path = { cmds: ['M', 'C', 'Z'], crds: [0, 0, 1, 1, 2, 2, 3, 3] };
+		const result = compositionModule.updateRingPathVariant(0, 'primary', restructured);
+		expect(result).toEqual({ ok: true });
+		expect(compositionModule.composition.rings[0].templatePath).toEqual(restructured);
+		// Secondary re-seeded as a clone of the new primary (kept morph-compatible).
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).toEqual(restructured);
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).not.toBe(
+			compositionModule.composition.rings[0].templatePath
+		);
+	});
+
+	it('updateRingPathVariant preserves a distinct secondary on a compatible primary edit', async () => {
+		const compositionModule = await import('./composition');
+		compositionModule.addRing();
+		compositionModule.createRingMorphTarget(0);
+		const primary = compositionModule.composition.rings[0].templatePath!;
+		// Distinct but structurally compatible secondary.
+		const distinctSecondary: Path = { cmds: [...primary.cmds], crds: primary.crds.map((c) => c + 5) };
+		expect(compositionModule.updateRingPathVariant(0, 'secondary', distinctSecondary)).toEqual({
+			ok: true
+		});
+		// Compatible primary edit (same structure, shifted coords).
+		const editedPrimary: Path = { cmds: [...primary.cmds], crds: primary.crds.map((c) => c + 1) };
+		const result = compositionModule.updateRingPathVariant(0, 'primary', editedPrimary);
+		expect(result).toEqual({ ok: true });
+		expect(compositionModule.composition.rings[0].templatePath).toEqual(editedPrimary);
+		// The distinct secondary is untouched (only structural edits re-seed it).
+		expect(compositionModule.composition.rings[0].secondaryTemplatePath).toEqual(distinctSecondary);
+	});
+});
+
+describe('ensureRingIds', () => {
+	const base = (rings: Partial<Ring>[]): Composition =>
+		({ rings } as unknown as Composition);
+
+	it('mints an id for rings missing one', async () => {
+		const { ensureRingIds } = await import('./composition-persistence.svelte');
+		const out = ensureRingIds(base([{ copies: 8 }, { copies: 4 }]));
+		expect(out.rings[0].id.length).toBeGreaterThan(0);
+		expect(out.rings[1].id.length).toBeGreaterThan(0);
+		expect(out.rings[0].id).not.toBe(out.rings[1].id);
+	});
+
+	it('preserves an existing id', async () => {
+		const { ensureRingIds } = await import('./composition-persistence.svelte');
+		const out = ensureRingIds(base([{ id: 'keep-me', copies: 8 }]));
+		expect(out.rings[0].id).toBe('keep-me');
 	});
 });

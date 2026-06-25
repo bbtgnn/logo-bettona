@@ -3,8 +3,10 @@ import type { Composition } from '$lib/types';
 export const DEFAULT_COMPOSITION: Composition = {
 	baseRadius: 5,
 	ringIncrement: 2,
+	aspectRatio: '1:1',
 	rings: [
 		{
+			id: 'ring-default-0',
 			copies: 8,
 			color: '#ffffff',
 			templatePath: {
@@ -27,6 +29,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			morphT: 1
 		},
 		{
+			id: 'ring-default-1',
 			copies: 8,
 			color: '#000000',
 			templatePath: {
@@ -49,6 +52,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			morphT: 1
 		},
 		{
+			id: 'ring-default-2',
 			copies: 8,
 			color: '#ffffff',
 			templatePath: {
@@ -71,6 +75,7 @@ export const DEFAULT_COMPOSITION: Composition = {
 			ringHeight: 0.12
 		},
 		{
+			id: 'ring-default-3',
 			copies: 8,
 			color: '#000000',
 			templatePath: {
@@ -95,8 +100,9 @@ export const DEFAULT_COMPOSITION: Composition = {
 	],
 	monochromePalettes: [
 		{
-			main: '#000000',
-			bg: '#ffffff'
+			primary: '#000000',
+			secondary: '#ffffff',
+			background: '#ffffff'
 		}
 	],
 	fullPalettes: [

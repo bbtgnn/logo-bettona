@@ -19,6 +19,20 @@ export function saveEntry(path: Path, secondaryPath: Path | null): PathLibraryEn
 	return entry;
 }
 
+/** Removes a user entry by id. Built-in default curves are protected (no-op). */
+export function removeEntry(id: string): void {
+	pathLibrary.entries = pathLibrary.entries.filter((e) => e.id !== id || e.builtin === true);
+}
+
+/** Renames a user entry. Empty/whitespace names and built-in curves are ignored. */
+export function renameEntry(id: string, name: string): void {
+	const trimmed = name.trim();
+	if (!trimmed) return;
+	pathLibrary.entries = pathLibrary.entries.map((e) =>
+		e.id === id && !e.builtin ? { ...e, name: trimmed } : e
+	);
+}
+
 export type ApplySlot = 'template' | 'secondary' | 'both';
 
 export function applyEntryToRing(ring: Ring, entry: PathLibraryEntry, slot: ApplySlot): void {

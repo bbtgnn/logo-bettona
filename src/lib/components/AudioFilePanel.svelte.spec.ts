@@ -109,4 +109,57 @@ describe('AudioFilePanel', () => {
 		await userEvent.click(page.getByRole('button', { name: /remove/i }));
 		expect(animApi.audioSource.clearFile).toHaveBeenCalledOnce();
 	});
+
+	// ── canvas pointer interaction ─────────────────────────────────────────────
+	function pd(node: Element, clientX: number, pointerId: number) {
+		node.dispatchEvent(
+			new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX })
+		);
+	}
+	function pm(node: Element, clientX: number, pointerId: number) {
+		node.dispatchEvent(
+			new PointerEvent('pointermove', { bubbles: true, pointerId, clientX })
+		);
+	}
+
+	async function renderLoadedCanvas(region: { start: number; end: number }) {
+		animApi.audioSource.getFileName.mockReturnValue('bettona.mp3');
+		animApi.audioSource.getDuration.mockReturnValue(10);
+		animApi.audioSource.getRegion.mockReturnValue(region);
+		render(AudioFilePanel);
+		const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+		expect(canvas).toBeTruthy();
+		await vi.waitFor(() => expect(canvas.getBoundingClientRect().width).toBeGreaterThan(0));
+		return canvas;
+	}
+
+	it('seek: middle click (not near a handle) seeks', async () => {
+		const canvas = await renderLoadedCanvas({ start: 0, end: 0 });
+		const r = canvas.getBoundingClientRect();
+		pd(canvas, r.left + r.width / 2, 1);
+		expect(animApi.audioSource.seek).toHaveBeenCalled();
+	});
+
+	it('drag: pressing the end handle and moving updates the region end', async () => {
+		const canvas = await renderLoadedCanvas({ start: 0, end: 10 });
+		const r = canvas.getBoundingClientRect();
+		pd(canvas, r.right, 1); // grab end handle
+		pm(canvas, r.left + r.width / 2, 1); // drag to middle ≈ t=5
+		expect(animApi.audioSource.setRegion).toHaveBeenCalled();
+		const [start, end] = animApi.audioSource.setRegion.mock.calls.at(-1)!;
+		expect(start).toBe(0); // start preserved
+		expect(end).toBeCloseTo(5, 1); // dragged toward middle
+	});
+
+	it('guard: a secondary pointer mid-drag is ignored', async () => {
+		const canvas = await renderLoadedCanvas({ start: 0, end: 10 });
+		const r = canvas.getBoundingClientRect();
+		pd(canvas, r.right, 1); // pointer 1 grabs end handle
+		pm(canvas, r.left + r.width / 2, 1);
+		const afterPointer1 = animApi.audioSource.setRegion.mock.calls.length;
+		pd(canvas, r.left, 2); // pointer 2 tries the start handle
+		pm(canvas, r.left + r.width / 2, 2);
+		const afterPointer2 = animApi.audioSource.setRegion.mock.calls.length;
+		expect(afterPointer2).toBe(afterPointer1); // pointer 2 changed nothing
+	});
 });

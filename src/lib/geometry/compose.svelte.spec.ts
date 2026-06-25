@@ -18,8 +18,10 @@ const rectPath: Path = {
 const twoRingComposition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
+	aspectRatio: '1:1',
 	rings: [
 		{
+			id: 'test-ring-0',
 			copies: 4,
 			color: '#ff0000',
 			templatePath: rectPath,
@@ -28,6 +30,7 @@ const twoRingComposition: Composition = {
 			ringHeight: 0.4
 		},
 		{
+			id: 'test-ring-1',
 			copies: 4,
 			color: '#0000ff',
 			templatePath: rectPath,
@@ -36,7 +39,7 @@ const twoRingComposition: Composition = {
 			ringHeight: 0.4
 		}
 	],
-	monochromePalettes: [{ main: '#000000', bg: '#ffffff' }],
+	monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
 	fullPalettes: [{ colors: ['#000000', '#ffffff'] }]
 };
 

@@ -1,8 +1,12 @@
 import type paper from 'paper';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
-import { composition } from '$lib/state/composition';
+import { composition, colorMode, setAspectRatio } from '$lib/state/composition';
+import { animationState, setAnimationDurationSec } from '$lib/state/animation';
+import { setKaleidoscopeEnabled } from '$lib/state/kaleidoscope.svelte';
+import { switchLocale } from '$lib/state/locale.svelte';
 
 let lastRenderedScope: paper.PaperScope | undefined;
 let lastRenderInput: RenderInput | undefined;
@@ -46,6 +50,7 @@ describe('PreviewCanvas.svelte', () => {
 	};
 
 	beforeEach(() => {
+		switchLocale('en');
 		lastRenderedScope = undefined;
 		lastRenderInput = undefined;
 		renderCallCount = 0;
@@ -67,6 +72,7 @@ describe('PreviewCanvas.svelte', () => {
 		composition.ringIncrement = 50;
 		composition.rings = [
 			{
+				id: 'test-ring',
 				copies: 8,
 				color: '#000000',
 				templatePath: {
@@ -124,4 +130,151 @@ describe('PreviewCanvas.svelte', () => {
 		expect(disposeCallCount).toBe(1);
 	});
 
+	it('off the animate surface, exposes only Export SVG', async () => {
+		render(PreviewCanvas);
+		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+		expect(page.getByRole('button', { name: 'Export animation' }).query()).toBeNull();
+		expect(page.getByText('Includi audio').query()).toBeNull();
+		expect(page.getByText('Esporta PNG (caleidoscopio)').query()).toBeNull();
+		expect(page.getByText('Esporta SVG (caleidoscopio)').query()).toBeNull();
+	});
+
+	it('on the animate surface, shows the Export animation button next to Export SVG', async () => {
+		render(PreviewCanvas, { animate: true });
+		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+		await expect
+			.element(page.getByRole('button', { name: 'Export animation' }))
+			.toBeInTheDocument();
+	});
+
+	it('Export SVG downloads the kaleidoscope SVG when kaleidoscope mode is on', async () => {
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		setKaleidoscopeEnabled(true);
+		try {
+			render(PreviewCanvas);
+			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
+			expect(downloads).toContain('kaleidoscope.svg');
+			expect(downloads).not.toContain('composition.svg');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+			setKaleidoscopeEnabled(false);
+		}
+	});
+
+	it('export reads the shared animation duration (no separate export-duration field)', async () => {
+		setAnimationDurationSec(7);
+		render(PreviewCanvas);
+		expect(page.getByLabelText('Durata (s)', { exact: true }).query()).toBeNull();
+		expect(animationState.durationSec).toBe(7);
+	});
+
+	it('paints a palette-colored background rect behind the rings in flat mode', async () => {
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#112233' }
+		];
+		colorMode.palette = 0;
+
+		render(PreviewCanvas);
+
+		await vi.waitFor(() => {
+			expect(lastRenderedScope).toBeDefined();
+			const children = lastRenderedScope!.project.activeLayer.children;
+			const bg = children.find((c) => c.name === 'preview-background');
+			expect(bg).toBeDefined();
+			// back-most item
+			expect(children.indexOf(bg!)).toBe(0);
+			expect((bg as paper.Path).fillColor?.toCSS(true)).toBe('#112233');
+		});
+	});
+
+	it('updates the background rect color when the palette background changes', async () => {
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#112233' }
+		];
+		colorMode.palette = 0;
+
+		render(PreviewCanvas);
+
+		await vi.waitFor(() => {
+			const bg = lastRenderedScope!.project.activeLayer.children.find(
+				(c) => c.name === 'preview-background'
+			);
+			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#112233');
+		});
+
+		composition.monochromePalettes = [
+			{ primary: '#000000', secondary: '#ffffff', background: '#445566' }
+		];
+
+		await vi.waitFor(() => {
+			const bg = lastRenderedScope!.project.activeLayer.children.find(
+				(c) => c.name === 'preview-background'
+			);
+			expect((bg as paper.Path)?.fillColor?.toCSS(true)).toBe('#445566');
+		});
+	});
+
+	it('keeps the canvas CSS box in the aspect ratio under kaleidoscope mode (no stretch)', async () => {
+		setKaleidoscopeEnabled(true);
+		setAspectRatio('16:9');
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => {
+				const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+				expect(canvas).toBeTruthy();
+				const w = parseFloat(canvas.style.width);
+				const h = parseFloat(canvas.style.height);
+				expect(w).toBeGreaterThan(0);
+				expect(h).toBeGreaterThan(0);
+				expect(w / h).toBeCloseTo(16 / 9, 1);
+			});
+		} finally {
+			setKaleidoscopeEnabled(false);
+			setAspectRatio('1:1');
+		}
+	});
+
+	it('shows the PNG export controls on both routes', async () => {
+		render(PreviewCanvas);
+		await expect.element(page.getByRole('button', { name: 'Export PNG' })).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Include background')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Resolution')).toBeInTheDocument();
+	});
+
+	it('triggers a PNG download when Export PNG is clicked', async () => {
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
+			await userEvent.click(page.getByRole('button', { name: 'Export PNG' }));
+			expect(downloads).toContain('composition.png');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+		}
+	});
+
+	it('flat Export SVG produces no download when there are no rings', async () => {
+		composition.rings = [];
+		const downloads: string[] = [];
+		const origClick = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+			downloads.push(this.download);
+		};
+		try {
+			render(PreviewCanvas);
+			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
+			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
+			expect(downloads).not.toContain('composition.svg');
+		} finally {
+			HTMLAnchorElement.prototype.click = origClick;
+		}
+	});
 });

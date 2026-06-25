@@ -24,31 +24,36 @@ describe('parseHexColors', () => {
 });
 
 describe('applyMonochrome', () => {
-	it('outermost ring (last index) gets main color', () => {
-		const result = applyMonochrome({ main: '#000000', bg: '#ffffff' }, 4);
+	it('outermost ring (last index) gets primary color', () => {
+		const result = applyMonochrome({ primary: '#000000', secondary: '#ffffff', background: '#eeeeee' }, 4);
 		expect(result[3]).toBe('#000000');
 	});
 
-	it('alternates strictly inward from outermost', () => {
-		const result = applyMonochrome({ main: '#000000', bg: '#ffffff' }, 4);
-		// index 3 = main, 2 = bg, 1 = main, 0 = bg
+	it('alternates primary/secondary strictly inward from outermost', () => {
+		const result = applyMonochrome({ primary: '#000000', secondary: '#ffffff', background: '#eeeeee' }, 4);
+		// index 3 = primary, 2 = secondary, 1 = primary, 0 = secondary
 		expect(result).toEqual(['#ffffff', '#000000', '#ffffff', '#000000']);
 	});
 
-	it('even ring count: innermost gets bg', () => {
-		const result = applyMonochrome({ main: '#111111', bg: '#eeeeee' }, 4);
+	it('even ring count: innermost gets secondary', () => {
+		const result = applyMonochrome({ primary: '#111111', secondary: '#eeeeee', background: '#cccccc' }, 4);
 		expect(result[0]).toBe('#eeeeee');
 	});
 
-	it('odd ring count: innermost gets main', () => {
-		const result = applyMonochrome({ main: '#111111', bg: '#eeeeee' }, 3);
-		// index 2 = main, 1 = bg, 0 = main
+	it('odd ring count: innermost gets primary', () => {
+		const result = applyMonochrome({ primary: '#111111', secondary: '#eeeeee', background: '#cccccc' }, 3);
+		// index 2 = primary, 1 = secondary, 0 = primary
 		expect(result[0]).toBe('#111111');
 	});
 
-	it('single ring gets main color', () => {
-		const result = applyMonochrome({ main: '#ff0000', bg: '#0000ff' }, 1);
+	it('single ring gets primary color', () => {
+		const result = applyMonochrome({ primary: '#ff0000', secondary: '#0000ff', background: '#00ff00' }, 1);
 		expect(result).toEqual(['#ff0000']);
+	});
+
+	it('never uses background as a ring color', () => {
+		const result = applyMonochrome({ primary: '#111111', secondary: '#222222', background: '#eeeeee' }, 5);
+		expect(result).not.toContain('#eeeeee');
 	});
 });
 
@@ -81,7 +86,7 @@ describe('applyPalette', () => {
 });
 
 describe('applyColors', () => {
-	const mono = { main: '#000000', bg: '#ffffff' };
+	const mono = { primary: '#000000', secondary: '#ffffff', background: '#ffffff' };
 	const full = { colors: ['#ff0000', '#00ff00', '#0000ff'] };
 	const current = ['#aabbcc', '#ddeeff'];
 

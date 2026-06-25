@@ -12,6 +12,7 @@ vi.mock('rune-sync/localstorage', () => ({
 
 function makeRing(): Ring {
 	return {
+		id: 'test-ring',
 		copies: 1,
 		color: '#000',
 		templatePath: { cmds: ['M', 'L'], crds: [0, 0, 1, 1] },
@@ -51,6 +52,75 @@ describe('saveEntry', () => {
 
 		expect(entry.path.crds[0]).toBe(0);
 		expect(entry.secondaryPath?.crds[0]).toBe(1);
+	});
+});
+
+describe('removeEntry', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('removes the entry with the given id', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		const b = mod.saveEntry({ cmds: ['M', 'L'], crds: [2, 2, 3, 3] }, null);
+
+		mod.removeEntry(a.id);
+
+		expect(mod.pathLibrary.entries.map((e) => e.id)).toEqual([b.id]);
+	});
+
+	it('never removes a builtin entry', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		mod.pathLibrary.entries = mod.pathLibrary.entries.map((e) =>
+			e.id === a.id ? { ...e, builtin: true } : e
+		);
+
+		mod.removeEntry(a.id);
+
+		expect(mod.pathLibrary.entries).toHaveLength(1);
+	});
+});
+
+describe('renameEntry', () => {
+	beforeEach(() => {
+		vi.resetModules();
+	});
+
+	it('renames a user entry (trimmed)', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+
+		mod.renameEntry(a.id, '  Logo cerchio  ');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Logo cerchio');
+	});
+
+	it('ignores an empty/whitespace name', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+
+		mod.renameEntry(a.id, '   ');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Path 1');
+	});
+
+	it('never renames a builtin entry', async () => {
+		const mod = await import('./path-library');
+		mod.pathLibrary.entries = [];
+		const a = mod.saveEntry({ cmds: ['M', 'L'], crds: [0, 0, 1, 1] }, null);
+		mod.pathLibrary.entries = mod.pathLibrary.entries.map((e) =>
+			e.id === a.id ? { ...e, builtin: true } : e
+		);
+
+		mod.renameEntry(a.id, 'Cambiato');
+
+		expect(mod.pathLibrary.entries[0].name).toBe('Path 1');
 	});
 });
 
