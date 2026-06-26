@@ -102,11 +102,7 @@
 				showTry
 			/>
 
-			<RingCanvas
-				templatePath={ring.secondaryTemplatePath}
-				onchange={applyPathFromEditor}
-				label={m.editor_path_editor_secondary()}
-			/>
+			<RingCanvas templatePath={ring.secondaryTemplatePath} onchange={applyPathFromEditor} />
 
 			{#if ringPathError}
 				<p class="text-xs text-destructive">{ringPathError}</p>

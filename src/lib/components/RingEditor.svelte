@@ -149,11 +149,7 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			<RingCanvas
-				templatePath={ring.templatePath}
-				onchange={applyPathFromEditor}
-				label={m.editor_path_editor()}
-			/>
+			<RingCanvas templatePath={ring.templatePath} onchange={applyPathFromEditor} />
 
 			{#if ringPathError}
 				<p class="text-xs text-destructive">{ringPathError}</p>

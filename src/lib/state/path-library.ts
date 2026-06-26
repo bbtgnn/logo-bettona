@@ -84,9 +84,16 @@ export function updateEntryPath(id: string, path: Path): void {
 }
 
 // Seed shape for a brand-new custom curve: a simple arch in the same coordinate
-// space (~0..180) as the builtin curves. Q is fine for display; once edited the
-// RingCanvas emits L/C segments.
-const SEED_ARC: Path = { cmds: ['M', 'Q'], crds: [20, 100, 100, 40, 180, 100] };
+// space (~0..180) as the builtin curves. The original single quadratic
+// (M 20,100  Q 100,40  180,100) is split at its midpoint into two quadratics so
+// the editable path exposes THREE anchor points — start, apex, end — instead of
+// two. Splitting at t=0.5 preserves the exact silhouette: the apex lands at
+// (100,70) and each half's control point is the midpoint of the original leg.
+// Q is fine for display; once edited the RingCanvas emits L/C segments.
+const SEED_ARC: Path = {
+	cmds: ['M', 'Q', 'Q'],
+	crds: [20, 100, 60, 70, 100, 70, 140, 70, 180, 100]
+};
 
 /** Creates and saves a new custom curve seeded from a simple arc. */
 export function createCurveFromArc(): PathLibraryEntry {

@@ -1,20 +1,28 @@
 <script lang="ts">
 	import paper from 'paper';
 	import type { Path } from '$lib/types';
+	import { Slider } from '$lib/shadcn/ui/slider/index.js';
+	import { m } from '$lib/paraglide/messages';
 
 	const EDITOR_STYLE = {
-		anchor: { radius: 5, fillColor: 'white', strokeColor: 'black', strokeWidth: 1 },
-		handle: { radius: 3, fillColor: '#3b82f6' }, // blue accent
+		anchor: { radius: 6, fillColor: 'white', strokeColor: 'black', strokeWidth: 1.5 },
+		handle: { radius: 4, fillColor: '#3b82f6' }, // blue accent
 		handleLine: { strokeColor: '#94a3b8', strokeWidth: 1 }, // muted
-		padding: 20,
-		paddingRect: { strokeColor: '#e2e8f0', strokeWidth: 1 } // very light
+		grid: { strokeColor: '#cbd5e1', strokeWidth: 1 }, // clearly visible grid lines
+		padding: 16,
+		paddingRect: { strokeColor: '#94a3b8', strokeWidth: 1 } // outer frame
 	};
+
+	const GRID_MIN = 2;
+	const GRID_MAX = 16;
 
 	let {
 		templatePath,
-		onchange,
-		label = 'Path editor'
-	}: { templatePath: Path | null; onchange?: (path: Path) => void; label?: string } = $props();
+		onchange
+	}: { templatePath: Path | null; onchange?: (path: Path) => void } = $props();
+
+	// Grid density (cells per axis). Drives the visible grid and the Shift-snap step.
+	let gridDivisions = $state(8);
 
 	// --- Point transform helpers (local copy, not imported from experiments) ---
 
@@ -146,8 +154,10 @@
 		// `isDragging` is non-reactive; if it stays true (e.g. lost mouseup), remounting this
 		// canvas (e.g. its `templatePath` prop changes / the parent re-keys it) reruns draw.
 		$effect(() => {
+			// Read gridDivisions here so the grid (and snap step) redraw when the slider moves.
+			const divisions = gridDivisions;
 			if (!isDragging) {
-				draw(scope, templatePath, onchange, setDragging);
+				draw(scope, templatePath, onchange, setDragging, divisions);
 			}
 		});
 
@@ -160,12 +170,13 @@
 		scope: paper.PaperScope,
 		path: Path | null,
 		onchangeCb: ((path: Path) => void) | undefined,
-		setDragging: (v: boolean) => void
+		setDragging: (v: boolean) => void,
+		divisions: number
 	) {
 		scope.activate();
 		scope.project.clear();
 
-		const { padding, paddingRect, anchor, handle, handleLine } = EDITOR_STYLE;
+		const { padding, paddingRect, anchor, handle, handleLine, grid } = EDITOR_STYLE;
 		const viewBounds = scope.view.bounds;
 
 		// Padding rectangle
@@ -177,6 +188,53 @@
 			fillColor: null
 		});
 		padRect.sendToBack();
+
+		// Grid — drawn inside the padded rect, behind the curve. Its spacing also defines
+		// the Shift-snap step, so anchors and handles snap exactly onto visible lines.
+		const gridLeft = viewBounds.x + padding;
+		const gridTop = viewBounds.y + padding;
+		const gridW = viewBounds.width - padding * 2;
+		const gridH = viewBounds.height - padding * 2;
+		const stepX = gridW / divisions;
+		const stepY = gridH / divisions;
+		const gridColor = new paper.Color(grid.strokeColor);
+		for (let i = 1; i < divisions; i++) {
+			const x = gridLeft + i * stepX;
+			const vLine = new paper.Path([
+				[x, gridTop],
+				[x, gridTop + gridH]
+			]);
+			vLine.strokeColor = gridColor;
+			vLine.strokeWidth = grid.strokeWidth;
+			const y = gridTop + i * stepY;
+			const hLine = new paper.Path([
+				[gridLeft, y],
+				[gridLeft + gridW, y]
+			]);
+			hLine.strokeColor = gridColor;
+			hLine.strokeWidth = grid.strokeWidth;
+		}
+
+		// paper's MouseEvent type omits `.event`, but the underlying DOM event is there at runtime.
+		function shiftHeld(ev: paper.MouseEvent): boolean {
+			return !!(ev as unknown as { event: MouseEvent }).event?.shiftKey;
+		}
+
+		// Snap a view-space point to the nearest grid intersection.
+		function snapToGrid(p: paper.Point): paper.Point {
+			return new paper.Point(
+				gridLeft + Math.round((p.x - gridLeft) / stepX) * stepX,
+				gridTop + Math.round((p.y - gridTop) / stepY) * stepY
+			);
+		}
+
+		// Target view position for a drag: while Shift is held, snap the ABSOLUTE cursor
+		// position (ev.point) to the grid — moving cell-to-cell as the cursor moves. Without
+		// Shift, accumulate the incremental delta for smooth free dragging. (Snapping a
+		// delta-accumulated position drifts from the cursor and feels broken.)
+		function dragTarget(ev: paper.MouseEvent, current: paper.Point): paper.Point {
+			return shiftHeld(ev) ? snapToGrid(ev.point) : current.add(ev.delta);
+		}
 
 		if (!path || path.cmds.length === 0) {
 			scope.view.update();
@@ -297,7 +355,7 @@
 				};
 
 				capturedOutCircle.onMouseDrag = (ev: paper.MouseEvent) => {
-					let newViewPos = capturedOutCircle.position.add(ev.delta);
+					let newViewPos = dragTarget(ev, capturedOutCircle.position);
 					newViewPos = clamp(newViewPos);
 
 					const newOrigPos = group.globalToLocal(newViewPos);
@@ -328,7 +386,7 @@
 				};
 
 				capturedInCircle.onMouseDrag = (ev: paper.MouseEvent) => {
-					let newViewPos = capturedInCircle.position.add(ev.delta);
+					let newViewPos = dragTarget(ev, capturedInCircle.position);
 					newViewPos = clamp(newViewPos);
 
 					const newOrigPos = group.globalToLocal(newViewPos);
@@ -373,7 +431,7 @@
 
 			circle.onMouseDrag = (ev: paper.MouseEvent) => {
 				// Compute new view-space position, clamped within padded bounds
-				let newViewPos = circle.position.add(ev.delta);
+				let newViewPos = dragTarget(ev, circle.position);
 				newViewPos = clamp(newViewPos);
 				circle.position = newViewPos;
 
@@ -401,12 +459,29 @@
 	}
 </script>
 
-<div class="w-full aspect-square bg-muted/50 rounded border flex items-center justify-center overflow-hidden relative">
-	<span class="absolute left-2 top-2 rounded bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-		{label}
-	</span>
-	{#if !templatePath}
-		<span class="text-xs text-muted-foreground absolute">Upload an SVG to preview</span>
-	{/if}
-	<canvas {@attach setupCanvas} width="200" height="200"></canvas>
+<div class="flex flex-col gap-1.5">
+	<div class="flex items-center gap-2">
+		<Slider
+			type="single"
+			min={GRID_MIN}
+			max={GRID_MAX}
+			step={1}
+			value={gridDivisions}
+			onValueChange={(v) => (gridDivisions = v)}
+			aria-label={m.tracciati_grid_density()}
+			data-testid="grid-density-slider"
+			class="w-24 shrink-0"
+		/>
+		<span class="text-[10px] leading-tight text-muted-foreground">
+			{m.tracciati_grid_snap_hint()}
+		</span>
+	</div>
+	<div
+		class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded border bg-muted/50"
+	>
+		{#if !templatePath}
+			<span class="absolute text-xs text-muted-foreground">Upload an SVG to preview</span>
+		{/if}
+		<canvas {@attach setupCanvas} width="320" height="320"></canvas>
+	</div>
 </div>

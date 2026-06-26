@@ -32,8 +32,6 @@
 	"editor_ring_drag": "Drag to reorder",
 	"editor_ring_label": "Ring {index}",
 	"editor_ring_delete": "Delete ring",
-	"editor_path_editor": "Path editor",
-	"editor_path_editor_secondary": "Path editor (secondary)",
 	"editor_create_morph": "Create morph target",
 	"editor_remove_morph": "Remove morph target",
 	"editor_morph_t": "Morph t: {value}",
@@ -191,5 +189,7 @@
 	"tracciati_create_curve": "Create curve",
 	"tracciati_points_editor": "Points editor",
 	"tracciati_duplicate": "Duplicate",
-	"tracciati_curve_name": "Curve name"
+	"tracciati_curve_name": "Curve name",
+	"tracciati_grid_density": "Grid density",
+	"tracciati_grid_snap_hint": "Hold SHIFT to snap to grid"
 }

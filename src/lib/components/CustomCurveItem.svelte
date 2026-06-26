@@ -2,8 +2,9 @@
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Input } from '$lib/shadcn/ui/input/index.js';
-	import { CaretDown, CaretRight, Trash, Copy } from 'phosphor-svelte';
+	import { CaretDown, CaretRight, Trash, Copy, PencilSimple } from 'phosphor-svelte';
 	import RingCanvas from './RingCanvas.svelte';
+	import PathThumbnail from './PathThumbnail.svelte';
 	import {
 		updateEntryPath,
 		renameEntry,
@@ -25,9 +26,21 @@
 
 	let editorOpen = $state(false);
 	let pendingDelete = $state(false);
+	let renaming = $state(false);
 
 	function handlePathChange(path: Path) {
 		updateEntryPath(entry.id, path);
+	}
+
+	function commitRename(value: string) {
+		renameEntry(entry.id, value);
+		renaming = false;
+	}
+
+	// Focus + select the rename field as soon as it mounts (when `renaming` flips on).
+	function autofocus(node: HTMLInputElement) {
+		node.focus();
+		node.select();
 	}
 </script>
 
@@ -37,15 +50,41 @@
 	data-testid="custom-curve-{entry.id}"
 >
 	<div class="flex items-center gap-1 p-1.5">
-		<Input
-			data-testid="custom-name-{entry.id}"
-			value={entry.name}
-			aria-label={m.tracciati_curve_name()}
-			class="h-7 flex-1 text-xs"
-			oninput={(e) => renameEntry(entry.id, (e.target as HTMLInputElement).value)}
-			onfocus={() => onselect(entry.id)}
-			onclick={() => onselect(entry.id)}
-		/>
+		{#if renaming}
+			<Input
+				{@attach autofocus}
+				data-testid="custom-rename-input-{entry.id}"
+				value={entry.name}
+				aria-label={m.tracciati_curve_name()}
+				class="h-7 flex-1 text-xs"
+				onblur={(e) => commitRename((e.target as HTMLInputElement).value)}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') commitRename((e.target as HTMLInputElement).value);
+					else if (e.key === 'Escape') renaming = false;
+				}}
+			/>
+		{:else}
+			<button
+				type="button"
+				data-testid="custom-name-{entry.id}"
+				aria-current={selected ? 'true' : undefined}
+				class="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-1 text-left text-xs hover:bg-muted"
+				onclick={() => onselect(entry.id)}
+			>
+				<PathThumbnail path={entry.path} secondaryPath={entry.secondaryPath} size={20} />
+				<span class="truncate">{entry.name}</span>
+			</button>
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-7 w-7 text-muted-foreground hover:text-foreground"
+				aria-label={m.tracciati_curve_name()}
+				data-testid="custom-rename-{entry.id}"
+				onclick={() => (renaming = true)}
+			>
+				<PencilSimple size={14} />
+			</Button>
+		{/if}
 		<Button
 			variant="ghost"
 			size="icon"
@@ -99,11 +138,7 @@
 			{m.tracciati_points_editor()}
 		</Collapsible.CollapsibleTrigger>
 		<Collapsible.CollapsibleContent class="px-2 pb-2" data-testid="custom-editor-{entry.id}">
-			<RingCanvas
-				templatePath={entry.path}
-				onchange={handlePathChange}
-				label={m.tracciati_points_editor()}
-			/>
+			<RingCanvas templatePath={entry.path} onchange={handlePathChange} />
 		</Collapsible.CollapsibleContent>
 	</Collapsible.Collapsible>
 </div>

@@ -34,6 +34,13 @@ describe('CustomCurveItem', () => {
 		expect(pathLibrary.entries.find((e) => e.id === 'u1')).toBeUndefined();
 	});
 
+	it('reveals the rename field when the pencil is clicked', async () => {
+		render(CustomCurveItem, { entry: ENTRY, selected: true, onselect: vi.fn() });
+		// name is a plain clickable row by default; the input only appears on rename
+		await page.getByTestId('custom-rename-u1').click();
+		await expect.element(page.getByTestId('custom-rename-input-u1')).toBeInTheDocument();
+	});
+
 	it('duplicates the entry', async () => {
 		render(CustomCurveItem, { entry: ENTRY, selected: true, onselect: vi.fn() });
 		await page.getByTestId('custom-duplicate-u1').click();

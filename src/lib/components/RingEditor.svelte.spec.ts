@@ -36,8 +36,9 @@ describe('RingEditor', () => {
 		expect(page.getByRole('button', { name: 'Create morph target' }).query()).toBeNull();
 		expect(page.getByRole('button', { name: 'Remove morph target' }).query()).toBeNull();
 		expect(page.getByRole('button', { name: 'Secondary' }).query()).toBeNull();
-		// The primary drawing + sizing controls stay.
-		await expect.element(page.getByText('Path editor', { exact: true })).toBeInTheDocument();
+		// The primary drawing + sizing controls stay. The RingCanvas editor is identified
+		// by its grid-density slider (the old "Path editor" badge was replaced by it).
+		await expect.element(page.getByTestId('grid-density-slider')).toBeInTheDocument();
 		await expect.element(page.getByText('Copies')).toBeInTheDocument();
 	});
 });

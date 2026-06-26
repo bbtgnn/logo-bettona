@@ -32,8 +32,6 @@
 	"editor_ring_drag": "Trascina per riordinare",
 	"editor_ring_label": "Anello {index}",
 	"editor_ring_delete": "Elimina anello",
-	"editor_path_editor": "Editor tracciato",
-	"editor_path_editor_secondary": "Editor tracciato (secondaria)",
 	"editor_create_morph": "Crea forma morph",
 	"editor_remove_morph": "Rimuovi forma morph",
 	"editor_morph_t": "Morph t: {value}",
@@ -191,5 +189,7 @@
 	"tracciati_create_curve": "Crea curva",
 	"tracciati_points_editor": "Editor punti",
 	"tracciati_duplicate": "Duplica",
-	"tracciati_curve_name": "Nome curva"
+	"tracciati_curve_name": "Nome curva",
+	"tracciati_grid_density": "Densità griglia",
+	"tracciati_grid_snap_hint": "Premi SHIFT per allineare alla griglia"
 }
