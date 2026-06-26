@@ -9,7 +9,8 @@
 		updateEntryPath,
 		renameEntry,
 		removeEntry,
-		duplicateEntry
+		duplicateEntry,
+		updateEntryGridOptions
 	} from '$lib/state/path-library';
 	import { m } from '$lib/paraglide/messages';
 	import type { PathLibraryEntry, Path } from '$lib/types';
@@ -139,7 +140,12 @@
 			{m.tracciati_points_editor()}
 		</Collapsible.CollapsibleTrigger>
 		<Collapsible.CollapsibleContent class="px-2 pb-2" data-testid="custom-editor-{entry.id}">
-			<RingCanvas templatePath={entry.path} onchange={handlePathChange} gridOptions={DEFAULT_GRID_OPTIONS} />
+			<RingCanvas
+				templatePath={entry.path}
+				onchange={handlePathChange}
+				gridOptions={entry.gridOptions ?? DEFAULT_GRID_OPTIONS}
+				ongridoptionschange={(o) => updateEntryGridOptions(entry.id, o)}
+			/>
 		</Collapsible.CollapsibleContent>
 	</Collapsible.Collapsible>
 </div>

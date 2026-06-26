@@ -46,4 +46,13 @@ describe('CustomCurveItem', () => {
 		await page.getByTestId('custom-duplicate-u1').click();
 		expect(pathLibrary.entries.filter((e) => !e.builtin)).toHaveLength(2);
 	});
+
+	it('persists a grid option toggle onto the entry', async () => {
+		render(CustomCurveItem, { entry: ENTRY, selected: true, onselect: vi.fn() });
+		// Expand the collapsible editor
+		await page.getByRole('button', { name: /points editor/i }).click();
+		await page.getByTestId('grid-snap-toggle').click();
+		const e = pathLibrary.entries.find((x) => x.id === 'u1')!;
+		expect(e.gridOptions).toEqual({ visible: true, snap: true, density: 8 });
+	});
 });
