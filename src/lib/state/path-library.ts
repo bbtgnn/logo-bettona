@@ -1,5 +1,5 @@
 import { lsSync } from 'rune-sync/localstorage';
-import type { Path, PathLibrary, PathLibraryEntry, Ring } from '$lib/types';
+import type { GridOptions, Path, PathLibrary, PathLibraryEntry, Ring } from '$lib/types';
 import { BUILTIN_CURVES } from './builtin-curves';
 
 export const pathLibrary = lsSync<PathLibrary>('path-library', { entries: [] });
@@ -80,6 +80,13 @@ export function duplicateEntry(source: PathLibraryEntry): PathLibraryEntry {
 export function updateEntryPath(id: string, path: Path): void {
 	pathLibrary.entries = pathLibrary.entries.map((e) =>
 		e.id === id && !e.builtin ? { ...e, path: clonePath(path) } : e
+	);
+}
+
+/** Replaces the grid options of a user entry. Builtins and unknown ids: no-op. */
+export function updateEntryGridOptions(id: string, opts: GridOptions): void {
+	pathLibrary.entries = pathLibrary.entries.map((e) =>
+		e.id === id && !e.builtin ? { ...e, gridOptions: { ...opts } } : e
 	);
 }
 

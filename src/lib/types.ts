@@ -77,7 +77,13 @@ export type PathLibraryEntry = {
 	secondaryPath: Path | null;
 	// Built-in default curves are author-provided and cannot be deleted by the user.
 	builtin?: boolean;
+	// Per-curve grid editor options; absent ⇒ DEFAULT_GRID_OPTIONS.
+	gridOptions?: GridOptions;
 };
+
+export type GridOptions = { visible: boolean; snap: boolean; density: number };
+
+export const DEFAULT_GRID_OPTIONS: GridOptions = { visible: true, snap: false, density: 8 };
 
 export type PathLibrary = {
 	entries: PathLibraryEntry[];
