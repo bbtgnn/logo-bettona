@@ -22,6 +22,9 @@
 	import type { Ring } from '$lib/types';
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+	import { DEFAULT_GRID_OPTIONS, type GridOptions } from '$lib/types';
+
+	let gridOptions = $state<GridOptions>({ ...DEFAULT_GRID_OPTIONS });
 
 	let {
 		ring,
@@ -149,7 +152,12 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
-			<RingCanvas templatePath={ring.templatePath} onchange={applyPathFromEditor} />
+			<RingCanvas
+				templatePath={ring.templatePath}
+				onchange={applyPathFromEditor}
+				{gridOptions}
+				ongridoptionschange={(o) => (gridOptions = o)}
+			/>
 
 			{#if ringPathError}
 				<p class="text-xs text-destructive">{ringPathError}</p>

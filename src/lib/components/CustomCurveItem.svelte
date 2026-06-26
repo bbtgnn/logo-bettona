@@ -13,6 +13,7 @@
 	} from '$lib/state/path-library';
 	import { m } from '$lib/paraglide/messages';
 	import type { PathLibraryEntry, Path } from '$lib/types';
+	import { DEFAULT_GRID_OPTIONS } from '$lib/types';
 
 	let {
 		entry,
@@ -138,7 +139,7 @@
 			{m.tracciati_points_editor()}
 		</Collapsible.CollapsibleTrigger>
 		<Collapsible.CollapsibleContent class="px-2 pb-2" data-testid="custom-editor-{entry.id}">
-			<RingCanvas templatePath={entry.path} onchange={handlePathChange} />
+			<RingCanvas templatePath={entry.path} onchange={handlePathChange} gridOptions={DEFAULT_GRID_OPTIONS} />
 		</Collapsible.CollapsibleContent>
 	</Collapsible.Collapsible>
 </div>
