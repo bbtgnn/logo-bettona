@@ -460,18 +460,23 @@
 </script>
 
 <div class="flex flex-col gap-1.5">
-	<div class="flex items-center gap-2">
-		<Slider
-			type="single"
-			min={GRID_MIN}
-			max={GRID_MAX}
-			step={1}
-			value={gridDivisions}
-			onValueChange={(v) => (gridDivisions = v)}
-			aria-label={m.tracciati_grid_density()}
-			data-testid="grid-density-slider"
-			class="w-24 shrink-0"
-		/>
+	<div class="flex items-end gap-2">
+		<div class="flex w-24 shrink-0 flex-col gap-1">
+			<span class="text-[10px] font-medium text-muted-foreground">
+				{m.tracciati_grid_density()}
+			</span>
+			<Slider
+				type="single"
+				min={GRID_MIN}
+				max={GRID_MAX}
+				step={1}
+				value={gridDivisions}
+				onValueChange={(v) => (gridDivisions = v)}
+				aria-label={m.tracciati_grid_density()}
+				data-testid="grid-density-slider"
+				class="w-full"
+			/>
+		</div>
 		<span class="text-[10px] leading-tight text-muted-foreground">
 			{m.tracciati_grid_snap_hint()}
 		</span>

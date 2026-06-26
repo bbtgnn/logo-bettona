@@ -190,3 +190,18 @@
 		display: none;
 	}
 }
+
+/* The SidebarNav pill (view-transition-name: sidebar-nav-pill) slides between
+   sections across navigations, including across the /paths ↔ (app) layout boundary. */
+::view-transition-group(sidebar-nav-pill) {
+	animation-duration: 300ms;
+	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+}
