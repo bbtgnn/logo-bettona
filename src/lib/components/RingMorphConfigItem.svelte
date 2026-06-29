@@ -13,6 +13,9 @@
 	import RingMorphPreview from './RingMorphPreview.svelte';
 	import type { Ring, PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+	import { DEFAULT_GRID_OPTIONS, type GridOptions } from '$lib/types';
+
+	let gridOptions = $state<GridOptions>({ ...DEFAULT_GRID_OPTIONS });
 
 	let { ring, index }: { ring: Ring; index: number } = $props();
 
@@ -105,7 +108,8 @@
 			<RingCanvas
 				templatePath={ring.secondaryTemplatePath}
 				onchange={applyPathFromEditor}
-				label={m.editor_path_editor_secondary()}
+				{gridOptions}
+				ongridoptionschange={(o) => (gridOptions = o)}
 			/>
 
 			{#if ringPathError}

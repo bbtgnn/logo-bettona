@@ -32,8 +32,6 @@
 	"editor_ring_drag": "Drag to reorder",
 	"editor_ring_label": "Ring {index}",
 	"editor_ring_delete": "Delete ring",
-	"editor_path_editor": "Path editor",
-	"editor_path_editor_secondary": "Path editor (secondary)",
 	"editor_create_morph": "Create morph target",
 	"editor_remove_morph": "Remove morph target",
 	"editor_morph_t": "Morph t: {value}",
@@ -185,5 +183,16 @@
 	"colors_background": "Background",
 	"colors_delete_palette": "Delete palette",
 	"colors_new_palette": "New palette",
-	"colors_reshuffle": "Reshuffle colors"
+	"colors_reshuffle": "Reshuffle colors",
+	"tracciati_default_group": "Base curves",
+	"tracciati_mine_group": "Custom curves",
+	"tracciati_create_curve": "Create curve",
+	"tracciati_points_editor": "Points editor",
+	"tracciati_duplicate": "Duplicate",
+	"tracciati_curve_name": "Curve name",
+	"tracciati_grid_density": "Grid density",
+	"tracciati_grid_options": "Grid options",
+	"tracciati_grid_visible": "Visible",
+	"tracciati_grid_snap": "Snap",
+	"tracciati_grid_constrain_hint": "Hold SHIFT to constrain to 45°"
 }

@@ -5,6 +5,7 @@ import type {
 	ColorMode,
 	FullPalette,
 	MonochromePalette,
+	Path,
 	Ring,
 	WaveState,
 	ZoneDrive
@@ -125,6 +126,29 @@ export function removeFullPalette(index: number) {
 
 export function addRing() {
 	composition.rings = [...composition.rings, { ...DEFAULT_RING, id: newRingId() }];
+	applyColorMode();
+}
+
+function clonePath(p: Path): Path {
+	return { cmds: [...p.cmds], crds: [...p.crds] };
+}
+
+/**
+ * Appends a ring seeded from a chosen curve. Used by the Tracciati landing flow:
+ * picking ("Usa") or finishing an edit ("Fatto") adds a ring carrying that curve.
+ * A secondary path makes it a morph pair (morphT = 1); without it the ring is static.
+ */
+export function addRingWithPath(path: Path, secondaryPath: Path | null = null): void {
+	const ring: Ring = {
+		id: newRingId(),
+		copies: 8,
+		color: '#000000',
+		templatePath: clonePath(path),
+		secondaryTemplatePath: secondaryPath ? clonePath(secondaryPath) : null,
+		morphT: secondaryPath ? 1 : 0,
+		ringHeight: 0.12
+	};
+	composition.rings = [...composition.rings, ring];
 	applyColorMode();
 }
 

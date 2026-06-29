@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
-	import WorkspaceNav from '$lib/components/WorkspaceNav.svelte';
+	import SidebarNav from '$lib/components/SidebarNav.svelte';
 	import PreviewCanvas from '$lib/components/PreviewCanvas.svelte';
 	import TimelinePanel from '$lib/components/TimelinePanel.svelte';
 	import LanguageSwitcher from '$lib/components/LanguageSwitcher.svelte';
@@ -17,6 +17,9 @@
 	<SidebarUI.SidebarProvider>
 		<SidebarUI.Sidebar>
 			<SidebarUI.SidebarContent class="divide-y divide-border" data-testid="sidebar-content">
+				<div class="p-2">
+					<SidebarNav />
+				</div>
 				{@render children()}
 			</SidebarUI.SidebarContent>
 		</SidebarUI.Sidebar>
@@ -24,7 +27,6 @@
 		<SidebarUI.SidebarInset>
 			<header class="flex items-center gap-2 border-b p-4">
 				<SidebarUI.SidebarTrigger />
-				<WorkspaceNav />
 				<div class="ml-auto flex items-center gap-3">
 					<LanguageSwitcher />
 					<a

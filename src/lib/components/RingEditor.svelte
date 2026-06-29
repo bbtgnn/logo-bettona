@@ -22,6 +22,9 @@
 	import type { Ring } from '$lib/types';
 	import type { PathLibraryEntry } from '$lib/types';
 	import type { ApplySlot } from '$lib/state/path-library';
+	import { DEFAULT_GRID_OPTIONS, type GridOptions } from '$lib/types';
+
+	let gridOptions = $state<GridOptions>({ ...DEFAULT_GRID_OPTIONS });
 
 	let {
 		ring,
@@ -152,7 +155,8 @@
 			<RingCanvas
 				templatePath={ring.templatePath}
 				onchange={applyPathFromEditor}
-				label={m.editor_path_editor()}
+				{gridOptions}
+				ongridoptionschange={(o) => (gridOptions = o)}
 			/>
 
 			{#if ringPathError}

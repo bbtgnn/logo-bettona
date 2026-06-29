@@ -1,20 +1,34 @@
 <script lang="ts">
 	import paper from 'paper';
-	import type { Path } from '$lib/types';
+	import type { GridOptions, Path } from '$lib/types';
+	import { Slider } from '$lib/shadcn/ui/slider/index.js';
+	import { Switch } from '$lib/shadcn/ui/switch/index.js';
+	import { snapToGrid, constrainTo45, type Grid, type Pt } from '$lib/geometry/grid-snap';
+	import { m } from '$lib/paraglide/messages';
 
 	const EDITOR_STYLE = {
-		anchor: { radius: 5, fillColor: 'white', strokeColor: 'black', strokeWidth: 1 },
-		handle: { radius: 3, fillColor: '#3b82f6' }, // blue accent
-		handleLine: { strokeColor: '#94a3b8', strokeWidth: 1 }, // muted
-		padding: 20,
-		paddingRect: { strokeColor: '#e2e8f0', strokeWidth: 1 } // very light
+		anchor: { radius: 6, fillColor: 'white', strokeColor: 'black', strokeWidth: 1.5 },
+		handle: { radius: 4, fillColor: '#3b82f6' },
+		handleLine: { strokeColor: '#94a3b8', strokeWidth: 1 },
+		grid: { strokeColor: '#cbd5e1', strokeWidth: 1 },
+		padding: 16,
+		paddingRect: { strokeColor: '#94a3b8', strokeWidth: 1 }
 	};
+
+	const GRID_MIN = 2;
+	const GRID_MAX = 16;
 
 	let {
 		templatePath,
 		onchange,
-		label = 'Path editor'
-	}: { templatePath: Path | null; onchange?: (path: Path) => void; label?: string } = $props();
+		gridOptions,
+		ongridoptionschange
+	}: {
+		templatePath: Path | null;
+		onchange?: (path: Path) => void;
+		gridOptions: GridOptions;
+		ongridoptionschange?: (opts: GridOptions) => void;
+	} = $props();
 
 	// --- Point transform helpers (local copy, not imported from experiments) ---
 
@@ -146,8 +160,9 @@
 		// `isDragging` is non-reactive; if it stays true (e.g. lost mouseup), remounting this
 		// canvas (e.g. its `templatePath` prop changes / the parent re-keys it) reruns draw.
 		$effect(() => {
+			const opts = gridOptions; // visible/density/snap — redraw when any change
 			if (!isDragging) {
-				draw(scope, templatePath, onchange, setDragging);
+				draw(scope, templatePath, onchange, setDragging, opts);
 			}
 		});
 
@@ -160,15 +175,15 @@
 		scope: paper.PaperScope,
 		path: Path | null,
 		onchangeCb: ((path: Path) => void) | undefined,
-		setDragging: (v: boolean) => void
+		setDragging: (v: boolean) => void,
+		opts: GridOptions
 	) {
 		scope.activate();
 		scope.project.clear();
 
-		const { padding, paddingRect, anchor, handle, handleLine } = EDITOR_STYLE;
+		const { padding, paddingRect, anchor, handle, handleLine, grid } = EDITOR_STYLE;
 		const viewBounds = scope.view.bounds;
 
-		// Padding rectangle
 		const padRect = new paper.Path.Rectangle({
 			point: [viewBounds.x + padding, viewBounds.y + padding],
 			size: [viewBounds.width - padding * 2, viewBounds.height - padding * 2],
@@ -177,6 +192,54 @@
 			fillColor: null
 		});
 		padRect.sendToBack();
+
+		// Grid geometry — used both for the (optional) visible grid and for snapping.
+		const gridLeft = viewBounds.x + padding;
+		const gridTop = viewBounds.y + padding;
+		const gridW = viewBounds.width - padding * 2;
+		const gridH = viewBounds.height - padding * 2;
+		const gridSpec: Grid = {
+			left: gridLeft,
+			top: gridTop,
+			stepX: gridW / opts.density,
+			stepY: gridH / opts.density
+		};
+
+		if (opts.visible) {
+			const gridColor = new paper.Color(grid.strokeColor);
+			for (let i = 1; i < opts.density; i++) {
+				const x = gridLeft + i * gridSpec.stepX;
+				const vLine = new paper.Path([
+					[x, gridTop],
+					[x, gridTop + gridH]
+				]);
+				vLine.strokeColor = gridColor;
+				vLine.strokeWidth = grid.strokeWidth;
+				const y = gridTop + i * gridSpec.stepY;
+				const hLine = new paper.Path([
+					[gridLeft, y],
+					[gridLeft + gridW, y]
+				]);
+				hLine.strokeColor = gridColor;
+				hLine.strokeWidth = grid.strokeWidth;
+			}
+		}
+
+		// paper's MouseEvent type omits `.event`; the DOM event is there at runtime.
+		function shiftHeld(ev: paper.MouseEvent): boolean {
+			return !!(ev as unknown as { event: MouseEvent }).event?.shiftKey;
+		}
+		const toPaper = (p: Pt) => new paper.Point(p.x, p.y);
+
+		// Resolve a drag target. `grab` keeps the cursor↔element offset so the point does
+		// not jump on grab. Shift constrains to 45° from `origin`; the Snap toggle snaps the
+		// result to the grid. Both compose: constrain first, then snap.
+		function resolveDrag(ev: paper.MouseEvent, grab: paper.Point, origin: paper.Point): paper.Point {
+			let t: paper.Point = ev.point.add(grab);
+			if (shiftHeld(ev)) t = toPaper(constrainTo45(origin, t));
+			if (opts.snap) t = toPaper(snapToGrid(t, gridSpec));
+			return t;
+		}
 
 		if (!path || path.cmds.length === 0) {
 			scope.view.update();
@@ -292,12 +355,15 @@
 			if (outCircle && outLine) {
 				const capturedOutCircle = outCircle;
 
-				capturedOutCircle.onMouseDown = () => {
+				let outGrab = new paper.Point(0, 0);
+				capturedOutCircle.onMouseDown = (ev: paper.MouseEvent) => {
 					setDragging(true);
+					outGrab = capturedOutCircle.position.subtract(ev.point);
 				};
 
 				capturedOutCircle.onMouseDrag = (ev: paper.MouseEvent) => {
-					let newViewPos = capturedOutCircle.position.add(ev.delta);
+					// 45° origin for a handle is its anchor.
+					let newViewPos = resolveDrag(ev, outGrab, group.localToGlobal(seg.point));
 					newViewPos = clamp(newViewPos);
 
 					const newOrigPos = group.globalToLocal(newViewPos);
@@ -323,12 +389,14 @@
 			if (inCircle && inLine) {
 				const capturedInCircle = inCircle;
 
-				capturedInCircle.onMouseDown = () => {
+				let inGrab = new paper.Point(0, 0);
+				capturedInCircle.onMouseDown = (ev: paper.MouseEvent) => {
 					setDragging(true);
+					inGrab = capturedInCircle.position.subtract(ev.point);
 				};
 
 				capturedInCircle.onMouseDrag = (ev: paper.MouseEvent) => {
-					let newViewPos = capturedInCircle.position.add(ev.delta);
+					let newViewPos = resolveDrag(ev, inGrab, group.localToGlobal(seg.point));
 					newViewPos = clamp(newViewPos);
 
 					const newOrigPos = group.globalToLocal(newViewPos);
@@ -367,13 +435,16 @@
 			// Capture segIdx in closure
 			const capturedSegIdx = segIdx;
 
-			circle.onMouseDown = () => {
+			let anchorGrab = new paper.Point(0, 0);
+			let anchorStart = circle.position.clone();
+			circle.onMouseDown = (ev: paper.MouseEvent) => {
 				setDragging(true);
+				anchorGrab = circle.position.subtract(ev.point);
+				anchorStart = circle.position.clone();
 			};
 
 			circle.onMouseDrag = (ev: paper.MouseEvent) => {
-				// Compute new view-space position, clamped within padded bounds
-				let newViewPos = circle.position.add(ev.delta);
+				let newViewPos = resolveDrag(ev, anchorGrab, anchorStart);
 				newViewPos = clamp(newViewPos);
 				circle.position = newViewPos;
 
@@ -401,12 +472,52 @@
 	}
 </script>
 
-<div class="w-full aspect-square bg-muted/50 rounded border flex items-center justify-center overflow-hidden relative">
-	<span class="absolute left-2 top-2 rounded bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
-		{label}
-	</span>
-	{#if !templatePath}
-		<span class="text-xs text-muted-foreground absolute">Upload an SVG to preview</span>
-	{/if}
-	<canvas {@attach setupCanvas} width="200" height="200"></canvas>
+<div class="flex flex-col gap-2">
+	<div
+		class="relative flex aspect-square w-full items-center justify-center overflow-hidden rounded border bg-muted/50"
+	>
+		{#if !templatePath}
+			<span class="absolute text-xs text-muted-foreground">Upload an SVG to preview</span>
+		{/if}
+		<canvas {@attach setupCanvas} width="320" height="320"></canvas>
+	</div>
+
+	<div class="flex flex-col gap-1.5">
+		<span class="text-[10px] font-medium text-muted-foreground">{m.tracciati_grid_options()}</span>
+		<label class="flex items-center justify-between text-xs">
+			<span>{m.tracciati_grid_visible()}</span>
+			<Switch
+				checked={gridOptions.visible}
+				onCheckedChange={(v) => ongridoptionschange?.({ ...gridOptions, visible: v })}
+				aria-label={m.tracciati_grid_visible()}
+				data-testid="grid-visible-toggle"
+			/>
+		</label>
+		<label class="flex items-center justify-between text-xs">
+			<span>{m.tracciati_grid_snap()}</span>
+			<Switch
+				checked={gridOptions.snap}
+				onCheckedChange={(v) => ongridoptionschange?.({ ...gridOptions, snap: v })}
+				aria-label={m.tracciati_grid_snap()}
+				data-testid="grid-snap-toggle"
+			/>
+		</label>
+		<label class="flex items-center gap-2 text-xs">
+			<span class="shrink-0">{m.tracciati_grid_density()}</span>
+			<Slider
+				type="single"
+				min={GRID_MIN}
+				max={GRID_MAX}
+				step={1}
+				value={gridOptions.density}
+				onValueChange={(v) => ongridoptionschange?.({ ...gridOptions, density: v })}
+				aria-label={m.tracciati_grid_density()}
+				data-testid="grid-density-slider"
+				class="w-full"
+			/>
+		</label>
+		<span class="text-[10px] leading-tight text-muted-foreground">
+			{m.tracciati_grid_constrain_hint()}
+		</span>
+	</div>
 </div>
