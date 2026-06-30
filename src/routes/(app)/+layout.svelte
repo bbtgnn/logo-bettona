@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import SidebarNav from '$lib/components/SidebarNav.svelte';
 	import PreviewCanvas from '$lib/components/PreviewCanvas.svelte';
@@ -30,7 +31,7 @@
 				<div class="ml-auto flex items-center gap-3">
 					<LanguageSwitcher />
 					<a
-						href="/about"
+						href={resolve('/about')}
 						class="text-sm text-muted-foreground hover:text-foreground"
 						data-testid="header-about-link"
 					>

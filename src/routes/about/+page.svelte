@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AboutHeroRing from '$lib/components/AboutHeroRing.svelte';
+	import { resolve } from '$app/paths';
 	import { m } from '$lib/paraglide/messages';
 </script>
 
@@ -9,7 +10,7 @@
 	<header class="border-b">
 		<div class="mx-auto flex max-w-[1100px] items-center px-6 py-3">
 			<a
-				href="/editor"
+				href={resolve('/editor')}
 				class="text-sm text-muted-foreground hover:text-foreground"
 				data-testid="about-back-link"
 			>
