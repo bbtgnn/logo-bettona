@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import { m } from '$lib/paraglide/messages';
 	import { BezierCurve, PencilSimple, FilmStrip } from 'phosphor-svelte';
 
 	const tabs = [
-		{ href: '/paths', label: () => m.nav_paths(), testid: 'nav-paths', Icon: BezierCurve },
-		{ href: '/editor', label: () => m.nav_editor(), testid: 'nav-editor', Icon: PencilSimple },
-		{ href: '/animate', label: () => m.nav_animate(), testid: 'nav-animate', Icon: FilmStrip }
+		{ href: resolve('/paths'), label: () => m.nav_paths(), testid: 'nav-paths', Icon: BezierCurve },
+		{ href: resolve('/editor'), label: () => m.nav_editor(), testid: 'nav-editor', Icon: PencilSimple },
+		{ href: resolve('/animate'), label: () => m.nav_animate(), testid: 'nav-animate', Icon: FilmStrip }
 	];
 
 	const pathname = $derived(page.url?.pathname ?? '');
