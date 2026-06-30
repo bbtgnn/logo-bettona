@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as SidebarUI from '$lib/shadcn/ui/sidebar/index.js';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
@@ -112,7 +113,7 @@
 				<div class="ml-auto flex items-center gap-3">
 					<LanguageSwitcher />
 					<a
-						href="/about"
+						href={resolve('/about')}
 						class="text-sm text-muted-foreground hover:text-foreground"
 						data-testid="header-about-link"
 					>
