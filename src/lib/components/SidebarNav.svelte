@@ -41,9 +41,9 @@
 			href={tab.href}
 			data-testid={tab.testid}
 			aria-current={pathname.startsWith(tab.href) ? 'page' : undefined}
-			class="relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-primary-foreground"
+			class="relative z-10 flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-primary-foreground"
 		>
-			<tab.Icon size={14} />
+			<tab.Icon size={12} class="shrink-0" />
 			{tab.label()}
 		</a>
 	{/each}
