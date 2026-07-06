@@ -20,6 +20,10 @@ _Avoid_: channel, curve, lane.
 A global on/off animation source over the whole timeline. The word spans three mechanisms, made explicit by `LAYER_KIND` in `animation.svelte.ts`: **driver** (audioBars, audioZones — register + activate a runtime driver), **gate** (kaleidoscope — its flag gates whether its `<layer>.*` keyframe params apply), **inert** (dataSeries — a parked placeholder, shown as unavailable, never runs). Distinct from a Ring.
 _Avoid_: track, effect.
 
+**Path / Path codec**:
+The persisted shape of a Ring template is a **Path**: `cmds` (an `M/L/Q/C/Z` list) plus a flat `crds` number array packed by command arity (`$lib/types`). The **Path codec** (`geometry/path-codec.ts`) is the single translation between a Path and a live `paper.Path` — `toPaperPath(path, scope)` and `fromPaperPath(paperPath)`. It is the one home for that conversion; the point editor, `bend`, and SVG import all go through it rather than re-walking `cmds`/`crds`. `bend.getSegments` deliberately stays separate: it reads the same Path but into polar-prep `SegmentData`, a different output.
+_Avoid_: for the codec — serializer, parser, adapter.
+
 **Template space / polar space**:
 A Ring's effect transforms run in two stages. **Template space** = the authored `(x, y)` bezier before bend; morph and wave apply here (unified in `composeRingTemplate`, pure). **Polar space** = after `buildRingPath` (`bend.ts`) maps `x → angle`, `y → radius`; zone deformation applies here, driven by `ring.zoneDrive`. Zone is polar-only by necessity — a template-space version is re-absorbed by bend's bbox normalization (see ADR-0001).
 _Avoid_: world space, screen space.
