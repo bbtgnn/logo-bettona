@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-test('tabs navigate between Editor, Animate and Paths', async ({ page }) => {
+test('tabs navigate between Editor, Composition, Animate and Paths', async ({ page }) => {
 	await page.goto('/editor');
 	await expect(page.getByTestId('nav-editor')).toHaveAttribute('aria-current', 'page');
+
+	await page.getByTestId('nav-composition').click();
+	await expect(page).toHaveURL(/\/composition$/);
+	await expect(page.getByTestId('nav-composition')).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByTestId('composition-placeholder')).toBeVisible();
 
 	await page.getByTestId('nav-animate').click();
 	await expect(page).toHaveURL(/\/animate$/);

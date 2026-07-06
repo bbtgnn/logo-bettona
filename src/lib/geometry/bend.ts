@@ -1,5 +1,6 @@
 import paper from 'paper';
 import type { Ring, Path } from '$lib/types';
+import { toPaperPath } from './path-codec';
 
 // Audio-zone deformation, applied in FINAL polar space (see buildRingPath). Radial
 // amounts are fractions of the ring radius so the tip travels outward toward the
@@ -22,7 +23,11 @@ const ZONE_TREBLE_TANG = 0.1; // inner: small tangential lean
  *  4. Mirror the half-arc about angle=0 to get the other half.
  *  5. Tile the full copy `ring.copies` times around the circle.
  */
-export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScope): paper.Path | null {
+export function buildRingPath(
+	ring: Ring,
+	radius: number,
+	scope: paper.PaperScope
+): paper.Path | null {
 	if (!ring.templatePath || ring.templatePath.cmds.length === 0) return null;
 
 	scope.activate();
@@ -30,7 +35,7 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 	const alpha = Math.PI / ring.copies; // arc half-angle per copy
 
 	// Build a temporary paper path to get the bounding box
-	const tmpPath = buildTempPath(ring.templatePath, scope);
+	const tmpPath = toPaperPath(ring.templatePath, scope);
 	const bbox = tmpPath.bounds;
 	tmpPath.remove();
 
@@ -86,8 +91,26 @@ export function buildRingPath(ring: Ring, radius: number, scope: paper.PaperScop
 			const mappedAngle = sign * anchorAngle;
 			const anchorPos = polarToCartesian(mappedAngle, anchorR);
 
-			const mappedHandleIn = transformHandle(seg.handleIn, anchorAngle, anchorR, sign, bbox, ring, radius, alpha);
-			const mappedHandleOut = transformHandle(seg.handleOut, anchorAngle, anchorR, sign, bbox, ring, radius, alpha);
+			const mappedHandleIn = transformHandle(
+				seg.handleIn,
+				anchorAngle,
+				anchorR,
+				sign,
+				bbox,
+				ring,
+				radius,
+				alpha
+			);
+			const mappedHandleOut = transformHandle(
+				seg.handleOut,
+				anchorAngle,
+				anchorR,
+				sign,
+				bbox,
+				ring,
+				radius,
+				alpha
+			);
 
 			return new paper.Segment(anchorPos, mappedHandleIn, mappedHandleOut);
 		});
@@ -164,7 +187,10 @@ function transformHandle(
 	const radialMag = -dy * ring.ringHeight * radius;
 
 	// Tangent direction at anchorAngle: perpendicular to radius, in direction of increasing angle
-	const tangentDir = new paper.Point(-Math.sin(sign * anchorAngle), Math.cos(sign * anchorAngle)).multiply(sign);
+	const tangentDir = new paper.Point(
+		-Math.sin(sign * anchorAngle),
+		Math.cos(sign * anchorAngle)
+	).multiply(sign);
 	// Radial direction: outward from center
 	const radialDir = new paper.Point(Math.cos(sign * anchorAngle), Math.sin(sign * anchorAngle));
 
@@ -272,57 +298,4 @@ function getSegments(p: Path): SegmentData[] {
 	}
 
 	return segs;
-}
-
-function buildTempPath(p: Path, scope: paper.PaperScope): paper.Path {
-	scope.activate();
-	const path = new paper.Path();
-	let ci = 0;
-	let currentPoint = new paper.Point(0, 0);
-
-	for (const cmd of p.cmds) {
-		switch (cmd) {
-			case 'M': {
-				const pt = new paper.Point(p.crds[ci], p.crds[ci + 1]);
-				path.moveTo(pt);
-				currentPoint = pt;
-				ci += 2;
-				break;
-			}
-			case 'L': {
-				const pt = new paper.Point(p.crds[ci], p.crds[ci + 1]);
-				path.lineTo(pt);
-				currentPoint = pt;
-				ci += 2;
-				break;
-			}
-			case 'Q': {
-				path.quadraticCurveTo(
-					new paper.Point(p.crds[ci], p.crds[ci + 1]),
-					new paper.Point(p.crds[ci + 2], p.crds[ci + 3])
-				);
-				currentPoint = new paper.Point(p.crds[ci + 2], p.crds[ci + 3]);
-				ci += 4;
-				break;
-			}
-			case 'C': {
-				path.cubicCurveTo(
-					new paper.Point(p.crds[ci], p.crds[ci + 1]),
-					new paper.Point(p.crds[ci + 2], p.crds[ci + 3]),
-					new paper.Point(p.crds[ci + 4], p.crds[ci + 5])
-				);
-				currentPoint = new paper.Point(p.crds[ci + 4], p.crds[ci + 5]);
-				ci += 6;
-				break;
-			}
-			case 'Z':
-				path.closePath();
-				break;
-		}
-	}
-
-	// suppress unused warning
-	void currentPoint;
-
-	return path;
 }

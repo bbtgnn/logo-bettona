@@ -2,11 +2,17 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { m } from '$lib/paraglide/messages';
-	import { BezierCurve, PencilSimple, FilmStrip } from 'phosphor-svelte';
+	import { BezierCurve, PencilSimple, Stack, FilmStrip } from 'phosphor-svelte';
 
 	const tabs = [
 		{ href: resolve('/paths'), label: () => m.nav_paths(), testid: 'nav-paths', Icon: BezierCurve },
 		{ href: resolve('/editor'), label: () => m.nav_editor(), testid: 'nav-editor', Icon: PencilSimple },
+		{
+			href: resolve('/composition'),
+			label: () => m.nav_composition(),
+			testid: 'nav-composition',
+			Icon: Stack
+		},
 		{ href: resolve('/animate'), label: () => m.nav_animate(), testid: 'nav-animate', Icon: FilmStrip }
 	];
 
@@ -36,9 +42,9 @@
 			href={tab.href}
 			data-testid={tab.testid}
 			aria-current={pathname.startsWith(tab.href) ? 'page' : undefined}
-			class="relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-primary-foreground"
+			class="relative z-10 flex flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-md px-1 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:font-semibold aria-[current=page]:text-primary-foreground"
 		>
-			<tab.Icon size={14} />
+			<tab.Icon size={12} class="shrink-0" />
 			{tab.label()}
 		</a>
 	{/each}
