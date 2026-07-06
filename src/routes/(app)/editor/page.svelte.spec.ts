@@ -13,9 +13,9 @@ describe('Editor page', () => {
 		await expect.element(page.getByText('Animation', { exact: true })).not.toBeInTheDocument();
 	});
 
-	it('shows the kaleidoscope section without stopwatches (static, not animatable)', async () => {
+	it('no longer shows the kaleidoscope panel', async () => {
 		render(EditorPage);
-		await expect.element(page.getByLabelText('Kaleidoscope mode')).toBeInTheDocument();
-		expect(page.getByLabelText('Animate Global rotation').query()).toBeNull();
+		expect(page.getByText('Kaleidoscope', { exact: true }).query()).toBeNull();
+		expect(page.getByLabelText('Sectors', { exact: true }).query()).toBeNull();
 	});
 });

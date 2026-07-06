@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import SettingsSection from '$lib/components/SettingsSection.svelte';
-	import KaleidoscopeSection from '$lib/components/KaleidoscopeSection.svelte';
 	import RingEditor from '$lib/components/RingEditor.svelte';
 	import ColorsSection from '$lib/components/ColorsSection.svelte';
 	import SidebarCollapsible from '$lib/components/SidebarCollapsible.svelte';
@@ -61,7 +60,5 @@
 		{/if}
 	{/snippet}
 </SidebarCollapsible>
-
-<KaleidoscopeSection animatable={false} />
 
 <ColorsSection />
