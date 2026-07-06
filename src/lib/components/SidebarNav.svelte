@@ -1,11 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
-	import { BezierCurve, PencilSimple, FilmStrip } from 'phosphor-svelte';
+	import { BezierCurve, PencilSimple, Stack, FilmStrip } from 'phosphor-svelte';
 
 	const tabs = [
 		{ href: '/paths', label: () => m.nav_paths(), testid: 'nav-paths', Icon: BezierCurve },
 		{ href: '/editor', label: () => m.nav_editor(), testid: 'nav-editor', Icon: PencilSimple },
+		{
+			href: '/composition',
+			label: () => m.nav_composition(),
+			testid: 'nav-composition',
+			Icon: Stack
+		},
 		{ href: '/animate', label: () => m.nav_animate(), testid: 'nav-animate', Icon: FilmStrip }
 	];
 
