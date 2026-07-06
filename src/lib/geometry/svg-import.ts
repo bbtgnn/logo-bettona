@@ -1,5 +1,6 @@
 import paper from 'paper';
 import type { Path } from '$lib/types';
+import { fromPaperPath } from './path-codec';
 
 export type Preprocessor = (item: paper.Item) => paper.Item;
 
@@ -50,54 +51,10 @@ export function importSvgFromString(svgText: string, scope: paper.PaperScope): P
 	// Flatten all transforms into absolute coordinates
 	pathItem.applyMatrix = true;
 
-	return segmentsToPath(pathItem);
+	return fromPaperPath(pathItem);
 }
 
 function findFirstPath(item: paper.Item): paper.Path | null {
 	if (item instanceof paper.Path) return item;
 	return item.getItem({ class: paper.Path }) as paper.Path | null;
-}
-
-function segmentsToPath(path: paper.Path): Path {
-	const cmds: Path['cmds'] = [];
-	const crds: number[] = [];
-
-	const segs = path.segments;
-	if (segs.length === 0) return { cmds, crds };
-
-	// Move to first point
-	cmds.push('M');
-	crds.push(segs[0].point.x, segs[0].point.y);
-
-	for (let i = 1; i < segs.length; i++) {
-		emitSegment(segs[i - 1], segs[i], cmds, crds);
-	}
-
-	// Close path: segment from last back to first
-	if (path.closed) {
-		emitSegment(segs[segs.length - 1], segs[0], cmds, crds);
-		cmds.push('Z');
-	}
-
-	return { cmds, crds };
-}
-
-function emitSegment(
-	from: paper.Segment,
-	to: paper.Segment,
-	cmds: Path['cmds'],
-	crds: number[]
-): void {
-	const hasHandles = !from.handleOut.isZero() || !to.handleIn.isZero();
-
-	if (hasHandles) {
-		// Cubic bezier: control points are absolute
-		const cp1 = from.point.add(from.handleOut);
-		const cp2 = to.point.add(to.handleIn);
-		cmds.push('C');
-		crds.push(cp1.x, cp1.y, cp2.x, cp2.y, to.point.x, to.point.y);
-	} else {
-		cmds.push('L');
-		crds.push(to.point.x, to.point.y);
-	}
 }

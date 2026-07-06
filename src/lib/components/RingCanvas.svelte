@@ -4,6 +4,7 @@
 	import { Slider } from '$lib/shadcn/ui/slider/index.js';
 	import { Switch } from '$lib/shadcn/ui/switch/index.js';
 	import { snapToGrid, constrainTo45, type Grid, type Pt } from '$lib/geometry/grid-snap';
+	import { toPaperPath, fromPaperPath } from '$lib/geometry/path-codec';
 	import { m } from '$lib/paraglide/messages';
 
 	const EDITOR_STYLE = {
@@ -55,81 +56,6 @@
 			}
 			// Z: no segment
 		}
-		return result;
-	}
-
-	function emitSeg(
-		from: paper.Segment,
-		to: paper.Segment,
-		cmds: Path['cmds'],
-		crds: number[]
-	): void {
-		if (!from.handleOut.isZero() || !to.handleIn.isZero()) {
-			const cp1 = from.point.add(from.handleOut);
-			const cp2 = to.point.add(to.handleIn);
-			cmds.push('C');
-			crds.push(cp1.x, cp1.y, cp2.x, cp2.y, to.point.x, to.point.y);
-		} else {
-			cmds.push('L');
-			crds.push(to.point.x, to.point.y);
-		}
-	}
-
-	function paperPathToPath(pp: paper.Path): Path {
-		const cmds: Path['cmds'] = [];
-		const crds: number[] = [];
-		const segs = pp.segments;
-		if (segs.length === 0) return { cmds, crds };
-
-		cmds.push('M');
-		crds.push(segs[0].point.x, segs[0].point.y);
-
-		for (let i = 1; i < segs.length; i++) {
-			emitSeg(segs[i - 1], segs[i], cmds, crds);
-		}
-		if (pp.closed) {
-			emitSeg(segs[segs.length - 1], segs[0], cmds, crds);
-			cmds.push('Z');
-		}
-		return { cmds, crds };
-	}
-
-	function buildPaperPath(p: Path, s: paper.PaperScope): paper.Path {
-		s.activate();
-		const result = new paper.Path();
-		let ci = 0;
-
-		for (const cmd of p.cmds) {
-			switch (cmd) {
-				case 'M':
-					result.moveTo(new paper.Point(p.crds[ci], p.crds[ci + 1]));
-					ci += 2;
-					break;
-				case 'L':
-					result.lineTo(new paper.Point(p.crds[ci], p.crds[ci + 1]));
-					ci += 2;
-					break;
-				case 'Q':
-					result.quadraticCurveTo(
-						new paper.Point(p.crds[ci], p.crds[ci + 1]),
-						new paper.Point(p.crds[ci + 2], p.crds[ci + 3])
-					);
-					ci += 4;
-					break;
-				case 'C':
-					result.cubicCurveTo(
-						new paper.Point(p.crds[ci], p.crds[ci + 1]),
-						new paper.Point(p.crds[ci + 2], p.crds[ci + 3]),
-						new paper.Point(p.crds[ci + 4], p.crds[ci + 5])
-					);
-					ci += 6;
-					break;
-				case 'Z':
-					result.closePath();
-					break;
-			}
-		}
-
 		return result;
 	}
 
@@ -234,7 +160,11 @@
 		// Resolve a drag target. `grab` keeps the cursor↔element offset so the point does
 		// not jump on grab. Shift constrains to 45° from `origin`; the Snap toggle snaps the
 		// result to the grid. Both compose: constrain first, then snap.
-		function resolveDrag(ev: paper.MouseEvent, grab: paper.Point, origin: paper.Point): paper.Point {
+		function resolveDrag(
+			ev: paper.MouseEvent,
+			grab: paper.Point,
+			origin: paper.Point
+		): paper.Point {
 			let t: paper.Point = ev.point.add(grab);
 			if (shiftHeld(ev)) t = toPaper(constrainTo45(origin, t));
 			if (opts.snap) t = toPaper(snapToGrid(t, gridSpec));
@@ -247,7 +177,7 @@
 		}
 
 		// Build the path in original coordinate space
-		const paperPath = buildPaperPath(path, scope);
+		const paperPath = toPaperPath(path, scope);
 		paperPath.strokeColor = new paper.Color(0, 0, 0);
 		paperPath.fillColor = null;
 		paperPath.strokeWidth = 1;
@@ -348,7 +278,7 @@
 				inCircle.strokeColor = null;
 			}
 
-				// Register into map so anchor drag can sync these items
+			// Register into map so anchor drag can sync these items
 			handleItems.set(segIdx, { outCircle, outLine, inCircle, inLine });
 
 			// Assign drag handlers with cross-references for smooth mirroring
@@ -375,7 +305,7 @@
 					}
 
 					syncHandleItems(segIdx);
-					onchangeCb?.(paperPathToPath(paperPath));
+					onchangeCb?.(fromPaperPath(paperPath));
 					scope.view.update();
 				};
 
@@ -408,7 +338,7 @@
 					}
 
 					syncHandleItems(segIdx);
-					onchangeCb?.(paperPathToPath(paperPath));
+					onchangeCb?.(fromPaperPath(paperPath));
 					scope.view.update();
 				};
 
@@ -456,7 +386,7 @@
 				syncHandleItems(capturedSegIdx);
 
 				// Emit updated path
-				onchangeCb?.(paperPathToPath(paperPath));
+				onchangeCb?.(fromPaperPath(paperPath));
 
 				scope.view.update();
 			};
