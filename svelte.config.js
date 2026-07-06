@@ -13,7 +13,10 @@ const config = {
 			return isExternalLibrary ? undefined : true;
 		}
 	},
-	kit: { adapter: adapter() }
+	kit: {
+		adapter: adapter({ fallback: '404.html' }),
+		paths: { base: process.env.BASE_PATH ?? '' }
+	}
 };
 
 export default config;

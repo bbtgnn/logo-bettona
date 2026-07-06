@@ -11,7 +11,7 @@
 
 	let { children } = $props();
 
-	const isAnimate = $derived((page.url?.pathname ?? '').startsWith('/animate'));
+	const isAnimate = $derived((page.url?.pathname ?? '').startsWith(resolve('/animate')));
 </script>
 
 {#key currentLocale()}
