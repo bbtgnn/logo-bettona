@@ -14,8 +14,12 @@ describe('Animate page', () => {
 		await expect.element(page.getByTestId('layer-toggle-audioZones')).toBeInTheDocument();
 	});
 
-	it('shows the kaleidoscope section with stopwatches (animatable)', async () => {
+	it('shows the kaleidoscope audio section but no static sliders', async () => {
 		render(AnimatePage);
-		await expect.element(page.getByLabelText('Animate Global rotation')).toBeInTheDocument();
+		await expect
+			.element(page.getByTestId('layer-toggle-kaleidoscope'))
+			.toBeInTheDocument();
+		expect(page.getByLabelText('Animate Global rotation').query()).toBeNull();
+		expect(page.getByLabelText('Sectors', { exact: true }).query()).toBeNull();
 	});
 });
