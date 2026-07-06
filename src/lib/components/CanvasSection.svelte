@@ -14,19 +14,33 @@
 	{/snippet}
 
 	{#snippet content()}
-		<div class="flex flex-col gap-1">
-			<Label for="canvas-ratio" class="text-xs">{m.editor_aspect_ratio()}</Label>
-			<select
-				id="canvas-ratio"
-				class="h-9 w-full rounded-md border border-input bg-background py-1 text-xs disabled:opacity-50"
-				value={composition.aspectRatio}
-				disabled={exportStatus.rendering}
-				onchange={(e) => setAspectRatio((e.target as HTMLSelectElement).value as AspectRatio)}
-			>
-				{#each ASPECT_RATIOS as ratio (ratio)}
-					<option value={ratio}>{ratio}</option>
-				{/each}
-			</select>
+		<div class="flex flex-col gap-3">
+			<div class="flex flex-col gap-1">
+				<Label for="canvas-ratio" class="text-xs">{m.editor_aspect_ratio()}</Label>
+				<select
+					id="canvas-ratio"
+					class="h-9 w-full rounded-md border border-input bg-background py-1 text-xs disabled:opacity-50"
+					value={composition.aspectRatio}
+					disabled={exportStatus.rendering}
+					onchange={(e) => setAspectRatio((e.target as HTMLSelectElement).value as AspectRatio)}
+				>
+					{#each ASPECT_RATIOS as ratio (ratio)}
+						<option value={ratio}>{ratio}</option>
+					{/each}
+				</select>
+			</div>
+
+			<!-- Reserved space for a future print-format control (disabled, no logic yet). -->
+			<div class="flex flex-col gap-1">
+				<Label for="canvas-print-format" class="text-xs">{m.composition_print_format()}</Label>
+				<select
+					id="canvas-print-format"
+					class="h-9 w-full rounded-md border border-input bg-background py-1 text-xs disabled:opacity-50"
+					disabled
+				>
+					<option>{m.composition_coming_soon()}</option>
+				</select>
+			</div>
 		</div>
 	{/snippet}
 </SidebarCollapsible>

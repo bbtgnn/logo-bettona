@@ -7,7 +7,8 @@ test('tabs navigate between Editor, Composition, Animate and Paths', async ({ pa
 	await page.getByTestId('nav-composition').click();
 	await expect(page).toHaveURL(/\/composition$/);
 	await expect(page.getByTestId('nav-composition')).toHaveAttribute('aria-current', 'page');
-	await expect(page.getByTestId('composition-placeholder')).toBeVisible();
+	// Composition now shows the Canvas panel over the shared preview, not a placeholder.
+	await expect(page.getByTestId('app-canvas')).toBeVisible();
 
 	await page.getByTestId('nav-animate').click();
 	await expect(page).toHaveURL(/\/animate$/);

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import SettingsSection from '$lib/components/SettingsSection.svelte';
-	import CanvasSection from '$lib/components/CanvasSection.svelte';
 	import KaleidoscopeSection from '$lib/components/KaleidoscopeSection.svelte';
 	import RingEditor from '$lib/components/RingEditor.svelte';
 	import ColorsSection from '$lib/components/ColorsSection.svelte';
@@ -34,7 +33,6 @@
 </script>
 
 <SettingsSection />
-<CanvasSection />
 
 <SidebarCollapsible>
 	{#snippet trigger()}
