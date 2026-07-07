@@ -16,6 +16,7 @@ import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
 import { composition } from './composition-persistence.svelte';
 import { newRingId } from './ring-id';
+import { DEFAULT_RING_PATH } from './default';
 
 export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
@@ -63,14 +64,7 @@ export function setPaletteBackground(color: string) {
 const DEFAULT_RING: Omit<Ring, 'id'> = {
 	copies: 8,
 	color: '#000000',
-	templatePath: {
-		cmds: ['M', 'C', 'C'],
-		crds: [
-			20, 117.61326806392421, 59, 117.50800490602947, 32.43817613081838, 82.72961144836285,
-			61.688995215311024, 62.77907643368346, 83.43200751345759, 47.9492445945898, 101,
-			66.54953384995142, 180, 67.38673193607579
-		]
-	},
+	templatePath: DEFAULT_RING_PATH,
 	secondaryTemplatePath: null,
 	morphT: 0,
 	ringHeight: 0.12

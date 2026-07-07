@@ -3,6 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import PathsPage from './+page.svelte';
 import { pathLibrary, updateEntryPath } from '$lib/state/path-library';
+import { composition } from '$lib/state/composition';
+import { newRingId } from '$lib/state/ring-id';
 
 describe('Tracciati v2 page', () => {
 	beforeEach(async () => {
@@ -39,5 +41,47 @@ describe('Tracciati v2 page', () => {
 		// the live-resolved entry (what the preview reads) carries the new path
 		const live = pathLibrary.entries.find((e) => e.id === draft.id)!;
 		expect(live.path).toEqual(NEW);
+	});
+
+	it('opens the apply sheet from the "Use this curve" button', async () => {
+		render(PathsPage);
+		await page.getByTestId('tracciati-apply').click();
+		await expect.element(page.getByTestId('apply-confirm')).toBeInTheDocument();
+	});
+
+	it('applying to a new ring appends a ring carrying the selected curve', async () => {
+		composition.rings = [];
+		render(PathsPage);
+		// selected falls back to builtins[0]; capture its path before applying.
+		await page.getByTestId('base-curve-builtin-0').click();
+		const curve = pathLibrary.entries.find((e) => e.id === 'builtin-0')!;
+		await page.getByTestId('tracciati-apply').click();
+		await page.getByTestId('apply-target-new').click();
+		await page.getByTestId('apply-confirm').click();
+		expect(composition.rings).toHaveLength(1);
+		expect(composition.rings[0].templatePath).toEqual(curve.path);
+	});
+
+	it('applying to an existing ring replaces its primary curve, keeping copies', async () => {
+		composition.rings = [
+			{
+				id: newRingId(),
+				copies: 12,
+				color: '#000',
+				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 1, 1] },
+				secondaryTemplatePath: null,
+				morphT: 0,
+				ringHeight: 0.1
+			}
+		];
+		render(PathsPage);
+		await page.getByTestId('base-curve-builtin-0').click();
+		const curve = pathLibrary.entries.find((e) => e.id === 'builtin-0')!;
+		await page.getByTestId('tracciati-apply').click();
+		await page.getByTestId('apply-target-existing-0').click();
+		await page.getByTestId('apply-confirm').click();
+		expect(composition.rings).toHaveLength(1);
+		expect(composition.rings[0].templatePath).toEqual(curve.path);
+		expect(composition.rings[0].copies).toBe(12);
 	});
 });

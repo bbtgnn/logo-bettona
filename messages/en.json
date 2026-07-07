@@ -152,9 +152,9 @@
 	"library_title": "Load from library",
 	"library_desc": "Choose a saved path and the slot to overwrite.",
 	"library_empty": "Empty library. Save from the Ring Editor first.",
-	"apply_title": "Apply to mark",
-	"apply_desc": "Choose the ring and the slot to apply the shape to.",
-	"apply_ring_label": "Ring",
+	"apply_title": "Apply curve",
+	"apply_desc": "Choose the ring to update, or create a new ring.",
+	"apply_target_new": "New ring",
 	"paths_page_title": "Path Library — logo-bettona",
 	"paths_empty_saved": "No saved path yet. Save from the Ring Editor.",
 	"paths_new_name": "New name",
@@ -208,5 +208,6 @@
 	"tracciati_grid_options": "Grid options",
 	"tracciati_grid_visible": "Visible",
 	"tracciati_grid_snap": "Snap",
-	"tracciati_grid_constrain_hint": "Hold SHIFT to constrain to 45°"
+	"tracciati_grid_constrain_hint": "Hold SHIFT to constrain to 45°",
+	"tracciati_apply": "Use this curve"
 }
