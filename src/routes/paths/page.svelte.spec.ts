@@ -62,11 +62,10 @@ describe('Tracciati v2 page', () => {
 		expect(composition.rings[0].templatePath).toEqual(curve.path);
 	});
 
-	it('applying to an existing ring replaces its primary curve, keeping copies', async () => {
+	it('applying to an existing ring replaces its primary curve, preserving other ring fields', async () => {
 		composition.rings = [
 			{
 				id: newRingId(),
-				copies: 12,
 				color: '#000',
 				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 1, 1] },
 				secondaryTemplatePath: null,
@@ -82,6 +81,6 @@ describe('Tracciati v2 page', () => {
 		await page.getByTestId('apply-confirm').click();
 		expect(composition.rings).toHaveLength(1);
 		expect(composition.rings[0].templatePath).toEqual(curve.path);
-		expect(composition.rings[0].copies).toBe(12);
+		expect(composition.rings[0].ringHeight).toBe(0.1);
 	});
 });

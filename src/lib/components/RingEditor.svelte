@@ -2,16 +2,20 @@
 	import paper from 'paper';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import { Slider } from '$lib/shadcn/ui/slider/index.js';
-	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
-	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
+	import { Input } from '$lib/shadcn/ui/input/index.js';
+	import { CaretDown, CaretRight, Copy, Trash, DotsSixVertical } from 'phosphor-svelte';
 	import {
 		updateRing,
+		renameRing,
 		setRingExpanded,
 		isRingExpanded,
 		colorMode,
-		updateRingPathVariant
+		duplicateRing,
+		updateRingPathVariant,
+		setRingIncrementOverride,
+		composition
 	} from '$lib/state/composition';
 	import { removeRing } from '$lib/state/animation';
 	import { importSvg } from '$lib/geometry/svg-import';
@@ -138,8 +142,18 @@
 				{:else}
 					<CaretRight size={14} />
 				{/if}
-				{m.editor_ring_label({ index: index + 1 })}
+				{ring.name?.trim() ? ring.name : m.editor_ring_label({ index: index + 1 })}
 			</Collapsible.CollapsibleTrigger>
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-6 w-6 text-muted-foreground hover:text-foreground"
+				onclick={() => duplicateRing(index)}
+				aria-label={m.editor_ring_duplicate()}
+				data-testid="ring-duplicate-{index}"
+			>
+				<Copy size={14} />
+			</Button>
 			<Button
 				variant="ghost"
 				size="icon"
@@ -152,6 +166,18 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
+			<div class="flex flex-col gap-1">
+				<Label for="ring-name-{index}" class="text-xs">{m.editor_ring_name()}</Label>
+				<Input
+					id="ring-name-{index}"
+					type="text"
+					value={ring.name ?? ''}
+					placeholder={m.editor_ring_label({ index: index + 1 })}
+					oninput={(e) => renameRing(index, (e.target as HTMLInputElement).value)}
+					data-testid="ring-name-{index}"
+				/>
+			</div>
+
 			<RingCanvas
 				templatePath={ring.templatePath}
 				onchange={applyPathFromEditor}
@@ -210,20 +236,6 @@
 				{/if}
 			</div>
 
-			<div class="flex flex-col gap-1">
-				<Label for="copies-{index}" class="text-xs">{m.editor_copies()}</Label>
-				<Input
-					id="copies-{index}"
-					type="number"
-					min="1"
-					value={ring.copies}
-					oninput={(e) =>
-						updateRing(index, {
-							copies: Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1)
-						})}
-				/>
-			</div>
-
 			<div class="flex flex-col gap-2">
 				<Label class="text-xs"
 					>{m.editor_ring_height()}
@@ -251,6 +263,43 @@
 							class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
 						/>
 						<span class="font-mono text-xs text-muted-foreground">{ring.color}</span>
+					</div>
+				</div>
+			{/if}
+
+			{#if index > 0}
+				<div class="flex flex-col gap-1">
+					<Label class="text-xs">{m.editor_ring_increment()}</Label>
+					<div class="flex items-center gap-2">
+						<input
+							id="increment-override-{index}"
+							type="checkbox"
+							data-testid="ring-increment-override-toggle-{index}"
+							checked={ring.incrementOverride != null}
+							onchange={(e) =>
+								setRingIncrementOverride(
+									index,
+									(e.target as HTMLInputElement).checked ? composition.ringIncrement : null
+								)}
+						/>
+						<Label for="increment-override-{index}" class="text-xs"
+							>{m.editor_increment_override()}</Label
+						>
+						{#if ring.incrementOverride != null}
+							<Input
+								type="number"
+								min="0"
+								class="w-20"
+								data-testid="ring-increment-override-input-{index}"
+								value={ring.incrementOverride}
+								oninput={(e) =>
+									setRingIncrementOverride(index, Number((e.target as HTMLInputElement).value))}
+							/>
+						{:else}
+							<span class="text-xs text-muted-foreground">
+								{m.editor_increment_global_hint({ value: composition.ringIncrement })}
+							</span>
+						{/if}
 					</div>
 				</div>
 			{/if}

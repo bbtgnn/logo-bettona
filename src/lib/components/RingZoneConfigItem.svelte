@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { updateRing } from '$lib/state/composition';
+	import { composition, updateRing } from '$lib/state/composition';
 	import { resolveZoneIntensity } from '$lib/geometry/zones';
 	import { m } from '$lib/paraglide/messages';
 	import ZonePreview from './ZonePreview.svelte';
@@ -73,7 +73,7 @@
 	{#snippet preview()}
 		<ZonePreview
 			template={ring.templatePath ?? null}
-			copies={ring.copies ?? 1}
+			copies={composition.copies}
 			ringHeight={ring.ringHeight ?? 0.4}
 			intensity={resolved}
 		/>

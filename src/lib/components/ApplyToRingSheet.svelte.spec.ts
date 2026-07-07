@@ -28,7 +28,6 @@ function entry(): PathLibraryEntry {
 function ring(): Ring {
 	return {
 		id: newRingId(),
-		copies: 8,
 		color: '#000',
 		templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
 		secondaryTemplatePath: null,

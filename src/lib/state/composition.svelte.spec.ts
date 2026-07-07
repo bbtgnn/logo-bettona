@@ -4,6 +4,7 @@ import type { Composition, ColorModeState, Path, Ring } from '$lib/types';
 const initialComposition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 50,
+	copies: 8,
 	aspectRatio: '1:1',
 	rings: [],
 	monochromePalettes: [{ primary: '#000000', secondary: '#ffffff', background: '#ffffff' }],
@@ -143,7 +144,7 @@ describe('ensureRingIds', () => {
 
 	it('mints an id for rings missing one', async () => {
 		const { ensureRingIds } = await import('./composition-persistence.svelte');
-		const out = ensureRingIds(base([{ copies: 8 }, { copies: 4 }]));
+		const out = ensureRingIds(base([{}, {}]));
 		expect(out.rings[0].id.length).toBeGreaterThan(0);
 		expect(out.rings[1].id.length).toBeGreaterThan(0);
 		expect(out.rings[0].id).not.toBe(out.rings[1].id);
@@ -151,7 +152,7 @@ describe('ensureRingIds', () => {
 
 	it('preserves an existing id', async () => {
 		const { ensureRingIds } = await import('./composition-persistence.svelte');
-		const out = ensureRingIds(base([{ id: 'keep-me', copies: 8 }]));
+		const out = ensureRingIds(base([{ id: 'keep-me' }]));
 		expect(out.rings[0].id).toBe('keep-me');
 	});
 });

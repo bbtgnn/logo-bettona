@@ -21,18 +21,19 @@ const ZONE_TREBLE_TANG = 0.1; // inner: small tangential lean
  *  2. Map each anchor: x → angle in [0, alpha], y → radius in [r*(1-h), r].
  *  3. Transform each handle using tangent-space decomposition at its anchor.
  *  4. Mirror the half-arc about angle=0 to get the other half.
- *  5. Tile the full copy `ring.copies` times around the circle.
+ *  5. Tile the full copy `copies` times around the circle.
  */
 export function buildRingPath(
 	ring: Ring,
 	radius: number,
+	copies: number,
 	scope: paper.PaperScope
 ): paper.Path | null {
 	if (!ring.templatePath || ring.templatePath.cmds.length === 0) return null;
 
 	scope.activate();
 
-	const alpha = Math.PI / ring.copies; // arc half-angle per copy
+	const alpha = Math.PI / copies; // arc half-angle per copy
 
 	// Build a temporary paper path to get the bounding box
 	const tmpPath = toPaperPath(ring.templatePath, scope);
@@ -140,10 +141,10 @@ export function buildRingPath(
 	}
 
 	// Tile all copies
-	const fullCopyAngle = (2 * Math.PI) / ring.copies;
+	const fullCopyAngle = (2 * Math.PI) / copies;
 	const allSegments: paper.Segment[] = [];
 
-	for (let k = 0; k < ring.copies; k++) {
+	for (let k = 0; k < copies; k++) {
 		const copySegs = buildOneCopy(k * fullCopyAngle);
 		allSegments.push(...copySegs);
 	}

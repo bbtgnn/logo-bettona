@@ -12,7 +12,6 @@ const DEFAULT = { bass: 0.5, mid: 0.5, treble: 0.5 };
 function ring(withOverride: boolean): Ring {
 	return {
 		id: 'test-ring',
-		copies: 4,
 		color: '#000',
 		templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
 		secondaryTemplatePath: null,

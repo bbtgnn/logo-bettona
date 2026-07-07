@@ -11,6 +11,9 @@ describe('DEFAULT_COMPOSITION', () => {
 		expect(ring.templatePath).toEqual(DEFAULT_RING_PATH);
 		expect(ring.secondaryTemplatePath).toBeNull();
 		expect(ring.morphT).toBe(0);
-		expect(ring.copies).toBe(8);
+	});
+
+	it('seeds the global copies default at 8', () => {
+		expect(DEFAULT_COMPOSITION.copies).toBe(8);
 	});
 });

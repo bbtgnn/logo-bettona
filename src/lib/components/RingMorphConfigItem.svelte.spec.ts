@@ -11,7 +11,6 @@ const PATH = { cmds: ['M', 'L', 'Z'] as ('M' | 'L' | 'Z')[], crds: [0, 0, 10, 0]
 function ring(secondary: boolean): Ring {
 	return {
 		id: 'test-ring',
-		copies: 4,
 		color: '#000',
 		templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
 		secondaryTemplatePath: secondary ? { cmds: [...PATH.cmds], crds: [...PATH.crds] } : null,

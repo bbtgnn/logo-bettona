@@ -2,6 +2,7 @@ import paper from 'paper';
 import type { Composition, Ring } from '$lib/types';
 import { buildRingPath } from './bend';
 import { composeRingTemplate } from './compose-ring';
+import { computeRingRadii } from './ring-radii';
 
 type RenderViewport = {
 	width: number;
@@ -160,11 +161,13 @@ export function createRenderPipeline(): {
 			throw toPipelineError(error, 'Render pipeline failed during setup phase');
 		}
 
+		const radii = computeRingRadii(composition);
+
 		for (let i = composition.rings.length - 1; i >= 0; i--) {
 			try {
 				const ring = composition.rings[i];
-				if (ring.copies <= 0) {
-					throw new Error('ring copies must be greater than zero');
+				if (composition.copies <= 0) {
+					throw new Error('composition copies must be greater than zero');
 				}
 
 				// Template-space prep (morph → wave) is pure; zone deformation stays in
@@ -182,8 +185,8 @@ export function createRenderPipeline(): {
 					effectiveRing = { ...effectiveRing, zoneDrive: null };
 				}
 
-				const radius = composition.baseRadius + composition.ringIncrement * i;
-				const ringPath = buildRingPath(effectiveRing, radius, scope);
+				const radius = radii[i];
+				const ringPath = buildRingPath(effectiveRing, radius, composition.copies, scope);
 
 				if (!ringPath) {
 					skippedCount += 1;

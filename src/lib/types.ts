@@ -29,7 +29,8 @@ export type AudioZonesConfig = {
 
 export type Ring = {
 	id: string;
-	copies: number;
+	name?: string; // etichetta autore; vuoto/assente → fallback posizionale "Anello N"
+	incrementOverride?: number | null; // null/assente = eredita composition.ringIncrement
 	color: string;
 	templatePath: Path | null;
 	secondaryTemplatePath: Path | null;
@@ -63,6 +64,7 @@ export type AspectRatio = '1:1' | '3:4' | '4:3' | '4:5' | '5:4' | '9:16' | '16:9
 export type Composition = {
 	baseRadius: number;
 	ringIncrement: number;
+	copies: number; // globale: numero di copie della curva attorno al cerchio (default 8)
 	aspectRatio: AspectRatio;
 	rings: Ring[];
 	monochromePalettes: MonochromePalette[];

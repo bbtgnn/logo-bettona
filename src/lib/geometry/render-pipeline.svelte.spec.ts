@@ -37,11 +37,11 @@ const petalPath: Path = {
 const composition: Composition = {
 	baseRadius: 100,
 	ringIncrement: 60,
+	copies: 4,
 	aspectRatio: '1:1',
 	rings: [
 		{
 			id: 'test-ring-0',
-			copies: 4,
 			color: '#ff0000',
 			templatePath: rectPath,
 			secondaryTemplatePath: null,
@@ -50,7 +50,6 @@ const composition: Composition = {
 		},
 		{
 			id: 'test-ring-1',
-			copies: 4,
 			color: '#0000ff',
 			templatePath: rectPath,
 			secondaryTemplatePath: null,
@@ -194,17 +193,11 @@ describe('createRenderPipeline().render', () => {
 		expect(result.warnings.some((warning) => warning.includes('morph fallback'))).toBe(true);
 	});
 
-	it('skips a ring and continues rendering when one ring throws', () => {
+	it('skips all rings and warns when composition.copies is non-positive', () => {
 		const pipeline = createRenderPipeline();
 		const throwingComposition: Composition = {
 			...composition,
-			rings: [
-				{
-					...composition.rings[0],
-					copies: 0
-				},
-				composition.rings[1]
-			]
+			copies: 0
 		};
 
 		const result = pipeline.render({
@@ -213,10 +206,10 @@ describe('createRenderPipeline().render', () => {
 			viewport: { width: 600, height: 600, padding: 32 }
 		});
 
-		expect(result.renderedCount).toBe(1);
-		expect(result.skippedCount).toBe(1);
+		expect(result.renderedCount).toBe(0);
+		expect(result.skippedCount).toBe(2);
 		expect(result.warnings.some((warning) => warning.includes('render failure'))).toBe(true);
-		expect(scope.project.activeLayer.children.length).toBe(1);
+		expect(scope.project.activeLayer.children.length).toBe(0);
 	});
 
 	it('clears previous scene when rendering twice on the same scope', () => {
@@ -411,10 +404,10 @@ describe('createRenderPipeline().render', () => {
 		const comp: Composition = {
 			baseRadius: 100,
 			ringIncrement: 60,
+			copies: 4,
 			aspectRatio: '1:1',
 			rings: [{
 				id: 'test-ring',
-				copies: 4,
 				color: '#ff0000',
 				templatePath: petalPath,
 				secondaryTemplatePath: null,

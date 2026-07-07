@@ -1,10 +1,9 @@
 <script lang="ts">
-	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import SettingsSection from '$lib/components/SettingsSection.svelte';
 	import RingEditor from '$lib/components/RingEditor.svelte';
 	import ColorsSection from '$lib/components/ColorsSection.svelte';
 	import SidebarCollapsible from '$lib/components/SidebarCollapsible.svelte';
-	import { composition, addRing, reorderRings } from '$lib/state/composition';
+	import { composition, reorderRings } from '$lib/state/composition';
 	import { m } from '$lib/paraglide/messages';
 
 	let dragFromIndex: number | null = null;
@@ -39,8 +38,6 @@
 	{/snippet}
 
 	{#snippet content()}
-		<Button onclick={addRing} class="w-full">{m.editor_add_ring()}</Button>
-
 		{#if composition.rings.length === 0}
 			<p class="py-8 text-center text-xs text-muted-foreground">
 				{m.editor_no_rings()}

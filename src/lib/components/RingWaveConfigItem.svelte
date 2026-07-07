@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { updateRing } from '$lib/state/composition';
+	import { composition, updateRing } from '$lib/state/composition';
 	import { resolveWaveConfig } from '$lib/geometry/wave';
 	import { m } from '$lib/paraglide/messages';
 	import WavePreview from './WavePreview.svelte';
@@ -72,7 +72,7 @@
 	{#snippet preview()}
 		<WavePreview
 			template={ring.templatePath ?? null}
-			copies={ring.copies ?? 1}
+			copies={composition.copies}
 			ringHeight={ring.ringHeight ?? 0.4}
 			crests={resolved.crests}
 			amplitude={resolved.amplitudeGain}

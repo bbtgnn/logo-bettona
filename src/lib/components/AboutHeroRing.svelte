@@ -6,11 +6,11 @@
 	const HERO_COMPOSITION: Composition = {
 		baseRadius: 5,
 		ringIncrement: 2,
+		copies: 8,
 		aspectRatio: '1:1',
 		rings: [
 			{
 				id: 'about-hero-ring-0',
-				copies: 8,
 				color: '#000000',
 				templatePath: {
 					cmds: ['M', 'C', 'C'],
@@ -30,7 +30,6 @@
 			},
 			{
 				id: 'about-hero-ring-1',
-				copies: 8,
 				color: '#000000',
 				templatePath: {
 					cmds: ['M', 'C', 'C'],

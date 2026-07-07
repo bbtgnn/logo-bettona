@@ -8,11 +8,11 @@ function makeComposition(): Composition {
 	return {
 		baseRadius: 100,
 		ringIncrement: 60,
+		copies: 4,
 		aspectRatio: '1:1',
 		rings: [
 			{
 				id: 'test-ring',
-				copies: 4,
 				color: '#000000',
 				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 10, 10] },
 				secondaryTemplatePath: null,

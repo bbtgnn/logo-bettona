@@ -18,7 +18,6 @@ const rectPath: Path = {
 
 const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
 	id: 'test-ring',
-	copies: 4,
 	color: '#000000',
 	ringHeight: 0.5,
 	templatePath: rectPath,
@@ -30,27 +29,27 @@ const baseRing = (overrides: Partial<Ring> = {}): Ring => ({
 describe('buildRingPath', () => {
 	it('returns null when templatePath is null', () => {
 		const ring = baseRing({ templatePath: null });
-		const result = buildRingPath(ring, 100, scope);
+		const result = buildRingPath(ring, 100, 4, scope);
 		expect(result).toBeNull();
 	});
 
 	it('returns null for an empty templatePath', () => {
 		const ring = baseRing({ templatePath: { cmds: [], crds: [] } });
-		const result = buildRingPath(ring, 100, scope);
+		const result = buildRingPath(ring, 100, 4, scope);
 		expect(result).toBeNull();
 	});
 
 	it('produces a closed path', () => {
 		const ring = baseRing();
-		const result = buildRingPath(ring, 100, scope);
+		const result = buildRingPath(ring, 100, 4, scope);
 		expect(result).not.toBeNull();
 		expect(result!.closed).toBe(true);
 	});
 
 	it('all anchor points lie within the expected radial range', () => {
 		const radius = 100;
-		const ring = baseRing({ copies: 4, ringHeight: 0.5 });
-		const result = buildRingPath(ring, radius, scope);
+		const ring = baseRing({ ringHeight: 0.5 });
+		const result = buildRingPath(ring, radius, 4, scope);
 		expect(result).not.toBeNull();
 
 		const rMin = radius * (1 - ring.ringHeight); // 50
@@ -64,8 +63,8 @@ describe('buildRingPath', () => {
 	});
 
 	it('produces 4-fold rotational symmetry for copies=4', () => {
-		const ring = baseRing({ copies: 4 });
-		const path = buildRingPath(ring, 100, scope);
+		const ring = baseRing();
+		const path = buildRingPath(ring, 100, 4, scope);
 		expect(path).not.toBeNull();
 
 		const segs = path!.segments;
@@ -99,8 +98,8 @@ describe('buildRingPath', () => {
 			]
 		};
 
-		const ring = baseRing({ templatePath: smoothPath, copies: 2 });
-		const result = buildRingPath(ring, 150, scope);
+		const ring = baseRing({ templatePath: smoothPath });
+		const result = buildRingPath(ring, 150, 2, scope);
 		expect(result).not.toBeNull();
 
 		// Check that at the junction segment (index 1), handleIn and handleOut are collinear

@@ -62,7 +62,6 @@ export function setPaletteBackground(color: string) {
 }
 
 const DEFAULT_RING: Omit<Ring, 'id'> = {
-	copies: 8,
 	color: '#000000',
 	templatePath: DEFAULT_RING_PATH,
 	secondaryTemplatePath: null,
@@ -175,7 +174,6 @@ function clonePath(p: Path): Path {
 export function addRingWithPath(path: Path, secondaryPath: Path | null = null): void {
 	const ring: Ring = {
 		id: newRingId(),
-		copies: 8,
 		color: '#000000',
 		templatePath: clonePath(path),
 		secondaryTemplatePath: secondaryPath ? clonePath(secondaryPath) : null,
@@ -197,9 +195,35 @@ export function removeRingFromComposition(index: number) {
 	applyColorMode();
 }
 
+export function duplicateRing(index: number) {
+	const src = composition.rings[index];
+	if (!src) return;
+	const clone: Ring = {
+		...src,
+		id: newRingId(),
+		templatePath: src.templatePath ? clonePath(src.templatePath) : null,
+		secondaryTemplatePath: src.secondaryTemplatePath ? clonePath(src.secondaryTemplatePath) : null,
+		// Transient audio-runtime fields must never be inherited from a live source ring
+		// (config vs runtime "distinzione sacra" — see ring-editor-params design doc).
+		wave: null,
+		zoneDrive: null
+	};
+	const rings = [...composition.rings];
+	rings.splice(index + 1, 0, clone);
+	composition.rings = rings;
+	applyColorMode();
+}
+
 export function updateRing(index: number, patch: Partial<Ring>) {
 	composition.rings = composition.rings.map((ring, i) =>
 		i === index ? { ...ring, ...patch } : ring
+	);
+}
+
+export function renameRing(index: number, name: string) {
+	const trimmed = name.trim();
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, name: trimmed } : ring
 	);
 }
 
@@ -316,6 +340,17 @@ export function setBaseRadius(value: number) {
 
 export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
+}
+
+export function setRingIncrementOverride(index: number, value: number | null) {
+	const next = value === null ? null : Math.max(0, Number.isFinite(value) ? value : 0);
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, incrementOverride: next } : ring
+	);
+}
+
+export function setCopies(value: number) {
+	composition.copies = Math.max(1, Math.floor(Number.isFinite(value) ? value : 1));
 }
 
 export function setAspectRatio(ratio: AspectRatio) {

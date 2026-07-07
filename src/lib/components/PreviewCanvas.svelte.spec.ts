@@ -73,7 +73,6 @@ describe('PreviewCanvas.svelte', () => {
 		composition.rings = [
 			{
 				id: 'test-ring',
-				copies: 8,
 				color: '#000000',
 				templatePath: {
 					cmds: ['M', 'L', 'L', 'L', 'Z'],

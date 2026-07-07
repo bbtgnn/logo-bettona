@@ -61,7 +61,6 @@ describe('preview-presenter export', () => {
 		composition.rings = [
 			{
 				id: 'test-ring',
-				copies: 4,
 				color: '#000000',
 				templatePath: { cmds: ['M', 'L', 'L', 'L', 'Z'], crds: [0, 0, 100, 0, 100, 50, 0, 50] },
 				secondaryTemplatePath: null,

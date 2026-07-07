@@ -14,7 +14,6 @@ describe('AudioZonesSection', () => {
 		composition.rings = [
 			{
 				id: 'ring-zones-test-0',
-				copies: 8,
 				color: '#000000',
 				templatePath: { cmds: ['M', 'L'], crds: [0, 0, 10, 10] },
 				secondaryTemplatePath: null,
