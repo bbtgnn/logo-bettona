@@ -327,3 +327,10 @@ export function createPreviewPresenter() {
 		animationExportSupported: isAnimationExportSupported()
 	};
 }
+
+/**
+ * The single presenter instance bound to the app's one visible canvas. PreviewCanvas
+ * (main pane) attaches it; ExportSection (Composition sidebar) drives static export
+ * off the same instance so the export logic is shared, not duplicated.
+ */
+export const previewPresenter = createPreviewPresenter();
