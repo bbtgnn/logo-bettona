@@ -1,127 +1,164 @@
 # Architecture
 
-**Analysis Date:** 2026-04-27
+**Analysis Date:** 2026-07-06
 
 ## Pattern Overview
 
-**Overall:** Client-only SvelteKit editor with local-first reactive state, a dedicated animation controller for morph playback, and a Paper.js render pipeline that derives ring geometry from composition state.
+**Overall:** Client-only SvelteKit app (`adapter-static`, `ssr = false`, `prerender = true`) organized around a four-section editing pipeline — **Tracciati** (path library) → **Editor** (rings/settings/colors) → **Composizione** (canvas layout + kaleidoscope) → **Animate** (audio-reactive drivers + keyframes + export) — over local-first reactive state persisted through `rune-sync`. A Paper.js render pipeline derives ring geometry from composition state; the visible canvas is arbitrated by a single-writer presenter that switches between a flat composition render and a kaleidoscope rAF loop.
 
 **Key Characteristics:**
-- Sidebar sections are ordered by editing workflow in `src/lib/components/Sidebar.svelte`: `SettingsSection` -> `AnimationSection` -> `ColorsSection` -> ring editors.
-- Ring morph animation is controller-driven in `src/lib/state/animation.svelte.ts` and writes only `morphT` through `setRingMorphT` from `src/lib/state/composition.ts`.
-- Preview rendering remains stateless and derived: `src/lib/components/PreviewCanvas.svelte` reacts to `composition` and delegates all drawing/morph blending to `src/lib/geometry/render-pipeline.ts`.
+- Four top-level destinations live behind `SidebarNav.svelte`: `/paths`, `/editor`, `/composition`, `/animate`; `src/routes/+page.ts` redirects `/` → `/paths` (`redirect(307, resolve('/paths'))`).
+- **Two distinct route shells, not one.** `src/routes/(app)/+layout.svelte` is shared by `editor/`, `composition/`, and `animate/` only: it mounts `SidebarNav`, a single shared `PreviewCanvas` main pane, and a `TimelinePanel` that appears only while `page.url.pathname` starts with `/animate`. `src/routes/paths/+page.svelte` (Tracciati) is a **sibling** of `(app)/`, not nested inside it — it builds its own `SidebarUI.SidebarProvider`/`Sidebar` (reusing `SidebarNav`/`LanguageSwitcher`) with no shared preview pane, rendering a `RingPreview` of the selected library curve instead. `about/` is a third sibling.
+- Animate is driver-based, not a single morph sweep: `AnimationLayer = 'audioBars' | 'audioZones' | 'dataSeries' | 'kaleidoscope'`, each classified by `LayerKind = 'driver' | 'gate' | 'inert'` in `state/animation.svelte.ts`. A keyframe system (`applyKeyframes`) samples per-param tracks (kaleidoscope, audio bars/zones, per-ring wave/morph) and gates layer-scoped params on that layer's flag.
+- Preview rendering is single-writer arbitrated in `components/preview-presenter.svelte.ts`: a flat-composition `$effect` paints the visible canvas unless `kaleidoscope.enabled`, in which case an rAF loop is the sole writer and the flat effect yields.
 
 ## Layers
 
-**Presentation (routes + shell):**
-- Purpose: Application frame and split layout between sidebar and preview canvas.
-- Location: `src/routes/+page.svelte`, `src/routes/+layout.svelte`
-- Contains: shadcn sidebar provider/inset and main editor viewport.
-- Depends on: `src/lib/components/Sidebar.svelte`, `src/lib/components/PreviewCanvas.svelte`
-- Used by: SvelteKit browser entry.
+**Presentation (route shells):**
+- Purpose: two different application frames depending on whether the route needs the shared preview pane.
+- Location: `src/routes/(app)/+layout.svelte` (shared shell for `editor/`, `composition/`, `animate/`); `src/routes/paths/+page.svelte` (own shell, Tracciati); `src/routes/+layout.svelte` (root: view-transition wiring via `onNavigate`); `src/routes/+layout.ts` (`prerender = true`, `ssr = false`); `src/routes/+page.ts` (redirect to `/paths`).
+- Contains: `SidebarUI.SidebarProvider`/`Sidebar`/`SidebarInset`, `SidebarNav.svelte`, `LanguageSwitcher.svelte`, and — only in `(app)` — `PreviewCanvas.svelte` + conditional `TimelinePanel.svelte`.
+- Depends on: `$lib/shadcn/ui/sidebar`, `$lib/components/*`.
+- Used by: SvelteKit browser entry (client-only; adapter-static with `404.html` fallback).
 
-**Feature components (sidebar and editors):**
-- Purpose: User controls for settings, animation playback, colors, and per-ring editing.
+**Feature components (per section):**
+- Purpose: user controls for each of the four sections.
 - Location: `src/lib/components/`
-- Contains: `SettingsSection.svelte`, `AnimationSection.svelte`, `ColorsSection.svelte`, `RingEditor.svelte`, `RingCanvas.svelte`, `PreviewCanvas.svelte`.
-- Depends on: `src/lib/state/composition.ts`, `src/lib/state/animation.svelte.ts`, `src/lib/geometry/*`, shadcn UI.
-- Used by: `src/routes/+page.svelte`.
+- Contains: Editor — `SettingsSection.svelte`, `RingEditor.svelte` (drag-reorder via `reorderRings`), `ColorsSection.svelte`. Composition — `CanvasSection.svelte`, `LayoutModeSwitch.svelte`, `KaleidoscopePanel.svelte` (mounted only `{#if kaleidoscope.enabled}`). Animate — `SimpleSection.svelte`, `DataSeriesSection.svelte`, `AudioBarsSection.svelte`, `AudioZonesSection.svelte`, `KaleidoscopeAudioSection.svelte`. Shared — `PreviewCanvas.svelte` (wraps `createPreviewPresenter`), `TimelinePanel.svelte`.
+- Depends on: `src/lib/state/composition.ts`, `src/lib/state/animation.ts`, `src/lib/state/kaleidoscope.svelte.ts`, `src/lib/geometry/*`, shadcn UI.
+- Used by: the four `+page.svelte` route files.
 
-**Composition state layer:**
-- Purpose: Persisted composition model, palette state, ring CRUD/reorder, and morph path integrity rules.
-- Location: `src/lib/state/composition.ts`
-- Contains: `composition`, `colorMode`, `uiState`, `setRingMorphT`, `createRingMorphTarget`, `removeRingMorphTarget`, `updateRingPathVariant`.
-- Depends on: `src/lib/types.ts`, `src/lib/color/apply.ts`, `src/lib/geometry/path-morph.ts`.
-- Used by: ring editors, animation controller, preview rendering.
+**Composition state layer (persistence singleton + action facade):**
+- Purpose: persisted composition model, palette state, ring CRUD/reorder/path-variant integrity.
+- Location: `src/lib/state/composition-persistence.svelte.ts` (persistence singleton), `src/lib/state/composition.ts` (facade).
+- Contains: `composition` (`createPersistedComposition('composition', DEFAULT_COMPOSITION)` — `$state` synced via `rune-sync`'s `localStorageSync`, with `TRANSIENT_RING_FIELDS` (`wave`, `zoneDrive`) stripped before every write and cross-tab `subscribe`); facade actions `addRing`, `removeRingFromComposition`, `reorderRings`, `setRingMorphT`, `setRingWave`, `setRingZoneDrive`, `createRingMorphTarget`/`removeRingMorphTarget`, `updateRingPathVariant`, `setAspectRatio`, `getCompositionBackgroundColor`, palette/color-mode actions (`colorMode` = `lsSync('color-mode', …)`), `uiState` = `lsSync('composition-ui', …)`.
+- Depends on: `src/lib/types.ts`, `src/lib/color/apply.ts`, `src/lib/geometry/path-morph.ts`, `src/lib/state/ring-id.ts`.
+- Used by: editor components, animate controller, preview-presenter.
 
-**Animation controller layer:**
-- Purpose: Playback lifecycle for morph sweep animation across all rings with a secondary path.
-- Location: `src/lib/state/animation.svelte.ts` (re-exported by `src/lib/state/animation.ts`)
-- Contains: `animationState`, `togglePlay`, `setAnimationDurationSec`, `setAnimationLoop`, `setAnimationAlternate`, `handleCompositionChanged`, `stopAnimation`.
-- Depends on: `animejs` (`animate`), `composition` and `setRingMorphT` from `src/lib/state/composition.ts`.
-- Used by: `src/lib/components/AnimationSection.svelte`.
+**Animate controller + driver runtime layer:**
+- Purpose: owns the playback clock, per-layer enable/disable, keyframe sampling, and export-audio tap; delegates actual driver math to the runtime.
+- Location: `src/lib/state/animation.svelte.ts` (re-exported by `src/lib/state/animation.ts`), `src/lib/state/animation-drivers/runtime.ts`.
+- Contains: `animationState` (`layers`, `audioBars`/`audioZones`/`dataSeries` configs, `audioSource`, `durationSec`, `fps`, `loop`, `alternate`); `setLayerEnabled`/`syncActiveDrivers` (mirror layer flags onto the runtime, driver layers only); `applyKeyframes` (samples every `AnimatableParam`, skipping a gate layer's `<layer>.*` params while that layer is off); `getExportAudioStream`; `createRingMorph`/`removeRingMorph`/`removeRing` (ties ring geometry actions to keyframe track lifecycle). `runtime.ts`: `createAnimationRuntime({ applyRingT })` → `registerDriver`/`setActive`/`tick` (clamps each driver's output via `clamp01` before calling `applyRingT`).
+- Depends on: `state/animation-drivers/{audio-bars-driver,audio-zones-driver,data-series-driver,fallback-bars,audio-source,demo-zones}.ts`, `state/keyframes.svelte.ts`, `state/kaleidoscope-params.ts`, `state/animatable-params.ts`, `state/composition.ts`.
+- Used by: Animate section components, `TimelinePanel.svelte`, `preview-presenter.svelte.ts` (`getExportAudioStream`).
+
+**Kaleidoscope state:**
+- Purpose: kaleidoscope-mode configuration singleton, independent of the animate driver layers (classified as a `'gate'` `LayerKind`).
+- Location: `src/lib/state/kaleidoscope.svelte.ts`
+- Contains: `kaleidoscope` (`enabled`, `sectors`, `repeat`, `liveTile`, `circularMask`, `drawBackground`, …) + setters.
+- Depends on: `src/lib/geometry/kaleidoscope.ts`, `kaleidoscope-tile.ts`.
+- Used by: `KaleidoscopePanel.svelte`, `KaleidoscopeAudioSection.svelte`, `preview-presenter.svelte.ts`.
+
+**Preview/canvas presentation layer:**
+- Purpose: single-writer arbitration of the one visible `<canvas>`, offscreen kaleidoscope tile lifecycle, and all export entry points.
+- Location: `src/lib/components/preview-presenter.svelte.ts`
+- Contains: `createPreviewPresenter()` → `attach` (Svelte attachment wiring three `$effect`s + teardown), `exportSvg`, `exportPng`, `exportAnimation`, `exportProgress`, `animationExportSupported`.
+- Depends on: `state/composition.ts`, `state/animation.ts`, `state/kaleidoscope.svelte.ts`, `geometry/render-pipeline.ts`, `geometry/kaleidoscope.ts`, `geometry/kaleidoscope-tile.ts`, `geometry/aspect-ratio.ts`, `export/canvas-export.ts`, `state/export-status.svelte.ts`.
+- Used by: `PreviewCanvas.svelte` (the only consumer; mounted once per `(app)` shell render via `{@attach presenter.attach}`).
 
 **Geometry/render core:**
-- Purpose: Morph compatibility checks, path interpolation, radial path composition, and canvas drawing.
-- Location: `src/lib/geometry/path-morph.ts`, `src/lib/geometry/bend.ts`, `src/lib/geometry/render-pipeline.ts`, `src/lib/geometry/compose.ts`
-- Contains: `validatePathCompatibility`, `interpolatePath`, `buildRingPath`, `createRenderPipeline().render`, `renderComposition`.
+- Purpose: deterministic conversion from composition data to a Paper.js scene, plus the morph/wave/zone/kaleidoscope math that feeds it.
+- Location: `src/lib/geometry/render-pipeline.ts`, `path-morph.ts`, `bend.ts`, `compose.ts`, `compose-ring.ts`, `kaleidoscope.ts`, `kaleidoscope-tile.ts`, `wave.ts`, `zones.ts`, `aspect-ratio.ts`, `fit-to-view.ts`, `grid-snap.ts`, `path-codec.ts`, `path-to-svg.ts`, `path-transform.ts`, `svg-import.ts`.
+- Contains: `createRenderPipeline().render` (accepts `ignoreMorph`, `ignoreZoneDrive`, `fitScale`, `restFit` options; returns `RenderResult` with `warnings`/`renderedCount`/`skippedCount`), `composeRingTemplate`, `buildRingPath`, `validatePathCompatibility`, `interpolatePath`.
 - Depends on: `paper`, `src/lib/types.ts`.
-- Used by: `PreviewCanvas.svelte`, `RingEditor.svelte` (import flow), legacy callers through `compose.ts`.
+- Used by: `preview-presenter.svelte.ts` (visible canvas, offscreen tile, PNG export), `RingPreview.svelte`/`RingCanvas.svelte` (path-library and editor previews).
 
 ## Data Flow
 
-**Animation control placement and trigger flow:**
+**(a) Layer toggle → driver runtime:**
+1. `setLayerEnabled(layer, on)` in `state/animation.svelte.ts` flips `animationState.layers[layer]`; if a driver layer was turned off and no driver layer remains active, it tears down the live `audioSource`.
+2. `syncActiveDrivers()` mirrors the current flags onto the runtime — only `DRIVER_LAYERS` (layers whose `LayerKind` is `driver`: today `audioBars` and `audioZones`) call `runtime.setActive`; the `kaleidoscope` gate and the `inert` `dataSeries` placeholder (registered as a driver but never activated) never drive the runtime.
+3. On each animation frame, `runtime.tick(nowMs)` (in `animation-drivers/runtime.ts`) calls every active driver's `frame(nowMs)`, clamps each returned `t` via `clamp01`, and writes it through `deps.applyRingT(index, t)` → `setRingMorphT` in `state/composition.ts`.
 
-1. `src/lib/components/Sidebar.svelte` mounts `AnimationSection.svelte` between `SettingsSection.svelte` and `ColorsSection.svelte`.
-2. `AnimationSection.svelte` reads/writes `animationState` and controller actions from `src/lib/state/animation.svelte.ts`.
-3. An `$effect` in `AnimationSection.svelte` tracks `composition.rings.length` and calls `handleCompositionChanged()` via `untrack` to stop stale playback when ring topology changes.
+**(b) Keyframes (progress-driven param sampling):**
+1. `applyKeyframes(progress)` walks `getAllAnimatableParams()` — the kaleidoscope registry, audio-bars/audio-zones registries, and per-ring wave/morph params rebuilt live from `composition.rings`.
+2. For any param whose id is scoped to a gate layer (`<layer>.*`), the sample is skipped unless `animationState.layers[gate]` is on.
+3. `keyframes.sampleParam(id, progress)` returns a value or `null` (no track/disabled); a non-null value is written via the param's own setter. `tick()` calls this every animation frame; `scrubTo`/`refreshPreview` call it on demand while paused (e.g. after a keyframe edit).
 
-**Morph playback flow (controller -> composition -> render):**
-
-1. User clicks Play in `AnimationSection.svelte`; `togglePlay()` starts/reuses an anime instance.
-2. `startNewAnimation()` in `src/lib/state/animation.svelte.ts` computes `animatedIndices` from rings where `secondaryTemplatePath` exists.
-3. Every anime update writes `t` to each target ring via `setRingMorphT(index, t)` in `src/lib/state/composition.ts` and mirrors progress to `animationState.progress`.
-4. `PreviewCanvas.svelte` has an `$effect` on `composition`; each `morphT` update triggers `renderPipeline.render(...)`.
-5. `render()` in `src/lib/geometry/render-pipeline.ts` composes `effectiveRing` per index: if primary and secondary paths are compatible, it applies `interpolatePath(primary, secondary, morphT)` before `buildRingPath(...)`.
-6. Paper.js fills each rendered ring and fits the result to the viewport.
-
-**Ring morph authoring flow (composition/ring updates):**
-
-1. `RingEditor.svelte` creates/removes morph targets through `createRingMorphTarget()` and `removeRingMorphTarget()` in `src/lib/state/composition.ts`.
-2. Primary/secondary variant edits (canvas or SVG import) are routed through `updateRingPathVariant(index, variant, path)`.
-3. `updateRingPathVariant` enforces compatibility with `validatePathCompatibility` and rejects incompatible writes with `{ ok: false, reason }`, preserving existing composition state.
+**(c) Kaleidoscope single-writer canvas arbitration (`preview-presenter.svelte.ts`):**
+1. The first `$effect` (flat composition render) returns early whenever `kaleidoscope.enabled` — it never writes to the canvas while kaleidoscope owns it.
+2. The second `$effect` runs the kaleidoscope rAF loop only while enabled; it is the sole writer of the visible canvas in that mode, calling `drawKaleidoscope()` each frame, which renders either a fresh tile (`kaleidoscope.liveTile`) or a cached `staticTile` snapshot into the kaleidoscope renderer.
+3. A third `$effect` keeps canvas pixel size in sync with the aspect ratio and re-snapshots `staticTile` whenever composition/aspect changes while kaleidoscope is enabled (deep-tracked via `$state.snapshot(composition)`), without ever touching the visible canvas directly (the tile renders into an offscreen `tileScope`).
 
 **State Management:**
-- Persisted source of truth: `composition`, `colorMode`, `uiState` from `lsSync` in `src/lib/state/composition.ts`.
-- Ephemeral runtime control: `animationState` and anime instance internals in `src/lib/state/animation.svelte.ts`.
-- Rendering reads current state only; no render cache is stored in state.
+- Persisted source of truth: `composition` (`state/composition-persistence.svelte.ts`, key `'composition'`), `colorMode` (key `'color-mode'`), `uiState` (key `'composition-ui'`) — all `rune-sync` singletons.
+- Ephemeral runtime control: `animationState` (playback clock, layer flags, per-driver configs) in `state/animation.svelte.ts`; `kaleidoscope` singleton state; driver-internal state inside each `animation-drivers/*` module.
+- Rendering reads current state only — `RenderResult` carries per-call warnings/counts but no render cache is stored in shared state.
+
+**(d) Export surfaces — runtime video vs. static (distinct paths):**
+
+`export/canvas-export.ts` (`exportCanvasAnimation`, `isAnimationExportSupported`) is a **runtime video export**: it records the live `<canvas>` to WebM via `MediaRecorder`, invoked from `preview-presenter.exportAnimation()`, optionally taping in `getExportAudioStream()` (mic/file sources only — demo/off yield no stream) and reporting `0..1` progress through `exportStatus.rendering`/`exportProgress`.
+
+Static SVG/PNG download is a **separate, already-built** path living **inline inside `preview-presenter.svelte.ts`** — not in `export/`: `exportSvg(opts?)` serializes the live Paper.js project (`scope.project.exportSVG`) when not in kaleidoscope mode, or the offscreen tile's SVG plus kaleidoscope framing (`generateKaleidoscopeSVG`) when `kaleidoscope.enabled`; `exportPng(opts)` renders into a scaled offscreen `paper.PaperScope` (flat) or re-renders the tile through `renderKaleidoscopeToCanvas` (kaleidoscope) and downloads a data URL. Both branch identically on `kaleidoscope.enabled` to choose flat-composition vs. kaleidoscope-tile output.
+
+A dedicated, standalone static PNG/SVG export module (living under `export/`, alongside `canvas-export.ts`) does **not exist yet** — it is a distinct, unbuilt future path. Do not describe the two as one subsystem.
 
 ## Key Abstractions
 
 **Composition + Ring model:**
-- Purpose: Serializable editor state including geometry templates and morph scalar.
-- Examples: `src/lib/types.ts`, `src/lib/state/composition.ts`
-- Pattern: Ring-level immutable replacement updates (array map/filter/splice) to trigger reactive redraw.
+- Purpose: serializable editor state — palettes, aspect ratio, and per-ring geometry (`templatePath`, optional `secondaryTemplatePath`, `morphT`, transient `wave`/`zoneDrive`).
+- Examples: `src/lib/types.ts`, `src/lib/state/composition.ts`, `src/lib/state/composition-persistence.svelte.ts`.
+- Pattern: ring-level immutable replacement (`.map(...)`) to trigger reactive redraw; transient (audio-driven) fields are stripped before every localStorage write so a reload never restores mid-animation values.
 
-**Animation controller:**
-- Purpose: Centralized play/pause/reconfigure logic for morph sweeps across eligible rings.
-- Examples: `src/lib/state/animation.svelte.ts`, `src/lib/components/AnimationSection.svelte`
-- Pattern: Controller owns timeline and eligibility (`animatedIndices`), but delegates actual ring value writes to composition actions.
+**Animate controller + `LayerKind` classification:**
+- Purpose: single source of truth for what each `AnimationLayer` *is* (`driver` registers/activates a runtime driver; `gate` only toggles which keyframe params apply; `inert` is a UI-visible placeholder that never runs), replacing scattered string special-cases.
+- Examples: `state/animation.svelte.ts` (`LAYER_KIND`, `DRIVER_LAYERS`, `GATE_LAYERS`, `isDriverLayer`), `state/animation-drivers/runtime.ts`.
+- Pattern: the controller owns the shared playback clock and keyframe sampling; drivers own only their own `frame()` math; runtime owns activation lifecycle (`init`/`dispose`) per driver.
+
+**Preview presenter (single-writer canvas):**
+- Purpose: guarantee exactly one writer of the visible `<canvas>` at any time, avoiding flicker from two effects racing on the same pixels.
+- Examples: `components/preview-presenter.svelte.ts`.
+- Pattern: the flat-render effect explicitly yields (`if (kaleidoscope.enabled) return;`) to the rAF loop; the rAF loop is torn down and restarted only when its tile *source* changes (`liveTile` vs static), not every param change.
 
 **Render pipeline:**
-- Purpose: Deterministic conversion from composition data to Paper.js scene with warnings and metrics.
-- Examples: `src/lib/geometry/render-pipeline.ts`
-- Pattern: Validate input -> clear scope -> ring loop with morph interpolation -> fit and update view.
+- Purpose: deterministic conversion from composition data to a Paper.js scene with warnings and metrics, reused identically by the visible canvas, the offscreen kaleidoscope tile, and PNG export.
+- Examples: `src/lib/geometry/render-pipeline.ts`.
+- Pattern: validate input → clear scope → per-ring loop (compose template → build path → fill) collecting warnings on failure → union-bounds fit (or fixed `fitScale`/`restFit` for audio-zones' stable rest scale) → view update.
 
 ## Entry Points
 
-**App shell:**
+**Root shell:**
 - Location: `src/routes/+layout.svelte`, `src/routes/+layout.ts`
-- Triggers: Initial app load.
-- Responsibilities: Global styles/head and route composition.
+- Triggers: initial app load (every route).
+- Responsibilities: favicon/head, cross-route View Transitions (`onNavigate` + `document.startViewTransition`) so the `SidebarNav` pill morphs across the two different shells; `prerender = true`, `ssr = false`.
 
-**Editor route:**
-- Location: `src/routes/+page.svelte`
-- Triggers: Navigation to `/`.
-- Responsibilities: Mount sidebar controls and preview canvas.
+**Redirect:**
+- Location: `src/routes/+page.ts`
+- Triggers: navigation to `/`.
+- Responsibilities: `redirect(307, resolve('/paths'))`.
+
+**`(app)` shared shell:**
+- Location: `src/routes/(app)/+layout.svelte`
+- Triggers: navigation to `/editor`, `/composition`, `/animate`.
+- Responsibilities: mounts `SidebarNav`, the single shared `PreviewCanvas` main pane (`animate` prop true only on `/animate`), and `TimelinePanel` conditionally when `page.url.pathname` starts with `/animate`.
+
+**Tracciati shell:**
+- Location: `src/routes/paths/+page.svelte`
+- Triggers: navigation to `/paths` (also the redirect target of `/`).
+- Responsibilities: own `SidebarProvider`/`Sidebar`, builtin + custom curve library browsing/selection, `RingPreview` of the selected curve — no shared `PreviewCanvas`.
 
 ## Error Handling
 
-**Strategy:** Reject invalid morph path updates at state boundaries; stop/cleanup animation when composition changes invalidate targets; degrade gracefully during render with warnings.
+**Strategy:** Reject invalid morph-path updates at the state boundary without mutating state; degrade gracefully during render by recording per-ring warnings and continuing other rings; clamp driver output before it reaches ring state; fall back to a safe audio source on permission/support failure.
 
 **Patterns:**
-- `updateRingPathVariant` returns explicit failure reasons without mutating invalid input (`src/lib/state/composition.ts`).
-- `handleCompositionChanged` halts running animations if ring count or morph-capable indices drift (`src/lib/state/animation.svelte.ts`).
-- Render loop catches ring-level failures and records them in `warnings` while continuing other rings (`src/lib/geometry/render-pipeline.ts`).
+- `updateRingPathVariant` returns an explicit `UpdateRingPathVariantResult` (`{ ok: true } | { ok: false, reason }`) — an incompatible secondary-path edit is rejected without mutating state; an incompatible primary-path edit instead re-seeds the secondary from the new primary (a documented stopgap in `src/lib/state/composition.ts`, pending relocation of morph editing to Animate).
+- `render-pipeline.ts` catches per-ring failures (non-positive `copies`, unrenderable template path, thrown errors during path build) and records them in `RenderResult.warnings` while continuing to render the remaining rings; validation-level failures (bad viewport/scope/composition shape) throw a `RenderPipelineError`.
+- `animation-drivers/runtime.ts` clamps every driver frame value through `clamp01` before writing it via `applyRingT`, so a driver bug can't push `morphT` out of `[0,1]`.
+- `setAudioSource` in `state/animation.svelte.ts` catches mic/file permission or support failures and falls back to the `'demo'` source so the preview keeps moving instead of erroring out.
 
 ## Cross-Cutting Concerns
 
-**Logging:** Render-time issues accumulate in `RenderResult.warnings` (`src/lib/geometry/render-pipeline.ts`).
+**Logging:** Render-time issues accumulate in `RenderResult.warnings` (`src/lib/geometry/render-pipeline.ts`); no separate logging framework.
 
-**Validation:** Path compatibility is enforced in both mutation (`src/lib/state/composition.ts`) and interpolation (`src/lib/geometry/render-pipeline.ts`).
+**Validation:** Path compatibility is enforced both at the mutation boundary (`updateRingPathVariant` in `src/lib/state/composition.ts`, via `validatePathCompatibility`) and again inside the render pipeline's morph handling (`compose-ring.ts`/`path-morph.ts`).
 
-**Authentication:** Not applicable.
+**Persistence hygiene:** `composition-persistence.svelte.ts` strips `TRANSIENT_RING_FIELDS` (`wave`, `zoneDrive`) before every localStorage write and gates the write on the stripped snapshot changing, so per-frame audio-driven mutation never touches `localStorage`.
+
+**i18n:** Paraglide-generated `messages/{en,it}.json` (via `m.*`), strategy `['localStorage', 'preferredLanguage', 'baseLocale']`; `LanguageSwitcher.svelte` + `state/locale.svelte.ts`; both route shells wrap their tree in `{#key currentLocale()}` to force a full re-render on language switch.
+
+**Authentication:** Not applicable (fully client-side, no backend).
 
 ---
 
-*Architecture analysis: 2026-04-27*
+*Architecture analysis: 2026-07-06*
