@@ -9,8 +9,15 @@
 	import CustomCurveItem from '$lib/components/CustomCurveItem.svelte';
 	import RingPreview from '$lib/components/RingPreview.svelte';
 	import PathThumbnail from '$lib/components/PathThumbnail.svelte';
-	import { pathLibrary, seedBuiltinCurves, createCurveFromArc } from '$lib/state/path-library';
-	import { composition } from '$lib/state/composition';
+	import {
+		pathLibrary,
+		seedBuiltinCurves,
+		createCurveFromArc,
+		type ApplyTarget
+	} from '$lib/state/path-library';
+	import { composition, updateRingPathVariant, addRingWithPath } from '$lib/state/composition';
+	import ApplyToRingSheet from '$lib/components/ApplyToRingSheet.svelte';
+	import type { Path } from '$lib/types';
 	import { m } from '$lib/paraglide/messages';
 	import { currentLocale } from '$lib/state/locale.svelte';
 
@@ -37,6 +44,22 @@
 		const entry = createCurveFromArc();
 		selectedId = entry.id;
 		customOpen = true;
+	}
+
+	let applyOpen = $state(false);
+
+	function clonePath(p: Path): Path {
+		return { cmds: [...p.cmds], crds: [...p.crds] };
+	}
+
+	function handleApply(target: ApplyTarget) {
+		if (!selected) return;
+		const path = clonePath(selected.path);
+		if (target.kind === 'new') {
+			addRingWithPath(path);
+		} else {
+			updateRingPathVariant(target.index, 'primary', path);
+		}
 	}
 </script>
 
@@ -124,7 +147,7 @@
 
 			<main class="flex flex-1 items-center justify-center p-8">
 				{#if selected}
-					<div data-testid="tracciati-preview">
+					<div class="flex flex-col items-center gap-4" data-testid="tracciati-preview">
 						{#key selected.id}
 							<RingPreview
 								path={selected.path}
@@ -134,7 +157,16 @@
 								size={360}
 							/>
 						{/key}
+						<Button data-testid="tracciati-apply" onclick={() => (applyOpen = true)}>
+							{m.tracciati_apply()}
+						</Button>
 					</div>
+					<ApplyToRingSheet
+						bind:open={applyOpen}
+						entry={selected}
+						rings={composition.rings}
+						onapply={handleApply}
+					/>
 				{/if}
 			</main>
 		</SidebarUI.SidebarInset>

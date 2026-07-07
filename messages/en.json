@@ -208,5 +208,6 @@
 	"tracciati_grid_options": "Grid options",
 	"tracciati_grid_visible": "Visible",
 	"tracciati_grid_snap": "Snap",
-	"tracciati_grid_constrain_hint": "Hold SHIFT to constrain to 45°"
+	"tracciati_grid_constrain_hint": "Hold SHIFT to constrain to 45°",
+	"tracciati_apply": "Use this curve"
 }

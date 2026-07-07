@@ -208,5 +208,6 @@
 	"tracciati_grid_options": "Opzioni griglia",
 	"tracciati_grid_visible": "Visibile",
 	"tracciati_grid_snap": "Aggancia",
-	"tracciati_grid_constrain_hint": "Premi SHIFT per vincolare a 45°"
+	"tracciati_grid_constrain_hint": "Premi SHIFT per vincolare a 45°",
+	"tracciati_apply": "Usa questa curva"
 }
