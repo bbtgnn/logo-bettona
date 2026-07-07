@@ -2,7 +2,6 @@
 	import paper from 'paper';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import { Slider } from '$lib/shadcn/ui/slider/index.js';
-	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
@@ -208,20 +207,6 @@
 				{#if importError}
 					<p class="text-xs text-destructive">{importError}</p>
 				{/if}
-			</div>
-
-			<div class="flex flex-col gap-1">
-				<Label for="copies-{index}" class="text-xs">{m.editor_copies()}</Label>
-				<Input
-					id="copies-{index}"
-					type="number"
-					min="1"
-					value={ring.copies}
-					oninput={(e) =>
-						updateRing(index, {
-							copies: Math.max(1, parseInt((e.target as HTMLInputElement).value) || 1)
-						})}
-				/>
 			</div>
 
 			<div class="flex flex-col gap-2">

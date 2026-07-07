@@ -12,7 +12,6 @@ const PATH: Path = { cmds: ['M', 'L', 'Z'], crds: [0, 0, 10, 0] };
 function morphRing(): Ring {
 	return {
 		id: 'test-ring',
-		copies: 4,
 		color: '#000',
 		templatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
 		secondaryTemplatePath: { cmds: [...PATH.cmds], crds: [...PATH.crds] },
@@ -39,6 +38,7 @@ describe('RingEditor', () => {
 		// The primary drawing + sizing controls stay. The RingCanvas editor is identified
 		// by its grid-density slider (the old "Path editor" badge was replaced by it).
 		await expect.element(page.getByTestId('grid-density-slider')).toBeInTheDocument();
-		await expect.element(page.getByText('Copies')).toBeInTheDocument();
+		// Copies is now a global setting (SettingsSection), not shown per-ring here.
+		expect(page.getByText('Copies').query()).toBeNull();
 	});
 });

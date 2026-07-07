@@ -9,9 +9,6 @@
 	import { m } from '$lib/paraglide/messages';
 	import { untrack } from 'svelte';
 
-	// Copies a brand-new ring gets; mirrors addRingWithPath in composition.ts.
-	const NEW_RING_COPIES = 8;
-
 	let {
 		open = $bindable(false),
 		entry,
@@ -79,7 +76,7 @@
 							<span class="flex-1">{m.editor_ring_label({ index: i + 1 })}</span>
 							<RingPreview
 								path={entry.path}
-								copies={ring.copies}
+								copies={composition.copies}
 								baseRadius={composition.baseRadius}
 								ringIncrement={composition.ringIncrement}
 								size={72}
@@ -101,7 +98,7 @@
 						<span class="flex-1">{m.apply_target_new()}</span>
 						<RingPreview
 							path={entry.path}
-							copies={NEW_RING_COPIES}
+							copies={composition.copies}
 							baseRadius={composition.baseRadius}
 							ringIncrement={composition.ringIncrement}
 							size={72}

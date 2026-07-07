@@ -62,7 +62,6 @@ export function setPaletteBackground(color: string) {
 }
 
 const DEFAULT_RING: Omit<Ring, 'id'> = {
-	copies: 8,
 	color: '#000000',
 	templatePath: DEFAULT_RING_PATH,
 	secondaryTemplatePath: null,
@@ -175,7 +174,6 @@ function clonePath(p: Path): Path {
 export function addRingWithPath(path: Path, secondaryPath: Path | null = null): void {
 	const ring: Ring = {
 		id: newRingId(),
-		copies: 8,
 		color: '#000000',
 		templatePath: clonePath(path),
 		secondaryTemplatePath: secondaryPath ? clonePath(secondaryPath) : null,
@@ -316,6 +314,10 @@ export function setBaseRadius(value: number) {
 
 export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
+}
+
+export function setCopies(value: number) {
+	composition.copies = Math.max(1, Math.floor(Number.isFinite(value) ? value : 1));
 }
 
 export function setAspectRatio(ratio: AspectRatio) {

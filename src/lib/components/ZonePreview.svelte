@@ -24,13 +24,13 @@
 		if (template) {
 			const baseRing: Ring = {
 				id: 'zone-preview-ring',
-				copies: Math.max(1, Math.floor(copies)),
 				color: '#000000',
 				templatePath: template,
 				secondaryTemplatePath: null,
 				morphT: 0,
 				ringHeight
 			};
+			const effectiveCopies = Math.max(1, Math.floor(copies));
 
 			// Normalized 0..1 drive at full amplitude; buildRingPath deforms in final
 			// polar space (ring-radius units). Vibration phase = 1 (max) for the preview.
@@ -42,14 +42,19 @@
 			};
 
 			// reach: max-amplitude zone deformation, translucent fill
-			const reach = buildRingPath({ ...baseRing, zoneDrive: maxDrive }, PREVIEW_RADIUS, scope);
+			const reach = buildRingPath(
+				{ ...baseRing, zoneDrive: maxDrive },
+				PREVIEW_RADIUS,
+				effectiveCopies,
+				scope
+			);
 			if (reach) {
 				reach.fillColor = new paper.Color(0, 0, 0, 0.18);
 				reach.strokeColor = null;
 			}
 
 			// rest: authored shape, crisp outline
-			const rest = buildRingPath(baseRing, PREVIEW_RADIUS, scope);
+			const rest = buildRingPath(baseRing, PREVIEW_RADIUS, effectiveCopies, scope);
 			if (rest) {
 				rest.fillColor = null;
 				rest.strokeColor = new paper.Color(0, 0, 0);

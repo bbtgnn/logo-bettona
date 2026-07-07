@@ -51,13 +51,13 @@
 		if (template) {
 			const baseRing: Ring = {
 				id: 'wave-preview-ring',
-				copies: Math.max(1, Math.floor(copies)),
 				color: '#000000',
 				templatePath: template,
 				secondaryTemplatePath: null,
 				morphT: 0,
 				ringHeight
 			};
+			const effectiveCopies = Math.max(1, Math.floor(copies));
 
 			// reach: full-amplitude wave on the primary template, translucent fill.
 			const reach = buildRingPath(
@@ -69,6 +69,7 @@
 					}).path
 				},
 				PREVIEW_RADIUS,
+				effectiveCopies,
 				scope
 			);
 			if (reach) {
@@ -77,7 +78,7 @@
 			}
 
 			// rest: silent shape, crisp outline (strokeScaling off so fit doesn't fatten it).
-			const rest = buildRingPath(baseRing, PREVIEW_RADIUS, scope);
+			const rest = buildRingPath(baseRing, PREVIEW_RADIUS, effectiveCopies, scope);
 			if (rest) {
 				rest.fillColor = null;
 				rest.strokeColor = new paper.Color(0, 0, 0);

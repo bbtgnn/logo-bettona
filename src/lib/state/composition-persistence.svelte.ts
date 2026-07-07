@@ -68,8 +68,23 @@ export function normalizeComposition(c: Composition): Composition {
 		}
 		return p;
 	});
-	const withPalettes = palettes ? { ...c, monochromePalettes: palettes } : c;
-	return ensureRingIds(withPalettes);
+	const src = palettes ? { ...c, monochromePalettes: palettes } : c;
+	const copies =
+		typeof (src as { copies?: unknown }).copies === 'number'
+			? (src as { copies: number }).copies
+			: typeof (src.rings?.[0] as { copies?: unknown })?.copies === 'number'
+				? (src.rings[0] as unknown as { copies: number }).copies
+				: 8;
+	const ringsWithoutCopies = src.rings?.map((r) => {
+		const rest = { ...r } as Record<string, unknown>;
+		delete rest.copies;
+		return rest as (typeof src.rings)[number];
+	});
+	const withCopies = {
+		...(ringsWithoutCopies ? { ...src, rings: ringsWithoutCopies } : src),
+		copies
+	} as Composition;
+	return ensureRingIds(withCopies);
 }
 
 /**

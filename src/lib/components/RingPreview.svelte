@@ -29,11 +29,11 @@
 		const composition: Composition = {
 			baseRadius,
 			ringIncrement,
+			copies,
 			aspectRatio: '1:1',
 			rings: [
 				{
 					id: 'ring-preview-ring',
-					copies,
 					color: '#000000',
 					templatePath: path,
 					secondaryTemplatePath: secondaryPath ?? null,

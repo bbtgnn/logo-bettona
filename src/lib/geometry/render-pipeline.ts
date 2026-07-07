@@ -163,8 +163,8 @@ export function createRenderPipeline(): {
 		for (let i = composition.rings.length - 1; i >= 0; i--) {
 			try {
 				const ring = composition.rings[i];
-				if (ring.copies <= 0) {
-					throw new Error('ring copies must be greater than zero');
+				if (composition.copies <= 0) {
+					throw new Error('composition copies must be greater than zero');
 				}
 
 				// Template-space prep (morph → wave) is pure; zone deformation stays in
@@ -183,7 +183,7 @@ export function createRenderPipeline(): {
 				}
 
 				const radius = composition.baseRadius + composition.ringIncrement * i;
-				const ringPath = buildRingPath(effectiveRing, radius, scope);
+				const ringPath = buildRingPath(effectiveRing, radius, composition.copies, scope);
 
 				if (!ringPath) {
 					skippedCount += 1;

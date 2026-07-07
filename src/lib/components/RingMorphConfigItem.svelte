@@ -75,7 +75,7 @@
 			<span class="text-xs text-muted-foreground">{m.animate_morph_primary_label()}</span>
 			<RingMorphPreview
 				path={ring.templatePath}
-				copies={ring.copies}
+				copies={composition.copies}
 				baseRadius={composition.baseRadius}
 				ringIncrement={composition.ringIncrement}
 				size={160}
@@ -98,7 +98,7 @@
 				path={ring.templatePath}
 				secondaryPath={ring.secondaryTemplatePath}
 				morphT={ring.morphT ?? 0}
-				copies={ring.copies}
+				copies={composition.copies}
 				baseRadius={composition.baseRadius}
 				ringIncrement={composition.ringIncrement}
 				size={200}

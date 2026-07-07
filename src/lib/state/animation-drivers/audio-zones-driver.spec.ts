@@ -16,7 +16,6 @@ type DriveCall = { index: number; drive: ZoneDrive | null };
 function makeRing(zoneConfig?: ZoneIntensity | null): Ring {
   return {
     id: 'test-ring',
-    copies: 8,
     color: '#000000',
     templatePath: null,
     secondaryTemplatePath: null,

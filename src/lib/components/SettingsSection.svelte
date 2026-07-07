@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
-	import { composition, setBaseRadius, setRingIncrement } from '$lib/state/composition';
+	import { composition, setBaseRadius, setRingIncrement, setCopies } from '$lib/state/composition';
 	import { m } from '$lib/paraglide/messages';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
 </script>
@@ -31,6 +31,16 @@
 					min="1"
 					value={composition.ringIncrement}
 					oninput={(e) => setRingIncrement(Number((e.target as HTMLInputElement).value))}
+				/>
+			</div>
+			<div class="flex flex-col gap-1">
+				<Label for="copies" class="text-xs">{m.editor_copies()}</Label>
+				<Input
+					id="copies"
+					type="number"
+					min="1"
+					value={composition.copies}
+					oninput={(e) => setCopies(Number((e.target as HTMLInputElement).value))}
 				/>
 			</div>
 		</div>

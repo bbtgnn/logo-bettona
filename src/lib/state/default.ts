@@ -16,11 +16,11 @@ export const DEFAULT_RING_PATH: Path = {
 export const DEFAULT_COMPOSITION: Composition = {
 	baseRadius: 5,
 	ringIncrement: 2,
+	copies: 8,
 	aspectRatio: '1:1',
 	rings: [
 		{
 			id: 'ring-default',
-			copies: 8,
 			color: '#000000',
 			templatePath: DEFAULT_RING_PATH,
 			secondaryTemplatePath: null,
