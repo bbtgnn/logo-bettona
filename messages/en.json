@@ -5,6 +5,8 @@
 	"editor_settings": "Settings",
 	"editor_base_radius": "Base radius",
 	"editor_ring_increment": "Ring increment",
+	"editor_increment_override": "Override increment",
+	"editor_increment_global_hint": "uses global ({value})",
 	"editor_canvas": "Canvas",
 	"editor_aspect_ratio": "Aspect ratio",
 	"editor_colors": "Colors",

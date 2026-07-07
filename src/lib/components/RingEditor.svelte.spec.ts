@@ -60,4 +60,26 @@ describe('RingEditor', () => {
 		await result.rerender({ ring: composition.rings[0], index: 0 });
 		await expect.element(page.getByRole('button', { name: /Ring 1/ })).toBeInTheDocument();
 	});
+
+	it('hides the increment override block on the innermost ring (index 0)', async () => {
+		render(RingEditor, { ring: morphRing(), index: 0 });
+		expect(page.getByTestId('ring-increment-override-toggle-0').query()).toBeNull();
+	});
+
+	it('shows the increment override block on other rings, revealing the input seeded to the global value', async () => {
+		composition.rings = [morphRing(), morphRing()];
+		setRingExpanded(1, true);
+		const result = render(RingEditor, { ring: composition.rings[1], index: 1 });
+
+		const toggle = page.getByTestId('ring-increment-override-toggle-1');
+		await expect.element(toggle).toBeInTheDocument();
+		expect(page.getByTestId('ring-increment-override-input-1').query()).toBeNull();
+
+		await userEvent.click(toggle);
+		await result.rerender({ ring: composition.rings[1], index: 1 });
+
+		const input = page.getByTestId('ring-increment-override-input-1');
+		await expect.element(input).toBeInTheDocument();
+		await expect.element(input).toHaveValue(composition.ringIncrement);
+	});
 });

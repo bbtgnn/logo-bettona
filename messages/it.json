@@ -5,6 +5,8 @@
 	"editor_settings": "Impostazioni",
 	"editor_base_radius": "Raggio base",
 	"editor_ring_increment": "Incremento anelli",
+	"editor_increment_override": "Override incremento",
+	"editor_increment_global_hint": "usa globale ({value})",
 	"editor_canvas": "Tela",
 	"editor_aspect_ratio": "Proporzioni",
 	"editor_colors": "Colori",

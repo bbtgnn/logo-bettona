@@ -13,7 +13,9 @@
 		isRingExpanded,
 		colorMode,
 		duplicateRing,
-		updateRingPathVariant
+		updateRingPathVariant,
+		setRingIncrementOverride,
+		composition
 	} from '$lib/state/composition';
 	import { removeRing } from '$lib/state/animation';
 	import { importSvg } from '$lib/geometry/svg-import';
@@ -261,6 +263,43 @@
 							class="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0.5"
 						/>
 						<span class="font-mono text-xs text-muted-foreground">{ring.color}</span>
+					</div>
+				</div>
+			{/if}
+
+			{#if index > 0}
+				<div class="flex flex-col gap-1">
+					<Label class="text-xs">{m.editor_ring_increment()}</Label>
+					<div class="flex items-center gap-2">
+						<input
+							id="increment-override-{index}"
+							type="checkbox"
+							data-testid="ring-increment-override-toggle-{index}"
+							checked={ring.incrementOverride != null}
+							onchange={(e) =>
+								setRingIncrementOverride(
+									index,
+									(e.target as HTMLInputElement).checked ? composition.ringIncrement : null
+								)}
+						/>
+						<Label for="increment-override-{index}" class="text-xs"
+							>{m.editor_increment_override()}</Label
+						>
+						{#if ring.incrementOverride != null}
+							<Input
+								type="number"
+								min="0"
+								class="w-20"
+								data-testid="ring-increment-override-input-{index}"
+								value={ring.incrementOverride}
+								oninput={(e) =>
+									setRingIncrementOverride(index, Number((e.target as HTMLInputElement).value))}
+							/>
+						{:else}
+							<span class="text-xs text-muted-foreground">
+								{m.editor_increment_global_hint({ value: composition.ringIncrement })}
+							</span>
+						{/if}
 					</div>
 				</div>
 			{/if}
