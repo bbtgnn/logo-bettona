@@ -2,9 +2,15 @@
 	import * as Sheet from '$lib/shadcn/ui/sheet/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import PathThumbnail from './PathThumbnail.svelte';
+	import RingPreview from './RingPreview.svelte';
 	import type { PathLibraryEntry, Ring } from '$lib/types';
-	import type { ApplySlot } from '$lib/state/path-library';
+	import type { ApplyTarget } from '$lib/state/path-library';
+	import { composition } from '$lib/state/composition';
 	import { m } from '$lib/paraglide/messages';
+	import { untrack } from 'svelte';
+
+	// Copies a brand-new ring gets; mirrors addRingWithPath in composition.ts.
+	const NEW_RING_COPIES = 8;
 
 	let {
 		open = $bindable(false),
@@ -15,30 +21,30 @@
 		open?: boolean;
 		entry: PathLibraryEntry | null;
 		rings: Ring[];
-		onapply: (ringIndex: number, slot: ApplySlot) => void;
+		onapply: (target: ApplyTarget) => void;
 	} = $props();
 
-	let ringIndex = $state(0);
-	let slotRaw = $state<ApplySlot>('template');
+	// Selected target: an existing ring index, or the 'new' sentinel.
+	let selected = $state<number | 'new'>(untrack(() => (rings.length > 0 ? 0 : 'new')));
 
-	// Mirror LibraryPickerSheet: only 'both' needs a secondary path; auto-correct it.
-	const slot = $derived<ApplySlot>(
-		slotRaw === 'both' && entry && !entry.secondaryPath ? 'template' : slotRaw
-	);
-
-	// Reset to defaults when the sheet closes so it opens fresh next time.
+	// Reset to the default target when the sheet closes so it opens fresh.
 	$effect(() => {
 		if (!open) {
-			ringIndex = 0;
-			slotRaw = 'template';
+			selected = rings.length > 0 ? 0 : 'new';
 		}
 	});
 
 	function confirm() {
-		// Guard the index too: rings can shrink under the sheet (prop change), and a
-		// stale ringIndex would otherwise dereference an undefined ring downstream.
-		if (!entry || ringIndex < 0 || ringIndex >= rings.length) return;
-		onapply(ringIndex, slot);
+		if (!entry) return;
+		if (selected === 'new') {
+			onapply({ kind: 'new' });
+			open = false;
+			return;
+		}
+		// Guard: rings can shrink under the sheet; a stale index would dereference
+		// an undefined ring downstream.
+		if (selected < 0 || selected >= rings.length) return;
+		onapply({ kind: 'existing', index: selected });
 		open = false;
 	}
 </script>
@@ -57,59 +63,59 @@
 					<div class="text-sm font-medium">{entry.name}</div>
 				</div>
 
-				<div class="flex flex-col gap-1">
-					<label for="apply-ring" class="text-xs font-medium">{m.apply_ring_label()}</label>
-					<select
-						id="apply-ring"
-						data-testid="apply-ring-select"
-						class="h-9 w-full rounded-md border border-input bg-background py-1 text-xs"
-						value={ringIndex}
-						onchange={(e) => (ringIndex = Number((e.target as HTMLSelectElement).value))}
+				<div class="flex flex-col gap-2" role="radiogroup">
+					{#each rings as ring, i (ring.id)}
+						<label
+							class="flex items-center gap-3 rounded border p-2 text-sm hover:bg-muted"
+							data-testid="apply-target-existing-{i}"
+						>
+							<input
+								type="radio"
+								name="apply-target"
+								value={i}
+								checked={selected === i}
+								onchange={() => (selected = i)}
+							/>
+							<span class="flex-1">{m.editor_ring_label({ index: i + 1 })}</span>
+							<RingPreview
+								path={entry.path}
+								copies={ring.copies}
+								baseRadius={composition.baseRadius}
+								ringIncrement={composition.ringIncrement}
+								size={72}
+							/>
+						</label>
+					{/each}
+
+					<label
+						class="flex items-center gap-3 rounded border border-dashed p-2 text-sm hover:bg-muted"
+						data-testid="apply-target-new"
 					>
-						{#each rings as ring, i (ring.id)}
-							<option value={i}>{m.editor_ring_label({ index: i + 1 })}</option>
-						{/each}
-					</select>
+						<input
+							type="radio"
+							name="apply-target"
+							value="new"
+							checked={selected === 'new'}
+							onchange={() => (selected = 'new')}
+						/>
+						<span class="flex-1">{m.apply_target_new()}</span>
+						<RingPreview
+							path={entry.path}
+							copies={NEW_RING_COPIES}
+							baseRadius={composition.baseRadius}
+							ringIncrement={composition.ringIncrement}
+							size={72}
+						/>
+					</label>
 				</div>
 
-				<fieldset class="space-y-2">
-					<legend class="text-xs font-medium">{m.common_slot()}</legend>
-					<label class="flex items-center gap-2 text-sm">
-						<input
-							type="radio"
-							name="apply-slot"
-							value="template"
-							checked={slot === 'template'}
-							onchange={() => (slotRaw = 'template')}
-						/>
-						{m.slot_primary()}
-					</label>
-					<label class="flex items-center gap-2 text-sm">
-						<input
-							type="radio"
-							name="apply-slot"
-							value="secondary"
-							checked={slot === 'secondary'}
-							onchange={() => (slotRaw = 'secondary')}
-						/>
-						{m.slot_secondary()}
-					</label>
-					<label class="flex items-center gap-2 text-sm" class:opacity-50={!entry.secondaryPath}>
-						<input
-							type="radio"
-							name="apply-slot"
-							value="both"
-							disabled={!entry.secondaryPath}
-							checked={slot === 'both'}
-							onchange={() => (slotRaw = 'both')}
-						/>
-						{m.slot_both()}
-					</label>
-				</fieldset>
-
-				<div class="flex justify-end">
-					<Button size="sm" onclick={confirm} data-testid="apply-confirm">{m.common_apply()}</Button
-					>
+				<div class="flex justify-end gap-2">
+					<Button variant="outline" size="sm" onclick={() => (open = false)}>
+						{m.common_back()}
+					</Button>
+					<Button size="sm" onclick={confirm} data-testid="apply-confirm">
+						{m.common_apply()}
+					</Button>
 				</div>
 			</div>
 		{/if}

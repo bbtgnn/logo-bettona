@@ -36,6 +36,8 @@ export function renameEntry(id: string, name: string): void {
 
 export type ApplySlot = 'template' | 'secondary' | 'both';
 
+export type ApplyTarget = { kind: 'existing'; index: number } | { kind: 'new' };
+
 export function applyEntryToRing(ring: Ring, entry: PathLibraryEntry, slot: ApplySlot): void {
 	if (slot === 'template' || slot === 'both') {
 		ring.templatePath = clonePath(entry.path);
