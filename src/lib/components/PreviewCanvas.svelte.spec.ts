@@ -1,6 +1,6 @@
 import type paper from 'paper';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { page, userEvent } from 'vitest/browser';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import type { RenderInput } from '$lib/geometry/render-pipeline';
 import { composition, colorMode, setAspectRatio } from '$lib/state/composition';
@@ -130,39 +130,14 @@ describe('PreviewCanvas.svelte', () => {
 		expect(disposeCallCount).toBe(1);
 	});
 
-	it('off the animate surface, exposes only Export SVG', async () => {
-		render(PreviewCanvas);
-		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+	it('shows the Export animation button only on the animate surface', async () => {
+		const { rerender } = render(PreviewCanvas);
 		expect(page.getByRole('button', { name: 'Export animation' }).query()).toBeNull();
-		expect(page.getByText('Includi audio').query()).toBeNull();
-		expect(page.getByText('Esporta PNG (caleidoscopio)').query()).toBeNull();
-		expect(page.getByText('Esporta SVG (caleidoscopio)').query()).toBeNull();
-	});
 
-	it('on the animate surface, shows the Export animation button next to Export SVG', async () => {
-		render(PreviewCanvas, { animate: true });
-		await expect.element(page.getByRole('button', { name: 'Export SVG' })).toBeInTheDocument();
+		await rerender({ animate: true });
 		await expect
 			.element(page.getByRole('button', { name: 'Export animation' }))
 			.toBeInTheDocument();
-	});
-
-	it('Export SVG downloads the kaleidoscope SVG when kaleidoscope mode is on', async () => {
-		const downloads: string[] = [];
-		const origClick = HTMLAnchorElement.prototype.click;
-		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
-			downloads.push(this.download);
-		};
-		setKaleidoscopeEnabled(true);
-		try {
-			render(PreviewCanvas);
-			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
-			expect(downloads).toContain('kaleidoscope.svg');
-			expect(downloads).not.toContain('composition.svg');
-		} finally {
-			HTMLAnchorElement.prototype.click = origClick;
-			setKaleidoscopeEnabled(false);
-		}
 	});
 
 	it('export reads the shared animation duration (no separate export-duration field)', async () => {
@@ -235,46 +210,6 @@ describe('PreviewCanvas.svelte', () => {
 		} finally {
 			setKaleidoscopeEnabled(false);
 			setAspectRatio('1:1');
-		}
-	});
-
-	it('shows the PNG export controls on both routes', async () => {
-		render(PreviewCanvas);
-		await expect.element(page.getByRole('button', { name: 'Export PNG' })).toBeInTheDocument();
-		await expect.element(page.getByLabelText('Include background')).toBeInTheDocument();
-		await expect.element(page.getByLabelText('Resolution')).toBeInTheDocument();
-	});
-
-	it('triggers a PNG download when Export PNG is clicked', async () => {
-		const downloads: string[] = [];
-		const origClick = HTMLAnchorElement.prototype.click;
-		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
-			downloads.push(this.download);
-		};
-		try {
-			render(PreviewCanvas);
-			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
-			await userEvent.click(page.getByRole('button', { name: 'Export PNG' }));
-			expect(downloads).toContain('composition.png');
-		} finally {
-			HTMLAnchorElement.prototype.click = origClick;
-		}
-	});
-
-	it('flat Export SVG produces no download when there are no rings', async () => {
-		composition.rings = [];
-		const downloads: string[] = [];
-		const origClick = HTMLAnchorElement.prototype.click;
-		HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
-			downloads.push(this.download);
-		};
-		try {
-			render(PreviewCanvas);
-			await vi.waitFor(() => expect(lastRenderedScope).toBeDefined());
-			await userEvent.click(page.getByRole('button', { name: 'Export SVG' }));
-			expect(downloads).not.toContain('composition.svg');
-		} finally {
-			HTMLAnchorElement.prototype.click = origClick;
 		}
 	});
 });

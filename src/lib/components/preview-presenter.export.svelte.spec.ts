@@ -95,6 +95,22 @@ describe('preview-presenter export', () => {
 		cleanup();
 	});
 
+	it('exportPng honors an explicit size', async () => {
+		const { presenter, cleanup } = mountPresenter();
+		try {
+			await withCapturedDownloads(async (caught) => {
+				presenter.exportPng({ includeBackground: true, size: { width: 800, height: 1000 } });
+				const png = caught.find((c) => c.name === 'composition.png');
+				expect(png).toBeDefined();
+				const { w, h } = await dataUrlSize(png!.href);
+				expect(w).toBe(800);
+				expect(h).toBe(1000);
+			});
+		} finally {
+			cleanup();
+		}
+	});
+
 	it('flat SVG with background off omits the preview-background rect', async () => {
 		const { presenter, cleanup } = mountPresenter();
 		await withCapturedDownloads(async (_caught, blobs) => {
