@@ -4,6 +4,11 @@
 	import { exportStatus } from '$lib/state/export-status.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import SidebarCollapsible from './SidebarCollapsible.svelte';
+	import {
+		getCompositionBackgroundColor,
+		setPaletteBackground,
+		colorMode
+	} from '$lib/state/composition';
 
 	const presenter = previewPresenter;
 	let includeBackground = $state(true);
@@ -25,6 +30,18 @@
 					aria-label={m.preview_include_background()}
 				/>
 				{m.preview_include_background()}
+			</label>
+
+			<label class="flex items-center gap-2 text-xs">
+				{m.composition_background_color()}
+				<input
+					type="color"
+					aria-label={m.composition_background_color()}
+					class="h-7 w-10 rounded border bg-background disabled:opacity-50"
+					value={getCompositionBackgroundColor()}
+					disabled={colorMode.mode !== 'monochrome'}
+					oninput={(e) => setPaletteBackground((e.target as HTMLInputElement).value)}
+				/>
 			</label>
 
 			<label class="flex items-center gap-2 text-xs">

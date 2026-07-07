@@ -41,4 +41,21 @@ describe('ExportSection', () => {
 			spy.mockRestore();
 		}
 	});
+
+	it('the background-color picker writes the composition palette background', async () => {
+		const { setPaletteBackground, getCompositionBackgroundColor, colorMode } = await import(
+			'$lib/state/composition'
+		);
+		colorMode.mode = 'monochrome';
+		setPaletteBackground('#ffffff');
+
+		render(ExportSection);
+		const picker = page.getByLabelText('Background color');
+		await expect.element(picker).toBeInTheDocument();
+
+		(picker.element() as HTMLInputElement).value = '#123456';
+		(picker.element() as HTMLInputElement).dispatchEvent(new Event('input', { bubbles: true }));
+
+		expect(getCompositionBackgroundColor()).toBe('#123456');
+	});
 });
