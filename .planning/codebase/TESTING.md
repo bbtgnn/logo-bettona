@@ -138,7 +138,9 @@ describe('feature name', () => {
 - `src/lib/state/animation.svelte.spec.ts` mocks `requestAnimationFrame`/`cancelAnimationFrame` with `vi.stubGlobal(...)` and a manual queue (`installRafMock`/`flushNextAnimationFrame`) to drive the animation loop deterministically.
 - Rendering tests that rely on Paper.js create a real `paper.PaperScope` per test (`scope = new paper.PaperScope(); scope.setup(new paper.Size(...))`) rather than mocking Paper internals.
 
-## Coverage Narrative (by subsystem)
+## Animation and Morph Coverage
+
+The animation surface is now a controller plus a driver runtime, a keyframe engine, and audio-reactive drivers; coverage spreads across the subsystems below (animation/morph first, then the rest of the pipeline).
 
 ### Animation drivers (`src/lib/state/animation-drivers/`)
 
@@ -147,7 +149,7 @@ describe('feature name', () => {
 - `audio-source.spec.ts` — audio source lifecycle/analyser wiring.
 - `data-series-driver.spec.ts` — data-series → wave mapping.
 - `demo-zones.spec.ts`, `fallback-bars.spec.ts` — deterministic fallback/demo signal generation when no live input is present.
-- `src/lib/state/animation.svelte.spec.ts` (node, see exception above) — the animate controller itself: mocks `animejs` and `./composition`; covers idle→playing, pause/resume, no-op with no morph targets, `onUpdate` progress, reset on ring-set change, loop/alternate edge cases, and rune reactivity via `$derived`.
+- `src/lib/state/animation.svelte.spec.ts` (node, see exception above) — the animate controller itself: mocks `./composition` and stubs `requestAnimationFrame`/`cancelAnimationFrame` (`installRafMock`/`flushNextAnimationFrame`) to drive the loop deterministically; covers idle→playing, pause/resume, no-op with no morph targets, progress updates, reset on ring-set change, loop/alternate edge cases, and rune reactivity via `$derived`.
 
 ### Keyframes (`src/lib/state/keyframes.svelte.ts`, `src/lib/animation/keyframes.ts`)
 

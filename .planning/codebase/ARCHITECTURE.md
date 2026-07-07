@@ -67,7 +67,7 @@
 
 **(a) Layer toggle → driver runtime:**
 1. `setLayerEnabled(layer, on)` in `state/animation.svelte.ts` flips `animationState.layers[layer]`; if a driver layer was turned off and no driver layer remains active, it tears down the live `audioSource`.
-2. `syncActiveDrivers()` mirrors the current flags onto the runtime — only `DRIVER_LAYERS` (`audioBars`, `audioZones`, `dataSeries`) call `runtime.setActive`; the `kaleidoscope` gate and `dataSeries`-as-inert-placeholder never touch the runtime directly.
+2. `syncActiveDrivers()` mirrors the current flags onto the runtime — only `DRIVER_LAYERS` (layers whose `LayerKind` is `driver`: today `audioBars` and `audioZones`) call `runtime.setActive`; the `kaleidoscope` gate and the `inert` `dataSeries` placeholder (registered as a driver but never activated) never drive the runtime.
 3. On each animation frame, `runtime.tick(nowMs)` (in `animation-drivers/runtime.ts`) calls every active driver's `frame(nowMs)`, clamps each returned `t` via `clamp01`, and writes it through `deps.applyRingT(index, t)` → `setRingMorphT` in `state/composition.ts`.
 
 **(b) Keyframes (progress-driven param sampling):**

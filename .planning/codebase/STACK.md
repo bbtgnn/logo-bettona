@@ -44,7 +44,7 @@
 
 **Critical:**
 - `paper` `^0.12.18` - ring geometry, SVG import, and rendering pipeline (`src/lib/geometry/**`, `src/lib/components/RingCanvas.svelte`, `src/lib/components/PreviewCanvas.svelte`).
-- `animejs` `^4.3.6` - playback engine for morph sweep animations in `src/lib/state/animation.svelte.ts`.
+- `animejs` `^4.3.6` - declared in `dependencies` but **not imported anywhere** in `src/` (`grep -rn animejs src/` is empty). Playback is driven by the in-house `createAnimationRuntime` + a `requestAnimationFrame` loop in `src/lib/state/animation.svelte.ts`, not anime.js — effectively a dead runtime dependency (see CONCERNS).
 - `rune-sync` `^0.2.1` - persistent client state via `lsSync` singleton in `src/lib/state/composition-persistence.svelte.ts` (surfaced through `src/lib/state/composition.ts`).
 
 These three (`animejs`, `paper`, `rune-sync`) are the **only** entries under `package.json`'s `dependencies`; every other package listed here (SvelteKit, Svelte, Vite, Tailwind stack, Paraglide, bits-ui, phosphor-svelte, testing tools, fonts) is a `devDependency` — the app is built/prerendered at build time, so nothing else needs to ship as a runtime dependency in `node_modules` resolution terms, but they are all still bundled into the client build output.
