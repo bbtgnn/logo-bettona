@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ratioToCanvasSize, ASPECT_RATIOS } from './aspect-ratio';
+import { proportionToCanvasSize, ratioToCanvasSize, ASPECT_RATIOS } from './aspect-ratio';
 
 describe('ratioToCanvasSize (longSide 600)', () => {
 	it('1:1 → 600×600', () => {
@@ -21,5 +21,16 @@ describe('ratioToCanvasSize (longSide 600)', () => {
 	});
 	it('exposes all 7 presets in order', () => {
 		expect(ASPECT_RATIOS).toEqual(['1:1', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9']);
+	});
+});
+
+describe('proportionToCanvasSize', () => {
+	it('caps the longer side and rounds the shorter one', () => {
+		expect(proportionToCanvasSize(210, 297, 3508)).toEqual({ width: 2480, height: 3508 });
+		expect(proportionToCanvasSize(16, 9, 1600)).toEqual({ width: 1600, height: 900 });
+	});
+
+	it('ratioToCanvasSize delegates to it', () => {
+		expect(ratioToCanvasSize('1:1', 600)).toEqual({ width: 600, height: 600 });
 	});
 });
