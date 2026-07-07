@@ -172,10 +172,17 @@ export function createPreviewPresenter() {
 		downloadSvg(svgData, 'composition.svg');
 	}
 
-	function exportPng(opts: { includeBackground: boolean; scale: number }) {
-		const { includeBackground, scale } = opts;
+	function exportPng(opts: {
+		includeBackground: boolean;
+		scale?: number;
+		size?: { width: number; height: number };
+	}) {
+		const { includeBackground } = opts;
 		const p = getEffectiveCanvasProportion();
-		const { width, height } = proportionToCanvasSize(p.width, p.height, CANVAS_LONG_SIDE * scale);
+		const { width, height } =
+			opts.size ?? proportionToCanvasSize(p.width, p.height, CANVAS_LONG_SIDE * (opts.scale ?? 1));
+		// Padding scales with the output so framing is consistent across resolutions.
+		const scale = Math.max(width, height) / CANVAS_LONG_SIDE;
 		const off = document.createElement('canvas');
 		off.width = width;
 		off.height = height;

@@ -7,13 +7,36 @@
 	import {
 		getCompositionBackgroundColor,
 		setPaletteBackground,
-		colorMode
+		colorMode,
+		canvasFormat,
+		getEffectiveCanvasProportion
 	} from '$lib/state/composition';
+	import { printFormatPixelSize } from '$lib/geometry/print-format';
+	import { proportionToCanvasSize } from '$lib/geometry/aspect-ratio';
 
 	const presenter = previewPresenter;
 	let includeBackground = $state(true);
-	let pngScale = $state(1);
 	const PNG_SCALES = [1, 2, 4];
+	const DPI_PRESETS = [150, 300, 600];
+	const BASE_LONG_SIDE = 600;
+	let pngScale = $state(1);
+	let dpi = $state(300);
+
+	const pngSize = $derived.by(() => {
+		if (canvasFormat.printFormat) {
+			return printFormatPixelSize(canvasFormat.printFormat, canvasFormat.orientation, dpi);
+		}
+		const p = getEffectiveCanvasProportion();
+		return proportionToCanvasSize(p.width, p.height, BASE_LONG_SIDE * pngScale);
+	});
+
+	function exportPng() {
+		if (canvasFormat.printFormat) {
+			presenter.exportPng({ includeBackground, size: pngSize });
+		} else {
+			presenter.exportPng({ includeBackground, scale: pngScale });
+		}
+	}
 </script>
 
 <SidebarCollapsible>
@@ -46,17 +69,31 @@
 
 			<label class="flex items-center gap-2 text-xs">
 				{m.preview_resolution()}
-				<select
-					aria-label={m.preview_resolution()}
-					class="h-8 rounded border bg-background px-1 text-xs"
-					value={pngScale}
-					onchange={(e) => (pngScale = Number((e.target as HTMLSelectElement).value))}
-				>
-					{#each PNG_SCALES as s (s)}
-						<option value={s}>{s}x</option>
-					{/each}
-				</select>
+				{#if canvasFormat.printFormat}
+					<select
+						aria-label={m.preview_resolution()}
+						class="h-8 rounded border bg-background px-1 text-xs"
+						value={dpi}
+						onchange={(e) => (dpi = Number((e.target as HTMLSelectElement).value))}
+					>
+						{#each DPI_PRESETS as d (d)}
+							<option value={d}>{d} DPI</option>
+						{/each}
+					</select>
+				{:else}
+					<select
+						aria-label={m.preview_resolution()}
+						class="h-8 rounded border bg-background px-1 text-xs"
+						value={pngScale}
+						onchange={(e) => (pngScale = Number((e.target as HTMLSelectElement).value))}
+					>
+						{#each PNG_SCALES as s (s)}
+							<option value={s}>{s}x</option>
+						{/each}
+					</select>
+				{/if}
 			</label>
+			<p class="text-[10px] text-muted-foreground">{pngSize.width} × {pngSize.height} px</p>
 
 			<div class="flex gap-2">
 				<Button
@@ -71,7 +108,7 @@
 					variant="outline"
 					class="flex-1"
 					disabled={exportStatus.rendering}
-					onclick={() => presenter.exportPng({ includeBackground, scale: pngScale })}
+					onclick={exportPng}
 				>
 					{m.preview_export_png()}
 				</Button>

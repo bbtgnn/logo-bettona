@@ -42,6 +42,27 @@ describe('ExportSection', () => {
 		}
 	});
 
+	it('under a print format, shows DPI + computed pixels and exports at paper size', async () => {
+		const { setPrintFormat, setPrintOrientation } = await import('$lib/state/composition');
+		const spy = vi.spyOn(previewPresenter, 'exportPng').mockImplementation(() => {});
+		setPrintFormat('a4');
+		setPrintOrientation('portrait');
+		try {
+			render(ExportSection);
+			// DPI presets replace the scale multiplier.
+			await userEvent.selectOptions(page.getByLabelText('Resolution'), '300');
+			await expect.element(page.getByText('2480 × 3508 px')).toBeInTheDocument();
+
+			await userEvent.click(page.getByRole('button', { name: 'Export PNG' }));
+			expect(spy).toHaveBeenCalledWith(
+				expect.objectContaining({ size: { width: 2480, height: 3508 } })
+			);
+		} finally {
+			spy.mockRestore();
+			setPrintFormat(null);
+		}
+	});
+
 	it('the background-color picker writes the composition palette background', async () => {
 		const { setPaletteBackground, getCompositionBackgroundColor, colorMode } = await import(
 			'$lib/state/composition'
