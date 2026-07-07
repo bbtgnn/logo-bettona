@@ -4,9 +4,11 @@
 	import { Slider } from '$lib/shadcn/ui/slider/index.js';
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
+	import { Input } from '$lib/shadcn/ui/input/index.js';
 	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
 	import {
 		updateRing,
+		renameRing,
 		setRingExpanded,
 		isRingExpanded,
 		colorMode,
@@ -137,7 +139,7 @@
 				{:else}
 					<CaretRight size={14} />
 				{/if}
-				{m.editor_ring_label({ index: index + 1 })}
+				{ring.name?.trim() ? ring.name : m.editor_ring_label({ index: index + 1 })}
 			</Collapsible.CollapsibleTrigger>
 			<Button
 				variant="ghost"
@@ -151,6 +153,18 @@
 		</div>
 
 		<Collapsible.CollapsibleContent class="space-y-3 px-3 pb-3">
+			<div class="flex flex-col gap-1">
+				<Label for="ring-name-{index}" class="text-xs">{m.editor_ring_name()}</Label>
+				<Input
+					id="ring-name-{index}"
+					type="text"
+					value={ring.name ?? ''}
+					placeholder={m.editor_ring_label({ index: index + 1 })}
+					oninput={(e) => renameRing(index, (e.target as HTMLInputElement).value)}
+					data-testid="ring-name-{index}"
+				/>
+			</div>
+
 			<RingCanvas
 				templatePath={ring.templatePath}
 				onchange={applyPathFromEditor}

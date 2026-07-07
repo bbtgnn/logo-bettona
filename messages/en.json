@@ -31,6 +31,7 @@
 	"editor_no_rings": "No rings yet. Click \"Add Ring\" to start.",
 	"editor_ring_drag": "Drag to reorder",
 	"editor_ring_label": "Ring {index}",
+	"editor_ring_name": "Name",
 	"editor_ring_delete": "Delete ring",
 	"editor_create_morph": "Create morph target",
 	"editor_remove_morph": "Remove morph target",

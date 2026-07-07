@@ -1,9 +1,9 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import RingEditor from './RingEditor.svelte';
 import type { Path, Ring } from '$lib/types';
-import { setRingExpanded } from '$lib/state/composition';
+import { composition, setRingExpanded } from '$lib/state/composition';
 import { setLayerEnabled } from '$lib/state/animation';
 import { switchLocale } from '$lib/state/locale.svelte';
 
@@ -40,5 +40,24 @@ describe('RingEditor', () => {
 		await expect.element(page.getByTestId('grid-density-slider')).toBeInTheDocument();
 		// Copies is now a global setting (SettingsSection), not shown per-ring here.
 		expect(page.getByText('Copies').query()).toBeNull();
+	});
+
+	it('reflects a custom ring name in the header, falling back to the positional label when cleared', async () => {
+		// The header reads the `ring` prop, which in the real app is refreshed by the
+		// `#each composition.rings as ring, i (ring.id)` block in +page.svelte whenever
+		// composition.rings changes. Emulate that here with an explicit rerender.
+		composition.rings = [morphRing()];
+		const result = render(RingEditor, { ring: composition.rings[0], index: 0 });
+
+		const nameInput = page.getByTestId('ring-name-0');
+		await expect.element(nameInput).toBeInTheDocument();
+
+		await userEvent.fill(nameInput, 'Corona');
+		await result.rerender({ ring: composition.rings[0], index: 0 });
+		await expect.element(page.getByRole('button', { name: /Corona/ })).toBeInTheDocument();
+
+		await userEvent.fill(nameInput, '   ');
+		await result.rerender({ ring: composition.rings[0], index: 0 });
+		await expect.element(page.getByRole('button', { name: /Ring 1/ })).toBeInTheDocument();
 	});
 });

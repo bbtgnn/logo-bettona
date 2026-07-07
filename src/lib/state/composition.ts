@@ -201,6 +201,13 @@ export function updateRing(index: number, patch: Partial<Ring>) {
 	);
 }
 
+export function renameRing(index: number, name: string) {
+	const trimmed = name.trim();
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, name: trimmed } : ring
+	);
+}
+
 export function setRingMorphT(index: number, t: number) {
 	composition.rings = composition.rings.map((ring, i) =>
 		i === index ? { ...ring, morphT: clamp01(t) } : ring

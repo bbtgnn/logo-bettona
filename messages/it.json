@@ -31,6 +31,7 @@
 	"editor_no_rings": "Nessun anello. Clicca \"Aggiungi anello\" per iniziare.",
 	"editor_ring_drag": "Trascina per riordinare",
 	"editor_ring_label": "Anello {index}",
+	"editor_ring_name": "Nome",
 	"editor_ring_delete": "Elimina anello",
 	"editor_create_morph": "Crea forma morph",
 	"editor_remove_morph": "Rimuovi forma morph",
