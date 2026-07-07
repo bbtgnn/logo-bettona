@@ -202,7 +202,11 @@ export function duplicateRing(index: number) {
 		...src,
 		id: newRingId(),
 		templatePath: src.templatePath ? clonePath(src.templatePath) : null,
-		secondaryTemplatePath: src.secondaryTemplatePath ? clonePath(src.secondaryTemplatePath) : null
+		secondaryTemplatePath: src.secondaryTemplatePath ? clonePath(src.secondaryTemplatePath) : null,
+		// Transient audio-runtime fields must never be inherited from a live source ring
+		// (config vs runtime "distinzione sacra" — see ring-editor-params design doc).
+		wave: null,
+		zoneDrive: null
 	};
 	const rings = [...composition.rings];
 	rings.splice(index + 1, 0, clone);

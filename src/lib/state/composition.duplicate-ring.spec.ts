@@ -47,4 +47,20 @@ describe('duplicateRing', () => {
 		expect(composition.rings[1].templatePath).toEqual(composition.rings[0].templatePath);
 		expect(composition.rings[1].templatePath).not.toBe(composition.rings[0].templatePath);
 	});
+
+	it('does not inherit transient wave/zoneDrive runtime state from the source', () => {
+		composition.rings = composition.rings.map((r, i) =>
+			i === 0
+				? {
+						...r,
+						wave: { amplitude: 0.5, crests: 2, phase: 0 },
+						zoneDrive: { bassPush: 1, midPush: 0, trebleRetract: 0, trebleVibrate: 0 }
+					}
+				: r
+		);
+		duplicateRing(0);
+		const clone = composition.rings[1];
+		expect(clone.wave).toBeFalsy();
+		expect(clone.zoneDrive).toBeFalsy();
+	});
 });
