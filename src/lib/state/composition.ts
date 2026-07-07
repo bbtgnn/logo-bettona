@@ -10,6 +10,8 @@ import type {
 	WaveState,
 	ZoneDrive
 } from '$lib/types';
+import type { PrintFormatId, Orientation } from '$lib/geometry/print-format';
+import { orientedDimensionsMm } from '$lib/geometry/print-format';
 import { applyColors } from '$lib/color/apply';
 import { validatePathCompatibility } from '$lib/geometry/path-morph';
 import { composition } from './composition-persistence.svelte';
@@ -19,6 +21,44 @@ export const colorMode = lsSync<ColorModeState>('color-mode', {
 	mode: 'monochrome',
 	palette: 0
 });
+
+export const canvasFormat = lsSync<{ printFormat: PrintFormatId | null; orientation: Orientation }>(
+	'canvas-format',
+	{ printFormat: null, orientation: 'portrait' }
+);
+
+export function setPrintFormat(id: PrintFormatId | null) {
+	canvasFormat.printFormat = id;
+}
+
+export function setPrintOrientation(orientation: Orientation) {
+	canvasFormat.orientation = orientation;
+}
+
+/**
+ * The width:height proportion the canvas is rendered at. A print format overrides
+ * the screen aspect ratio with the oriented paper dimensions (in mm, used purely as
+ * a proportion); otherwise the aspect-ratio preset is parsed.
+ */
+export function getEffectiveCanvasProportion(): { width: number; height: number } {
+	if (canvasFormat.printFormat) {
+		const { widthMm, heightMm } = orientedDimensionsMm(
+			canvasFormat.printFormat,
+			canvasFormat.orientation
+		);
+		return { width: widthMm, height: heightMm };
+	}
+	const [w, h] = composition.aspectRatio.split(':').map(Number);
+	return { width: w, height: h };
+}
+
+/** Writes the active mono palette's background (replaces the array for reactivity). */
+export function setPaletteBackground(color: string) {
+	const i = colorMode.palette;
+	composition.monochromePalettes = composition.monochromePalettes.map((p, idx) =>
+		idx === i ? { ...p, background: color } : p
+	);
+}
 
 const DEFAULT_RING: Omit<Ring, 'id'> = {
 	copies: 8,
