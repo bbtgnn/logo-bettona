@@ -3,13 +3,13 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import EditorPage from './+page.svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
+import { composition } from '$lib/state/composition';
 
 describe('Editor page', () => {
 	beforeEach(() => switchLocale('en'));
 
-	it('renders the Rings add button but not the Animation section', async () => {
+	it('does not render the Animation section', async () => {
 		render(EditorPage);
-		await expect.element(page.getByRole('button', { name: 'Add Ring' })).toBeInTheDocument();
 		await expect.element(page.getByText('Animation', { exact: true })).not.toBeInTheDocument();
 	});
 
@@ -17,5 +17,18 @@ describe('Editor page', () => {
 		render(EditorPage);
 		expect(page.getByText('Kaleidoscope', { exact: true }).query()).toBeNull();
 		expect(page.getByLabelText('Sectors', { exact: true }).query()).toBeNull();
+	});
+
+	it('does not render an "Add Ring" button (creation happens in Tracciati)', async () => {
+		render(EditorPage);
+		expect(page.getByRole('button', { name: 'Add Ring' }).query()).toBeNull();
+	});
+
+	it('shows an empty-state message pointing to Tracciati when there are no rings', async () => {
+		composition.rings = [];
+		render(EditorPage);
+		await expect
+			.element(page.getByText('No rings yet. Create one from Tracciati.'))
+			.toBeInTheDocument();
 	});
 });
