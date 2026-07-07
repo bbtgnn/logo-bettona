@@ -2,6 +2,7 @@
 	import CanvasSection from '$lib/components/CanvasSection.svelte';
 	import LayoutModeSwitch from '$lib/components/LayoutModeSwitch.svelte';
 	import KaleidoscopePanel from '$lib/components/KaleidoscopePanel.svelte';
+	import ExportSection from '$lib/components/ExportSection.svelte';
 	import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 	import { m } from '$lib/paraglide/messages';
 </script>
@@ -15,3 +16,5 @@
 {#if kaleidoscope.enabled}
 	<KaleidoscopePanel />
 {/if}
+
+<ExportSection />
