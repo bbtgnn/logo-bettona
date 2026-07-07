@@ -1,8 +1,12 @@
 import paper from 'paper';
-import { composition, getCompositionBackgroundColor } from '$lib/state/composition';
+import {
+	composition,
+	getCompositionBackgroundColor,
+	getEffectiveCanvasProportion
+} from '$lib/state/composition';
 import { animationState, getExportAudioStream } from '$lib/state/animation';
 import { createRenderPipeline } from '$lib/geometry/render-pipeline';
-import { ratioToCanvasSize } from '$lib/geometry/aspect-ratio';
+import { proportionToCanvasSize } from '$lib/geometry/aspect-ratio';
 import { kaleidoscope } from '$lib/state/kaleidoscope.svelte';
 import { renderKaleidoscopeToCanvas, generateKaleidoscopeSVG } from '$lib/geometry/kaleidoscope';
 import { composeTileWithBackground } from '$lib/geometry/kaleidoscope-tile';
@@ -50,8 +54,7 @@ export function createPreviewPresenter() {
 	function renderTile(): HTMLCanvasElement {
 		ensureTileScope();
 		const viewport = { width: TILE_PX, height: TILE_PX, padding: 32 };
-		const ignoreMorph =
-			animationState.layers.audioBars || animationState.layers.audioZones;
+		const ignoreMorph = animationState.layers.audioBars || animationState.layers.audioZones;
 		// audioZones holds a stable rest-derived scale; pass it here too so the kaleidoscope
 		// tile matches the visible canvas instead of re-fitting the deformed pose.
 		const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
@@ -171,7 +174,8 @@ export function createPreviewPresenter() {
 
 	function exportPng(opts: { includeBackground: boolean; scale: number }) {
 		const { includeBackground, scale } = opts;
-		const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE * scale);
+		const p = getEffectiveCanvasProportion();
+		const { width, height } = proportionToCanvasSize(p.width, p.height, CANVAS_LONG_SIDE * scale);
 		const off = document.createElement('canvas');
 		off.width = width;
 		off.height = height;
@@ -227,11 +231,11 @@ export function createPreviewPresenter() {
 			const comp = composition;
 			// Canvas pixel size comes from the persisted aspect ratio; the render pipeline
 			// applies this as the paper view size, so changing the ratio reshapes the canvas.
-			const { width, height } = ratioToCanvasSize(comp.aspectRatio, CANVAS_LONG_SIDE);
+			const p = getEffectiveCanvasProportion();
+			const { width, height } = proportionToCanvasSize(p.width, p.height, CANVAS_LONG_SIDE);
 			const viewport = { width, height, padding: 32 };
 			// An active audio layer rides the primary petal; bypass morph in the render only.
-			const ignoreMorph =
-				animationState.layers.audioBars || animationState.layers.audioZones;
+			const ignoreMorph = animationState.layers.audioBars || animationState.layers.audioZones;
 			// audioZones reserves edge headroom by holding a rest-derived scale; the pipeline
 			// owns that two-pass now, so the caller just declares it.
 			const restFit = animationState.layers.audioZones ? { fraction: REST_FRACTION } : undefined;
@@ -284,7 +288,8 @@ export function createPreviewPresenter() {
 		$effect(() => {
 			if (!kaleidoscope.enabled) return;
 			void $state.snapshot(composition); // deep-track composition edits
-			const { width, height } = ratioToCanvasSize(composition.aspectRatio, CANVAS_LONG_SIDE);
+			const p = getEffectiveCanvasProportion();
+			const { width, height } = proportionToCanvasSize(p.width, p.height, CANVAS_LONG_SIDE);
 			if (canvasEl) {
 				if (canvasEl.width !== width || canvasEl.height !== height) {
 					canvasEl.width = width;

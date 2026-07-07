@@ -28,4 +28,20 @@ describe('Composition page', () => {
 		await userEvent.click(page.getByRole('button', { name: 'Kaleidoscope' }));
 		await expect.element(page.getByLabelText('Sectors', { exact: true })).toBeInTheDocument();
 	});
+
+	it('disables the aspect select when a print format is chosen and shows orientation', async () => {
+		const { setPrintFormat } = await import('$lib/state/composition');
+		setPrintFormat(null);
+		render(CompositionPage);
+
+		const aspect = page.getByLabelText('Aspect ratio');
+		await expect.element(aspect).toBeInTheDocument();
+		expect((aspect.element() as HTMLSelectElement).disabled).toBe(false);
+
+		await userEvent.selectOptions(page.getByLabelText('Print format'), 'a4');
+		expect((aspect.element() as HTMLSelectElement).disabled).toBe(true);
+		await expect.element(page.getByLabelText('Orientation')).toBeInTheDocument();
+
+		setPrintFormat(null);
+	});
 });
