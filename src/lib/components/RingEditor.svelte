@@ -5,13 +5,14 @@
 	import { Button } from '$lib/shadcn/ui/button/index.js';
 	import { Label } from '$lib/shadcn/ui/label/index.js';
 	import { Input } from '$lib/shadcn/ui/input/index.js';
-	import { CaretDown, CaretRight, Trash, DotsSixVertical } from 'phosphor-svelte';
+	import { CaretDown, CaretRight, Copy, Trash, DotsSixVertical } from 'phosphor-svelte';
 	import {
 		updateRing,
 		renameRing,
 		setRingExpanded,
 		isRingExpanded,
 		colorMode,
+		duplicateRing,
 		updateRingPathVariant
 	} from '$lib/state/composition';
 	import { removeRing } from '$lib/state/animation';
@@ -141,6 +142,16 @@
 				{/if}
 				{ring.name?.trim() ? ring.name : m.editor_ring_label({ index: index + 1 })}
 			</Collapsible.CollapsibleTrigger>
+			<Button
+				variant="ghost"
+				size="icon"
+				class="h-6 w-6 text-muted-foreground hover:text-foreground"
+				onclick={() => duplicateRing(index)}
+				aria-label={m.editor_ring_duplicate()}
+				data-testid="ring-duplicate-{index}"
+			>
+				<Copy size={14} />
+			</Button>
 			<Button
 				variant="ghost"
 				size="icon"

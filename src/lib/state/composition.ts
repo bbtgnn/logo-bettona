@@ -195,6 +195,21 @@ export function removeRingFromComposition(index: number) {
 	applyColorMode();
 }
 
+export function duplicateRing(index: number) {
+	const src = composition.rings[index];
+	if (!src) return;
+	const clone: Ring = {
+		...src,
+		id: newRingId(),
+		templatePath: src.templatePath ? clonePath(src.templatePath) : null,
+		secondaryTemplatePath: src.secondaryTemplatePath ? clonePath(src.secondaryTemplatePath) : null
+	};
+	const rings = [...composition.rings];
+	rings.splice(index + 1, 0, clone);
+	composition.rings = rings;
+	applyColorMode();
+}
+
 export function updateRing(index: number, patch: Partial<Ring>) {
 	composition.rings = composition.rings.map((ring, i) =>
 		i === index ? { ...ring, ...patch } : ring

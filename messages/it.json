@@ -33,6 +33,7 @@
 	"editor_ring_label": "Anello {index}",
 	"editor_ring_name": "Nome",
 	"editor_ring_delete": "Elimina anello",
+	"editor_ring_duplicate": "Duplica anello",
 	"editor_create_morph": "Crea forma morph",
 	"editor_remove_morph": "Rimuovi forma morph",
 	"editor_morph_t": "Morph t: {value}",
