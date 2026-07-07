@@ -9,22 +9,21 @@
 	// export now lives in the Composition sidebar (ExportSection).
 	let { animate = false }: { animate?: boolean } = $props();
 
-	const presenter = previewPresenter;
 	const progressPercent = $derived(
-		Math.round(Math.max(0, Math.min(1, presenter.exportProgress)) * 100)
+		Math.round(Math.max(0, Math.min(1, previewPresenter.exportProgress)) * 100)
 	);
 </script>
 
 <div class="flex shrink-0 flex-col items-center gap-3">
-	<canvas {@attach presenter.attach} width="600" height="600" class="rounded-lg border"
+	<canvas {@attach previewPresenter.attach} width="600" height="600" class="rounded-lg border"
 	></canvas>
 
 	{#if animate}
 		<div class="flex w-full max-w-[600px] flex-col gap-2">
 			<Button
 				variant="outline"
-				onclick={presenter.exportAnimation}
-				disabled={exportStatus.rendering || !presenter.animationExportSupported}
+				onclick={previewPresenter.exportAnimation}
+				disabled={exportStatus.rendering || !previewPresenter.animationExportSupported}
 				class="w-full"
 			>
 				{m.preview_export_animation()}
@@ -51,7 +50,7 @@
 				</div>
 			{/if}
 
-			{#if !presenter.animationExportSupported}
+			{#if !previewPresenter.animationExportSupported}
 				<p class="text-[10px] text-muted-foreground">
 					{m.preview_export_unsupported()}
 				</p>

@@ -14,7 +14,6 @@
 	import { printFormatPixelSize } from '$lib/geometry/print-format';
 	import { proportionToCanvasSize } from '$lib/geometry/aspect-ratio';
 
-	const presenter = previewPresenter;
 	let includeBackground = $state(true);
 	const PNG_SCALES = [1, 2, 4];
 	const DPI_PRESETS = [150, 300, 600];
@@ -32,9 +31,9 @@
 
 	function exportPng() {
 		if (canvasFormat.printFormat) {
-			presenter.exportPng({ includeBackground, size: pngSize });
+			previewPresenter.exportPng({ includeBackground, size: pngSize });
 		} else {
-			presenter.exportPng({ includeBackground, scale: pngScale });
+			previewPresenter.exportPng({ includeBackground, scale: pngScale });
 		}
 	}
 </script>
@@ -100,7 +99,7 @@
 					variant="outline"
 					class="flex-1"
 					disabled={exportStatus.rendering}
-					onclick={() => presenter.exportSvg({ includeBackground })}
+					onclick={() => previewPresenter.exportSvg({ includeBackground })}
 				>
 					{m.preview_export_svg()}
 				</Button>
