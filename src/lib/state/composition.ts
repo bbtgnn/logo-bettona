@@ -316,6 +316,13 @@ export function setRingIncrement(value: number) {
 	composition.ringIncrement = value;
 }
 
+export function setRingIncrementOverride(index: number, value: number | null) {
+	const next = value === null ? null : Math.max(0, Number.isFinite(value) ? value : 0);
+	composition.rings = composition.rings.map((ring, i) =>
+		i === index ? { ...ring, incrementOverride: next } : ring
+	);
+}
+
 export function setCopies(value: number) {
 	composition.copies = Math.max(1, Math.floor(Number.isFinite(value) ? value : 1));
 }
