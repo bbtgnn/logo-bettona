@@ -1,14 +1,25 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { switchLocale } from '$lib/state/locale.svelte';
 import { previewPresenter } from './preview-presenter.svelte';
 import ExportSection from './ExportSection.svelte';
+import { colorMode, getCompositionBackgroundColor, setPaletteBackground } from '$lib/state/composition';
 
 describe('ExportSection', () => {
+	let originalColorMode: (typeof colorMode)['mode'];
+	let originalBackgroundColor: string;
+
 	beforeEach(async () => {
+		originalColorMode = colorMode.mode;
+		originalBackgroundColor = getCompositionBackgroundColor();
 		switchLocale('en');
 		await page.viewport(1280, 800);
+	});
+
+	afterEach(() => {
+		colorMode.mode = originalColorMode;
+		setPaletteBackground(originalBackgroundColor);
 	});
 
 	it('renders SVG/PNG buttons, the include-background toggle and resolution', async () => {
